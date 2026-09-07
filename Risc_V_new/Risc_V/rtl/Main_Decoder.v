@@ -9,7 +9,7 @@ module Main_Decoder(
     output reg  [1:0] ALUSrcA,     // 00: rs1, 01: PC, 10: zero
     output reg        MemWrite,
     output reg        MemRead,
-    output reg  [1:0] ResultSrc,   // 00: ALU, 01: MEM, 10: PC+4, 11: FPU
+    output reg  [1:0] ResultSrc,   // 00: ALU, 01: MEM, 10: PC+4
     output reg        Branch,
     output reg        Jump,
     output reg  [2:0] ImmSrc,
@@ -24,20 +24,13 @@ module Main_Decoder(
     // ============================================================
     localparam [6:0]
         OP_LOAD     = 7'b0000011,
-        OP_FLW      = 7'b0000111,
         OP_MISC_MEM = 7'b0001111,
         OP_OP_IMM   = 7'b0010011,
         OP_AUIPC    = 7'b0010111,
         OP_STORE    = 7'b0100011,
-        OP_FSW      = 7'b0100111,
         OP_AMO      = 7'b0101111,
         OP_OP       = 7'b0110011,
         OP_LUI      = 7'b0110111,
-        OP_FMADD    = 7'b1000011,
-        OP_FMSUB    = 7'b1000111,
-        OP_FNMSUB   = 7'b1001011,
-        OP_FNMADD   = 7'b1001111,
-        OP_FPU      = 7'b1010011,
         OP_BRANCH   = 7'b1100011,
         OP_JALR     = 7'b1100111,
         OP_JAL      = 7'b1101111,
@@ -97,40 +90,10 @@ module Main_Decoder(
             end
 
             // ====================================================
-            // Floating load: FLW
-            // fd <- MEM[rs1 + imm]
-            // FPRegWrite xử lý ở Control_Unit / FPU control
-            // ====================================================
-            OP_FLW: begin
-                RegWrite  = 1'b0;    // không ghi integer RF
-                ALUSrc    = 1'b1;
-                ALUSrcA   = 2'b00;   // rs1
-                MemRead   = 1'b1;
-                MemWrite  = 1'b0;
-                ResultSrc = 2'b01;   // MEM
-                ImmSrc    = 3'b000;  // I-type
-                ALUOp     = 2'b00;   // ADD address
-            end
-
-            // ====================================================
             // Integer store: SB/SH/SW
             // MEM[rs1 + imm] <- rs2
             // ====================================================
             OP_STORE: begin
-                RegWrite  = 1'b0;
-                ALUSrc    = 1'b1;
-                ALUSrcA   = 2'b00;   // rs1
-                MemRead   = 1'b0;
-                MemWrite  = 1'b1;
-                ImmSrc    = 3'b001;  // S-type
-                ALUOp     = 2'b00;   // ADD address
-            end
-
-            // ====================================================
-            // Floating store: FSW
-            // MEM[rs1 + imm] <- fs2
-            // ====================================================
-            OP_FSW: begin
                 RegWrite  = 1'b0;
                 ALUSrc    = 1'b1;
                 ALUSrcA   = 2'b00;   // rs1
@@ -352,23 +315,6 @@ module Main_Decoder(
                 MemRead   = 1'b0;
                 MemWrite  = 1'b0;
                 CSR       = 1'b1;
-            end
-
-            // ====================================================
-            // OP-FP + FMA group
-            //
-            // ResultSrc = FPU.
-            // RegWrite / FPRegWrite nên để Control_Unit hoặc FPU_Decoder
-            // quyết định tùy từng lệnh:
-            // - FEQ/FLT/FLE/FCLASS/FCVT.W/FM​V.X -> integer RF
-            // - FADD/FSUB/FMUL/FDIV/FSQRT/FMA/FM​V.W -> FP RF
-            // ====================================================
-            OP_FPU,
-            OP_FMADD,
-            OP_FMSUB,
-            OP_FNMSUB,
-            OP_FNMADD: begin
-                ResultSrc = 2'b11;   // FPU
             end
 
             default: begin

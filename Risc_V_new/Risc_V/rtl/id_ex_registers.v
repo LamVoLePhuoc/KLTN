@@ -21,10 +21,7 @@ module id_ex_registers(
     input  wire         AtomicD,
     input  wire [4:0]   AmoOpD,
 
-    // --- FPU / other control ---
-    input  wire         FPRegWriteD,
-    input  wire [4:0]   FPUControlD,
-    input  wire         FPU_StartD,
+    // --- Other control ---
     input  wire [2:0]   MemOpD,
     input  wire         CSR_D,
     input  wire         Fence_D,
@@ -41,17 +38,6 @@ module id_ex_registers(
     input  wire [4:0]   RS1_D,
     input  wire [4:0]   RS2_D,
 
-    // --- Float register addresses ---
-    input  wire [4:0]   RD_F_D,
-    input  wire [4:0]   RS1_F_D,
-    input  wire [4:0]   RS2_F_D,
-    input  wire [4:0]   RS3_F_D,
-
-    // --- Float data từ Decode stage ---
-    input  wire [31:0]  RD1_F_D,
-    input  wire [31:0]  RD2_F_D,
-    input  wire [31:0]  RD3_F_D,
-
     // --- Outputs sang Execute stage ---
     output reg          RegWriteE,
     output reg          ALUSrcE,
@@ -67,10 +53,7 @@ module id_ex_registers(
     output reg          AtomicE,
     output reg  [4:0]   AmoOpE,
 
-    // --- FPU / other control ---
-    output reg          FPRegWriteE,
-    output reg  [4:0]   FPUControlE,
-    output reg          FPU_StartE,
+    // --- Other control ---
     output reg  [2:0]   MemOpE,
     output reg          CSR_E,
     output reg          Fence_E,
@@ -85,18 +68,7 @@ module id_ex_registers(
 
     output reg  [4:0]   RD_E,
     output reg  [4:0]   RS1_E,
-    output reg  [4:0]   RS2_E,
-
-    // --- Float register addresses ---
-    output reg  [4:0]   RD_F_E,
-    output reg  [4:0]   RS1_F_E,
-    output reg  [4:0]   RS2_F_E,
-    output reg  [4:0]   RS3_F_E,
-
-    // --- Float data sang Execute stage ---
-    output reg  [31:0]  RD1_F_E,
-    output reg  [31:0]  RD2_F_E,
-    output reg  [31:0]  RD3_F_E
+    output reg  [4:0]   RS2_E
 );
 
     always @(posedge clk) begin
@@ -117,9 +89,6 @@ module id_ex_registers(
             AtomicE     <= 1'b0;
             AmoOpE      <= 5'b00000;
 
-            FPRegWriteE <= 1'b0;
-            FPUControlE <= 5'b00000;
-            FPU_StartE  <= 1'b0;
             MemOpE      <= 3'b000;
             CSR_E       <= 1'b0;
             Fence_E     <= 1'b0;
@@ -137,18 +106,6 @@ module id_ex_registers(
             RD_E        <= 5'b00000;
             RS1_E       <= 5'b00000;
             RS2_E       <= 5'b00000;
-
-            // =====================================================
-            // RESET: clear float data/address
-            // =====================================================
-            RD_F_E      <= 5'b00000;
-            RS1_F_E     <= 5'b00000;
-            RS2_F_E     <= 5'b00000;
-            RS3_F_E     <= 5'b00000;
-
-            RD1_F_E     <= 32'b0;
-            RD2_F_E     <= 32'b0;
-            RD3_F_E     <= 32'b0;
         end
 
         else if (flush) begin
@@ -169,9 +126,6 @@ module id_ex_registers(
             AtomicE     <= 1'b0;
             AmoOpE      <= 5'b00000;
 
-            FPRegWriteE <= 1'b0;
-            FPUControlE <= 5'b00000;
-            FPU_StartE  <= 1'b0;
             MemOpE      <= 3'b000;
             CSR_E       <= 1'b0;
             Fence_E     <= 1'b0;
@@ -186,15 +140,6 @@ module id_ex_registers(
             RD_E        <= 5'b00000;
             RS1_E       <= 5'b00000;
             RS2_E       <= 5'b00000;
-
-            RD_F_E      <= 5'b00000;
-            RS1_F_E     <= 5'b00000;
-            RS2_F_E     <= 5'b00000;
-            RS3_F_E     <= 5'b00000;
-
-            RD1_F_E     <= 32'b0;
-            RD2_F_E     <= 32'b0;
-            RD3_F_E     <= 32'b0;
         end
 
         else if (!stall) begin
@@ -217,10 +162,7 @@ module id_ex_registers(
             AtomicE     <= AtomicD;
             AmoOpE      <= AmoOpD;
 
-            // --- FPU / other control ---
-            FPRegWriteE <= FPRegWriteD;
-            FPUControlE <= FPUControlD;
-            FPU_StartE  <= FPU_StartD;
+            // --- other control ---
             MemOpE      <= MemOpD;
             CSR_E       <= CSR_D;
             Fence_E     <= Fence_D;
@@ -236,16 +178,6 @@ module id_ex_registers(
             RD_E        <= RD_D;
             RS1_E       <= RS1_D;
             RS2_E       <= RS2_D;
-
-            // --- float data/address ---
-            RD_F_E      <= RD_F_D;
-            RS1_F_E     <= RS1_F_D;
-            RS2_F_E     <= RS2_F_D;
-            RS3_F_E     <= RS3_F_D;
-
-            RD1_F_E     <= RD1_F_D;
-            RD2_F_E     <= RD2_F_D;
-            RD3_F_E     <= RD3_F_D;
         end
 
         // stall = 1 -> giữ nguyên toàn bộ thanh ghi pipeline

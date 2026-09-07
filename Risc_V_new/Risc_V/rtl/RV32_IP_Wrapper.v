@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module RV32IMFA_IP_Wrapper #(
+module RV32IMA_IP_Wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_0000
 )(
     input  wire        ACLK,
@@ -60,7 +60,7 @@ module RV32IMFA_IP_Wrapper #(
     // Load đọc combinational nên không cần stall.
     reg d_stall;
 
-    RV32IMFA  core (
+    RV32IMA  core (
         .clk                (ACLK),
         .rst                (core_rst),
 

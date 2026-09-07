@@ -31,24 +31,6 @@ module execute_stage(
     input  wire [31:0] ResultW,
     input  wire [31:0] ALUResultM,
 
-    // ==========================================
-    // FLOAT PATH
-    // ==========================================
-    input  wire        FPU_StartE,
-    input  wire [4:0]  FPU_Opcode_E,
-
-    input  wire [31:0] RD1_F_E,
-    input  wire [31:0] RD2_F_E,
-    input  wire [31:0] RD3_F_E,
-
-    input  wire [1:0]  ForwardA_F_E,
-    input  wire [1:0]  ForwardB_F_E,
-    input  wire [1:0]  ForwardC_F_E,
-
-    input  wire [31:0] FP_ResultW,
-    input  wire [31:0] FP_ResultM,
-
-    output wire        Stall_FPU_Req,
     output wire        Stall_MDU_Req,
 
     // ==========================================
@@ -66,7 +48,6 @@ module execute_stage(
 );
 
     localparam [6:0] OP_JALR = 7'b1100111;
-    localparam [6:0] OP_FSW  = 7'b0100111;
 
     // ==========================================
     // ALU CONTROL ENCODING FOR MDU DETECT
@@ -81,13 +62,6 @@ module execute_stage(
     localparam ALU_REMU   = 5'b10111;
 
     // ==========================================
-    // FPU CONTROL ENCODING FOR SOURCE SELECT
-    // ==========================================
-    localparam FCVT_S_W  = 5'b01111;
-    localparam FCVT_S_WU = 5'b10000;
-    localparam FMV_W_X   = 5'b10010;
-
-    // ==========================================
     // INTERNAL WIRES
     // ==========================================
     wire [31:0] SrcA_Forwarded;
@@ -95,20 +69,6 @@ module execute_stage(
     wire [31:0] ALU_In_A;
     wire [31:0] ALU_In_B;
     wire [31:0] Int_ALUResultE;
-
-    wire [31:0] SrcA_F_Forwarded;
-    wire [31:0] SrcB_F_Forwarded;
-    wire [31:0] SrcC_F_Forwarded;
-    wire [31:0] FPU_ResultE;
-    wire        FPU_ValidE;
-
-    wire        is_FSW_E;
-    wire        fpu_rs1_from_int;
-    wire [31:0] FPU_RS1_Input;
-
-    wire        IsFPUResultE;
-    reg         fpu_issued;
-    wire        fpu_start_pulse;
 
     wire        IsMResultE;
     wire [31:0] MDU_ResultE;
@@ -125,10 +85,8 @@ module execute_stage(
     wire [31:0] JalrSum;
 
     // ==========================================
-    // FPU / MDU DETECT
+    // MDU DETECT
     // ==========================================
-    assign IsFPUResultE = (ResultSrcE == 2'b11);
-
     assign IsMResultE =
         (ALUControlE == ALU_MUL)    ||
         (ALUControlE == ALU_MULH)   ||
@@ -138,11 +96,6 @@ module execute_stage(
         (ALUControlE == ALU_DIVU)   ||
         (ALUControlE == ALU_REM)    ||
         (ALUControlE == ALU_REMU);
-
-    assign fpu_start_pulse = IsFPUResultE && FPU_StartE && !fpu_issued;
-
-    // Stall toàn pipeline cho tới khi FPU xong
-    assign Stall_FPU_Req = IsFPUResultE && FPU_StartE && !FPU_ValidE;
 
     // Start MDU đúng 1 lần khi lệnh M đứng ở EX
     assign mdu_start_pulse = IsMResultE && !mdu_issued && !MDU_BusyE && !MDU_DoneE;
@@ -170,40 +123,11 @@ module execute_stage(
     );
 
     // ==========================================
-    // FLOAT FORWARDING
-    // ==========================================
-    Mux_3_by_1 forward_fa_mux (
-        .a(RD1_F_E),
-        .b(FP_ResultW),
-        .c(FP_ResultM),
-        .s(ForwardA_F_E),
-        .d(SrcA_F_Forwarded)
-    );
-
-    Mux_3_by_1 forward_fb_mux (
-        .a(RD2_F_E),
-        .b(FP_ResultW),
-        .c(FP_ResultM),
-        .s(ForwardB_F_E),
-        .d(SrcB_F_Forwarded)
-    );
-
-    Mux_3_by_1 forward_fc_mux (
-        .a(RD3_F_E),
-        .b(FP_ResultW),
-        .c(FP_ResultM),
-        .s(ForwardC_F_E),
-        .d(SrcC_F_Forwarded)
-    );
-
-    // ==========================================
     // STORE DATA SELECT
     //
     // SW/SB/SH dùng integer rs2.
-    // FSW dùng floating fs2.
     // ==========================================
-    assign is_FSW_E   = (OpE == OP_FSW);
-    assign WriteDataE = is_FSW_E ? SrcB_F_Forwarded : SrcB_Forwarded;
+    assign WriteDataE = SrcB_Forwarded;
 
     // ==========================================
     // INTEGER ALU INPUT SELECT
@@ -275,67 +199,13 @@ module execute_stage(
     );
 
     // ==========================================
-    // FPU ISSUE CONTROL
-    // Chống re-trigger khi pipeline đang stall chờ FPU.
-    // ==========================================
-    always @(posedge clk) begin
-        if (rst) begin
-            fpu_issued <= 1'b0;
-        end
-        else if (!IsFPUResultE || !FPU_StartE) begin
-            fpu_issued <= 1'b0;
-        end
-        else if (FPU_ValidE) begin
-            fpu_issued <= 1'b0;
-        end
-        else if (fpu_start_pulse) begin
-            fpu_issued <= 1'b1;
-        end
-    end
-
-    // ==========================================
-    // FPU SOURCE SELECT
-    //
-    // Những lệnh này lấy rs1 từ integer RF:
-    // - FCVT.S.W
-    // - FCVT.S.WU
-    // - FMV.W.X
-    //
-    // Các lệnh F khác lấy rs1 từ FP RF.
-    // ==========================================
-    assign fpu_rs1_from_int =
-        (FPU_Opcode_E == FCVT_S_W)  ||
-        (FPU_Opcode_E == FCVT_S_WU) ||
-        (FPU_Opcode_E == FMV_W_X);
-
-    assign FPU_RS1_Input = fpu_rs1_from_int ? SrcA_Forwarded : SrcA_F_Forwarded;
-
-    // ==========================================
-    // FPU
-    // ==========================================
-    FPU u_fpu (
-        .clk       (clk),
-        .rst_n     (~rst),
-        .in_start  (fpu_start_pulse),
-        .in_opcode (FPU_Opcode_E),
-        .in_rs1    (FPU_RS1_Input),
-        .in_rs2    (SrcB_F_Forwarded),
-        .in_rs3    (SrcC_F_Forwarded),
-        .out_data  (FPU_ResultE),
-        .out_valid (FPU_ValidE),
-        .out_stall ()
-    );
-
-    // ==========================================
     // RESULT SELECT
     // Ưu tiên:
-    // FPU result nếu là lệnh FPU
     // MDU result nếu là lệnh M
     // ALU result nếu là lệnh integer thường
     // ==========================================
-    assign ALUResultE = IsFPUResultE ? FPU_ResultE  :
-                        IsMResultE   ? MDU_ResultE  :
-                                       Int_ALUResultE;
+    assign ALUResultE = IsMResultE ? MDU_ResultE
+                                   : Int_ALUResultE;
 
     // ==========================================
     // BRANCH/JUMP LOGIC

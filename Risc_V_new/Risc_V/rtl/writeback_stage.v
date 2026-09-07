@@ -15,7 +15,6 @@ module writeback_stage(
             2'b00: ResultW = ALU_ResultW; // ALU / integer
             2'b01: ResultW = ReadDataW;   // Load / LR / SC status
             2'b10: ResultW = PCPlus4W;    // JAL / JALR
-            2'b11: ResultW = ALU_ResultW; // FPU result đã đi chung ALU_ResultW
             default: ResultW = 32'h00000000;
         endcase
     end

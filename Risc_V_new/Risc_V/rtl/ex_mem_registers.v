@@ -13,14 +13,12 @@ module ex_mem_registers(
     input  wire [1:0]  ResultSrcE,
     input  wire        AtomicE,
     input  wire [4:0]  AmoOpE,
-    input  wire        FPRegWriteE,
     input  wire [2:0]  MemOpE,
     input  wire        CSR_E,
     input  wire        Fence_E,
 
     // --- Data Signals from Execute (E) ---
     input  wire [4:0]  RD_E,
-    input  wire [4:0]  RD_F_E,
     input  wire [31:0] PCPlus4E,
     input  wire [31:0] ALU_ResultE,
     input  wire [31:0] WriteDataE,
@@ -32,13 +30,11 @@ module ex_mem_registers(
     output reg  [1:0]  ResultSrcM,
     output reg         AtomicM,
     output reg  [4:0]  AmoOpM,
-    output reg         FPRegWriteM,
     output reg  [2:0]  MemOpM,
     output reg         CSR_M,
     output reg         Fence_M,
 
     output reg  [4:0]  RD_M,
-    output reg  [4:0]  RD_F_M,
     output reg  [31:0] PCPlus4M,
     output reg  [31:0] ALU_ResultM,
     output reg  [31:0] WriteDataM
@@ -52,13 +48,11 @@ module ex_mem_registers(
             ResultSrcM  <= 2'b00;
             AtomicM     <= 1'b0;
             AmoOpM      <= 5'b00000;
-            FPRegWriteM <= 1'b0;
             MemOpM      <= 3'b000;
             CSR_M       <= 1'b0;
             Fence_M     <= 1'b0;
 
             RD_M        <= 5'b00000;
-            RD_F_M      <= 5'b00000;
             PCPlus4M    <= 32'b0;
             ALU_ResultM <= 32'b0;
             WriteDataM  <= 32'b0;
@@ -71,13 +65,11 @@ module ex_mem_registers(
             ResultSrcM  <= 2'b00;
             AtomicM     <= 1'b0;
             AmoOpM      <= 5'b00000;
-            FPRegWriteM <= 1'b0;
             MemOpM      <= 3'b000;
             CSR_M       <= 1'b0;
             Fence_M     <= 1'b0;
 
             RD_M        <= 5'b00000;
-            RD_F_M      <= 5'b00000;
             PCPlus4M    <= 32'b0;
             ALU_ResultM <= 32'b0;
             WriteDataM  <= 32'b0;
@@ -89,13 +81,11 @@ module ex_mem_registers(
             ResultSrcM  <= ResultSrcE;
             AtomicM     <= AtomicE;
             AmoOpM      <= AmoOpE;
-            FPRegWriteM <= FPRegWriteE;
             MemOpM      <= MemOpE;
             CSR_M       <= CSR_E;
             Fence_M     <= Fence_E;
 
             RD_M        <= RD_E;
-            RD_F_M      <= RD_F_E;
             PCPlus4M    <= PCPlus4E;
             ALU_ResultM <= ALU_ResultE;
             WriteDataM  <= WriteDataE;

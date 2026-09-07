@@ -142,7 +142,7 @@ module tb_top();
     // ============================================================
     // DUT
     // ============================================================
-    RV32IMFA_DualCore_Wrapper #(
+    RV32IMA_DualCore_Wrapper #(
         .CORE0_RESET_ADDR(32'h0000_0000),
         .CORE1_RESET_ADDR(32'h0000_0100)
     ) dut (

@@ -1,0 +1,16 @@
+CACHE/CacheDataArray.sv
+CACHE/CacheTagArray.sv
+CACHE/CacheComparator.sv
+CACHE/CacheController.sv
+CACHE/SetAssociativeCache.sv
+CACHE/SimpleCacheToAxiMaster.sv
+CACHE/AxiSlaveToSimpleCache.sv
+CACHE/CoherenceManager.sv
+CACHE/CacheArchitecture.sv
+AXI4-Interconnect-main/rtl/*.v
+AXI4-Interconnect-main/rtl/common/arbiter/iwrr/*.v
+AXI4-Interconnect-main/rtl/common/encoder/onehot_encoder/*.v
+AXI4-Interconnect-main/rtl/common/decoder/onehot_decoder/*.v
+AXI4-Interconnect-main/rtl/common/edgedet/*.v
+AXI4-Interconnect-main/rtl/common/fifo/sync_fifo/*.v
+AXI4-Interconnect-main/rtl/common/skid_buffer/*.v
