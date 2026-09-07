@@ -1,0 +1,20 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/AxiSlaveToSimpleCache.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module AxiSlaveToSimpleCache
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/CacheArchitecture.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module CacheArchitecture
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/CacheComparator.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module CacheComparator
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/CacheController.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module SharedCacheController
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/CacheDataArray.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module CacheDataArray
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/CacheTagArray.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module CacheTagArray
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/CoherenceManager.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module CoherenceManager
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/SetAssociativeCache.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module SetAssociativeCache
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/SimpleCacheToAxiMaster.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module SimpleCacheToAxiMaster
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "D:/Study/KLTN/MMU/MMU/CACHE/tb_cache_architecture.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module tb_cache_architecture

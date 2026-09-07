@@ -1,0 +1,15 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Thu Aug  6 00:23:28 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_bus_skew -warn_on_violation -file RV32IMFA_DualCore_BoardTop_bus_skew_routed.rpt -pb RV32IMFA_DualCore_BoardTop_bus_skew_routed.pb -rpx RV32IMFA_DualCore_BoardTop_bus_skew_routed.rpx
+| Design       : RV32IMFA_DualCore_BoardTop
+| Device       : 7z030-fbv676
+| Speed File   : -1  PRODUCTION 1.12 2019-11-22
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Bus Skew Report
+
+No bus skew constraints
+

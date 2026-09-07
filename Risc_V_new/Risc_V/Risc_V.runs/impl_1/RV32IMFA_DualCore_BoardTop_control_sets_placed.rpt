@@ -1,0 +1,390 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Thu Aug  6 00:21:04 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_control_sets -verbose -file RV32IMFA_DualCore_BoardTop_control_sets_placed.rpt
+| Design       : RV32IMFA_DualCore_BoardTop
+| Device       : xc7z030
+-------------------------------------------------------------------------------------------------------
+
+Control Set Information
+
+Table of Contents
+-----------------
+1. Summary
+2. Histogram
+3. Flip-Flop Distribution
+4. Detailed Control Set Information
+
+1. Summary
+----------
+
++----------------------------------------------------------+-------+
+|                          Status                          | Count |
++----------------------------------------------------------+-------+
+| Total control sets                                       |   312 |
+|    Minimum number of control sets                        |   312 |
+|    Addition due to synthesis replication                 |     0 |
+|    Addition due to physical synthesis replication        |     0 |
+| Unused register locations in slices containing registers |   121 |
++----------------------------------------------------------+-------+
+* Control sets can be merged at opt_design using control_set_merge or merge_equivalent_drivers
+** Run report_qor_suggestions for automated merging and remapping suggestions
+
+
+2. Histogram
+------------
+
++--------------------+-------+
+|       Fanout       | Count |
++--------------------+-------+
+| Total control sets |   312 |
+| >= 0 to < 4        |     0 |
+| >= 4 to < 6        |     0 |
+| >= 6 to < 8        |     2 |
+| >= 8 to < 10       |    12 |
+| >= 10 to < 12      |     0 |
+| >= 12 to < 14      |     0 |
+| >= 14 to < 16      |     0 |
+| >= 16              |   298 |
++--------------------+-------+
+* Control sets can be remapped at either synth_design or opt_design
+
+
+3. Flip-Flop Distribution
+-------------------------
+
++--------------+-----------------------+------------------------+-----------------+--------------+
+| Clock Enable | Synchronous Set/Reset | Asynchronous Set/Reset | Total Registers | Total Slices |
++--------------+-----------------------+------------------------+-----------------+--------------+
+| No           | No                    | No                     |            4357 |         1302 |
+| No           | No                    | Yes                    |             106 |           78 |
+| No           | Yes                   | No                     |             372 |          108 |
+| Yes          | No                    | No                     |               0 |            0 |
+| Yes          | No                    | Yes                    |             858 |          351 |
+| Yes          | Yes                   | No                     |            5658 |         2721 |
++--------------+-----------------------+------------------------+-----------------+--------------+
+
+
+4. Detailed Control Set Information
+-----------------------------------
+
++----------------------+-----------------------------------------------------------+---------------------------------------------------------------------+------------------+----------------+--------------+
+|     Clock Signal     |                       Enable Signal                       |                           Set/Reset Signal                          | Slice Load Count | Bel Load Count | Bels / Slice |
++----------------------+-----------------------------------------------------------+---------------------------------------------------------------------+------------------+----------------+--------------+
+|  sys_clock_IBUF_BUFG | dut/core1/execute_unit/mdu_unit/cnt[5]_i_1__0_n_0         | reset_rtl_IBUF                                                      |                3 |              6 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/execute_unit/mdu_unit/cnt[5]_i_1_n_0            | reset_rtl_IBUF                                                      |                2 |              6 |         3.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_adder/Out[30]_i_1__0_n_0             |                3 |              8 |         2.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_fma/u_fma_add/Out[30]_i_1_n_0        |                3 |              8 |         2.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_fma/u_fma_mul/Mul_Out[30]_i_1_n_0    |                2 |              8 |         4.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_multiplier/Mul_Out[30]_i_1__0_n_0    |                3 |              8 |         2.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_multiplier/Mul_Out[30]_i_1__2_n_0    |                4 |              8 |         2.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_adder/Out[30]_i_1__2_n_0             |                4 |              8 |         2.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_fma/u_fma_add/Out[30]_i_1__1_n_0     |                2 |              8 |         4.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_fma/u_fma_mul/Mul_Out[30]_i_1__1_n_0 |                2 |              8 |         4.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_adder/s4_exp[8]_i_1__0_n_0           |                3 |              9 |         3.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_fma/u_fma_add/s4_exp[8]_i_1_n_0      |                3 |              9 |         3.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_adder/s4_exp[8]_i_1__2_n_0           |                3 |              9 |         3.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_fma/u_fma_add/s4_exp[8]_i_1__1_n_0   |                3 |              9 |         3.00 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_adder/Out[21]_i_1__0_n_0             |                6 |             22 |         3.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_fma/u_fma_add/Out[21]_i_1_n_0        |                6 |             22 |         3.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_fma/u_fma_mul/Mul_Out[21]_i_1_n_0    |                4 |             22 |         5.50 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_multiplier/Mul_Out[21]_i_1__0_n_0    |                4 |             22 |         5.50 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_multiplier/Mul_Out[21]_i_1__2_n_0    |                9 |             22 |         2.44 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_adder/Out[21]_i_1__2_n_0             |                6 |             22 |         3.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_fma/u_fma_add/Out[21]_i_1__1_n_0     |                6 |             22 |         3.67 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_fma/u_fma_mul/Mul_Out[21]_i_1__1_n_0 |                4 |             22 |         5.50 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/execute_unit/u_fpu/u_fma/B_r[22]                          |                7 |             24 |         3.43 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core0/mem_wb/ALU_ResultM_reg[22]_0                              |                7 |             24 |         3.43 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/execute_unit/u_fpu/u_fma/B_r[22]                          |                7 |             24 |         3.43 |
+|  sys_clock_IBUF_BUFG |                                                           | dut/core1/mem_wb/ALU_ResultM_reg[22]_0                              |                7 |             24 |         3.43 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/FPRegWriteE_reg_0                         | dut/core0/id_ex/reset_rtl_1                                         |                8 |             31 |         3.88 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/FPRegWriteE_reg_0                         | dut/core1/id_ex/reset_rtl_1                                         |                8 |             31 |         3.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_18[0]                    | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_19[0]                    | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_20[0]                    | reset_rtl_IBUF                                                      |               20 |             32 |         1.60 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_14[0]                    | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_15[0]                    | reset_rtl_IBUF                                                      |               15 |             32 |         2.13 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_2[0]                     | reset_rtl_IBUF                                                      |               20 |             32 |         1.60 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_12[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_1[0]                     | reset_rtl_IBUF                                                      |               21 |             32 |         1.52 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_13[0]                    | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_22[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_23[0]                    | reset_rtl_IBUF                                                      |               20 |             32 |         1.60 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_24[0]                    | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_25[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_21[0]                    | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_11[0]                    | reset_rtl_IBUF                                                      |               15 |             32 |         2.13 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_28[0]                    | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_6[0]                     | reset_rtl_IBUF                                                      |               24 |             32 |         1.33 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_7[0]                     | reset_rtl_IBUF                                                      |               21 |             32 |         1.52 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_27[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_8[0]                     | reset_rtl_IBUF                                                      |               25 |             32 |         1.28 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_29[0]                    | reset_rtl_IBUF                                                      |               25 |             32 |         1.28 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_9[0]                     | reset_rtl_IBUF                                                      |               26 |             32 |         1.23 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_26[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_3[0]                     | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_4[0]                     | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_31[0]                    | reset_rtl_IBUF                                                      |               30 |             32 |         1.07 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_5[0]                     | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_30[0]                    | reset_rtl_IBUF                                                      |               24 |             32 |         1.33 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_6[0]                       | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_9[0]                       | reset_rtl_IBUF                                                      |               13 |             32 |         2.46 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_16[0]                      | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_21[0]                      | reset_rtl_IBUF                                                      |               13 |             32 |         2.46 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_26[0]                      | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_7[0]                       | reset_rtl_IBUF                                                      |               15 |             32 |         2.13 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_4[0]                       | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_22[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_18[0]                      | reset_rtl_IBUF                                                      |                9 |             32 |         3.56 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_2[0]                       | reset_rtl_IBUF                                                      |               15 |             32 |         2.13 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_10[0]                      | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_5[0]                       | reset_rtl_IBUF                                                      |               13 |             32 |         2.46 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_1[0]                       | reset_rtl_IBUF                                                      |               23 |             32 |         1.39 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_17[0]                      | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_25[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_30[0]                      | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_8[0]                       | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_20[0]                      | reset_rtl_IBUF                                                      |               23 |             32 |         1.39 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_23[0]                      | reset_rtl_IBUF                                                      |                7 |             32 |         4.57 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_12[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_27[0]                      | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_3[0]                       | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_24[0]                      | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_19[0]                      | reset_rtl_IBUF                                                      |                9 |             32 |         3.56 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_11[0]                      | reset_rtl_IBUF                                                      |               13 |             32 |         2.46 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_13[0]                      | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_15[0]                      | reset_rtl_IBUF                                                      |               13 |             32 |         2.46 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_28[0]                      | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_14[0]                      | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_29[0]                      | reset_rtl_IBUF                                                      |                9 |             32 |         3.56 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/RegWriteW_reg_0[0]                       | reset_rtl_IBUF                                                      |               27 |             32 |         1.19 |
+|  sys_clock_IBUF_BUFG | dut/core1/ex_mem/AtomicM_reg_0[0]                         | reset_rtl_IBUF                                                      |                4 |             32 |         8.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/execute_unit/u_fpu/u_fma/out_res[31]_i_1__1_n_0 | reset_rtl_IBUF                                                      |               20 |             32 |         1.60 |
+|  sys_clock_IBUF_BUFG | dut/core1/execute_unit/mdu_unit/result[31]_i_1__0_n_0     | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/E[0]                                      | reset_rtl_IBUF                                                      |               11 |             32 |         2.91 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/state_reg[0]                              | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_6[0]                     | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_8[0]                     | reset_rtl_IBUF                                                      |               25 |             32 |         1.28 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_12[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_0[0]                     | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_13[0]                    | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_22[0]                    | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_3[0]                     | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_19[0]                    | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_10[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_25[0]                    | reset_rtl_IBUF                                                      |               23 |             32 |         1.39 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_9[0]                     | reset_rtl_IBUF                                                      |               27 |             32 |         1.19 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_23[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_15[0]                    | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_20[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_21[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_30[0]                    | reset_rtl_IBUF                                                      |               26 |             32 |         1.23 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_11[0]                    | reset_rtl_IBUF                                                      |               15 |             32 |         2.13 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_28[0]                    | reset_rtl_IBUF                                                      |               23 |             32 |         1.39 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_16[0]                    | reset_rtl_IBUF                                                      |               23 |             32 |         1.39 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_27[0]                    | reset_rtl_IBUF                                                      |               26 |             32 |         1.23 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_24[0]                    | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_18[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_26[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_1[0]                     | reset_rtl_IBUF                                                      |               20 |             32 |         1.60 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_17[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_29[0]                    | reset_rtl_IBUF                                                      |               26 |             32 |         1.23 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_7[0]                     | reset_rtl_IBUF                                                      |               21 |             32 |         1.52 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_14[0]                    | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_5[0]                     | reset_rtl_IBUF                                                      |               21 |             32 |         1.52 |
+|  sys_clock_IBUF_BUFG | dut/core0/execute_unit/u_fpu/u_fma/out_res[31]_i_1_n_0    | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_4[0]                     | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_31[0]                    | reset_rtl_IBUF                                                      |               25 |             32 |         1.28 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_0[0]                       | reset_rtl_IBUF                                                      |               27 |             32 |         1.19 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_13[0]                      | reset_rtl_IBUF                                                      |               13 |             32 |         2.46 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_14[0]                      | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_1[0]                       | reset_rtl_IBUF                                                      |               21 |             32 |         1.52 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_17[0]                      | reset_rtl_IBUF                                                      |                9 |             32 |         3.56 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_12[0]                      | reset_rtl_IBUF                                                      |               15 |             32 |         2.13 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_19[0]                      | reset_rtl_IBUF                                                      |               11 |             32 |         2.91 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_2[0]                       | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_21[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_18[0]                      | reset_rtl_IBUF                                                      |                9 |             32 |         3.56 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_20[0]                      | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_15[0]                      | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_16[0]                      | reset_rtl_IBUF                                                      |               25 |             32 |         1.28 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_22[0]                      | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_23[0]                      | reset_rtl_IBUF                                                      |                9 |             32 |         3.56 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_10[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_11[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_28[0]                      | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_6[0]                       | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_7[0]                       | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_29[0]                      | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_5[0]                       | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_3[0]                       | reset_rtl_IBUF                                                      |               16 |             32 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_25[0]                      | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_4[0]                       | reset_rtl_IBUF                                                      |               11 |             32 |         2.91 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_9[0]                       | reset_rtl_IBUF                                                      |               10 |             32 |         3.20 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_8[0]                       | reset_rtl_IBUF                                                      |               12 |             32 |         2.67 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_27[0]                      | reset_rtl_IBUF                                                      |                7 |             32 |         4.57 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_24[0]                      | reset_rtl_IBUF                                                      |               22 |             32 |         1.45 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_26[0]                      | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/RegWriteW_reg_30[0]                      | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/AtomicM_reg_0[0]                         | reset_rtl_IBUF                                                      |                8 |             32 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/mem_wb/FPRegWriteW_reg_2[0]                     | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core0/execute_unit/mdu_unit/result[31]_i_1_n_0        | reset_rtl_IBUF                                                      |               24 |             32 |         1.33 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/E[0]                                      | reset_rtl_IBUF                                                      |               14 |             32 |         2.29 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/state_reg[0]                              | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_0[0]                     | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_10[0]                    | reset_rtl_IBUF                                                      |               18 |             32 |         1.78 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_16[0]                    | reset_rtl_IBUF                                                      |               17 |             32 |         1.88 |
+|  sys_clock_IBUF_BUFG | dut/core0/mem_wb/FPRegWriteW_reg_17[0]                    | reset_rtl_IBUF                                                      |               19 |             32 |         1.68 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/mdu_issued_reg[0]                         | reset_rtl_IBUF                                                      |                9 |             35 |         3.89 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/mdu_issued_reg[0]                         | reset_rtl_IBUF                                                      |               11 |             35 |         3.18 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_14                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_0                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_1                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_10                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_12                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_13                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_15                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_17                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_18                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_16                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_2                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_21                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_22                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_24                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_23                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_25                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_26                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_27                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_29                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_20                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_11                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_3                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_28                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_30                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_19                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_6                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_13                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_8                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_20                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_19                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_15                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_31                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_3                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_4                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_17                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_25                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_7                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_30                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_31                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_12                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_14                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_11                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_7                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_15                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_2                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_16                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_17                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_2                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_20                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_1                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_22                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_10                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_9                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_24                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_21                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_3                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_4                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_6                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_11                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_13                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_23                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_5                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_28                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_7                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_0                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_18                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_9                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_22                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_4                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_0                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_5                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_19                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_8                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[10]_9                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_21                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_6                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_1                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_12                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_27                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_14                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_16                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_26                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_0                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_5                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_23                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[12]_10                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_8                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_29                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_13                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_17                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_14                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_14                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_10                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_11                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_18                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_19                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_12                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_7                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_6                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_22                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_23                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_3                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_4                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_6                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_9                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_15                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_13                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_15                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_5                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_1                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_4                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_9                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_2                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_0                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_12                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_8                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_2                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_3                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_7                     |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_1                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_20                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_8                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_11                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_16                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[11]_18                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_5                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[13]_10                   |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/execute_unit/u_fpu/u_fma/add_A_r                | reset_rtl_IBUF                                                      |               11 |             64 |         5.82 |
+|  sys_clock_IBUF_BUFG | dut/core1/execute_unit/u_fpu/u_fma/add_A_r                | reset_rtl_IBUF                                                      |               22 |             64 |         2.91 |
+|  sys_clock_IBUF_BUFG | dut/core0/ex_mem/ALU_ResultM_reg[9]_21                    |                                                                     |               16 |             64 |         4.00 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/FPRegWriteE_reg_0                         | dut/core0/id_ex/reset_rtl_0                                         |               41 |             82 |         2.00 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/FPRegWriteE_reg_0                         | dut/core1/id_ex/reset_rtl_0                                         |               49 |             82 |         1.67 |
+|  sys_clock_IBUF_BUFG | dut/core0/execute_unit/mdu_unit/remainder                 | reset_rtl_IBUF                                                      |               27 |             95 |         3.52 |
+|  sys_clock_IBUF_BUFG | dut/core1/execute_unit/mdu_unit/remainder                 | reset_rtl_IBUF                                                      |               23 |             95 |         4.13 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/FSM_onehot_state_reg[0][0]                | reset_rtl_IBUF                                                      |               53 |            101 |         1.91 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/FSM_onehot_state_reg[0][0]                | reset_rtl_IBUF                                                      |               42 |            101 |         2.40 |
+|  sys_clock_IBUF_BUFG | dut/arbiter/c0_stall                                      | reset_rtl_IBUF                                                      |               31 |            105 |         3.39 |
+|  sys_clock_IBUF_BUFG | dut/arbiter/c1_stall                                      | reset_rtl_IBUF                                                      |               27 |            105 |         3.89 |
+|  sys_clock_IBUF_BUFG |                                                           | reset_rtl_IBUF                                                      |               78 |            106 |         1.36 |
+|  sys_clock_IBUF_BUFG | dut/arbiter/c0_stall                                      | dut/core0/id_ex/SR[0]                                               |               35 |            116 |         3.31 |
+|  sys_clock_IBUF_BUFG | dut/arbiter/c1_stall                                      | dut/core1/id_ex/SR[0]                                               |               37 |            116 |         3.14 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/PC_Write                                  | reset_rtl_IBUF                                                      |               70 |            134 |         1.91 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/PC_Write                                  | reset_rtl_IBUF                                                      |               65 |            138 |         2.12 |
+|  sys_clock_IBUF_BUFG | dut/core1/id_ex/p_1_in                                    | dut/core1/id_ex/reset_rtl                                           |              126 |            311 |         2.47 |
+|  sys_clock_IBUF_BUFG | dut/core0/id_ex/p_1_in                                    | dut/core0/id_ex/reset_rtl                                           |              117 |            311 |         2.66 |
+|  sys_clock_IBUF_BUFG |                                                           |                                                                     |             1302 |           4501 |         3.46 |
++----------------------+-----------------------------------------------------------+---------------------------------------------------------------------+------------------+----------------+--------------+
+
+

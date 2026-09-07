@@ -1,0 +1,41 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  \
+"../../../../rtl/ALU.v" \
+"../../../../rtl/ALU_Decoder.v" \
+"../../../../rtl/Control_Unit.v" \
+"../../../../rtl/FPU.v" \
+"../../../../rtl/FPU_Decoder.v" \
+"../../../../rtl/FP_Add.v" \
+"../../../../rtl/FP_CVT.v" \
+"../../../../rtl/FP_Div.v" \
+"../../../../rtl/FP_FMA.v" \
+"../../../../rtl/FP_Mul.v" \
+"../../../../rtl/FP_Register_File.v" \
+"../../../../rtl/FP_sqrt.v" \
+"../../../../rtl/Main_Decoder.v" \
+"../../../../rtl/Mux_3_by_1.v" \
+"../../../../rtl/PC_Adder.v" \
+"../../../../rtl/PC_module.v" \
+"../../../../rtl/RV32IMFA.v" \
+"../../../../rtl/RV32IMFA_DualCore_Wrapper.v" \
+"../../../../rtl/Register_File.v" \
+"../../../../rtl/Sign_Extend.v" \
+"../../../../rtl/decode_stage.v" \
+"../../../../rtl/ex_mem_registers.v" \
+"../../../../rtl/execute_stage.v" \
+"../../../../rtl/fetch_stage.v" \
+"../../../../rtl/hazard_unit.v" \
+"../../../../rtl/id_ex_registers.v" \
+"../../../../rtl/if_id_registers.v" \
+"../../../../rtl/mem_wb_registers.v" \
+"../../../../rtl/memory_stage.v" \
+"../../../../rtl/mux.v" \
+"../../../../rtl/round_robin_arbiter_2core.v" \
+"../../../../rtl/writeback_stage.v" \
+"../../../../sim/tb_top.v" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

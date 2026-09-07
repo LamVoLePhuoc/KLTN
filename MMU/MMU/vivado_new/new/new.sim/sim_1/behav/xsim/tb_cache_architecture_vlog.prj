@@ -1,0 +1,41 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  \
+"../../../../../../AXI4-Interconnect-main/rtl/ai_dispatcher.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/ai_slave_arbitration.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/arbiter/iwrr/arbiter_iwrr_1cycle.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/axi_interconnect.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/dsp_Ax_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/dsp_B_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/dsp_R_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/dsp_W_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/dsp_read_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/dsp_write_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/edgedet/edgedet.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/fifo/sync_fifo/fifo.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/decoder/onehot_decoder/onehot_decoder.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/encoder/onehot_encoder/onehot_encoder.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/sa_Ax_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/sa_B_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/sa_R_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/sa_W_channel.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/skid_buffer/skid_buffer.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/splitting_4kb_masker.v" \
+"../../../../../../AXI4-Interconnect-main/rtl/common/fifo/sync_fifo/sync_fifo.v" \
+
+sv xil_defaultlib  \
+"../../../../../../CACHE/AxiSlaveToSimpleCache.sv" \
+"../../../../../../CACHE/CacheArchitecture.sv" \
+"../../../../../../CACHE/CacheComparator.sv" \
+"../../../../../../CACHE/CacheController.sv" \
+"../../../../../../CACHE/CacheDataArray.sv" \
+"../../../../../../CACHE/CacheTagArray.sv" \
+"../../../../../../CACHE/CoherenceManager.sv" \
+"../../../../../../CACHE/SetAssociativeCache.sv" \
+"../../../../../../CACHE/SimpleCacheToAxiMaster.sv" \
+"../../../../../../CACHE/tb_cache_architecture.sv" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort
