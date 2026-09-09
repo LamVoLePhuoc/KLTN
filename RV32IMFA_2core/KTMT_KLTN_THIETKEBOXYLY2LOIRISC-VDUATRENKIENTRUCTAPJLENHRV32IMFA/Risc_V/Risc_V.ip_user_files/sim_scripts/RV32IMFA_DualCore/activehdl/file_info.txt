@@ -1,3 +1,0 @@
-RV32IMFA_DualCore_RV32IMFA_DualCore_Bo_0_0.v,verilog,xil_defaultlib,../../../bd/RV32IMFA_DualCore/ip/RV32IMFA_DualCore_RV32IMFA_DualCore_Bo_0_0/sim/RV32IMFA_DualCore_RV32IMFA_DualCore_Bo_0_0.v,incdir="../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef"
-RV32IMFA_DualCore.v,verilog,xil_defaultlib,../../../bd/RV32IMFA_DualCore/sim/RV32IMFA_DualCore.v,incdir="../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef"
-glbl.v,Verilog,xil_defaultlib,glbl.v
