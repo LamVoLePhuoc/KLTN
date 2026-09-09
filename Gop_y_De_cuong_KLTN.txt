@@ -1,0 +1,163 @@
+GÓP Ý CHO "De_cuong_KLTN (1).docx"
+(Đề tài: THIẾT KẾ BỘ VI XỬ LÝ 4 LÕI RISC-V DỰA TRÊN KIẾN TRÚC TẬP LỆNH RV32IMA)
+
+Bản này thay thế bản góp ý trước đó, viết lại theo đúng hướng dẫn của giảng viên.
+File .docx gốc không bị thay đổi. Bản .docx có góp ý (định dạng đẹp, có tô màu
+để dễ phân biệt với nội dung gốc) nằm ở "De_cuong_KLTN_GopY_v2.docx" (xem ghi
+chú ở cuối file này về việc vì sao có "_v2").
+
+============================================================
+A) VIẾT LẠI "TỔNG QUAN ĐỀ TÀI" — ĐẶT VẤN ĐỀ TỪ NHU CẦU ỨNG DỤNG THỰC TẾ
+============================================================
+Giảng viên lưu ý: KHÔNG mở đầu theo kiểu "các đề tài trước làm còn thiếu sót
+nên nhóm em làm bù/mở rộng". Cách đặt vấn đề đúng phải bắt đầu từ một nhu cầu
+ứng dụng thực tế cần đến bộ xử lý đa lõi, rồi mới dẫn dắt vào bài toán kỹ thuật.
+
+Ví dụ mẫu giảng viên đưa ra: trong hệ thống Flight Control (FC) của UAV, cần
+một chip xử lý đa dụng, công suất mạnh để giao tiếp đồng thời với nhiều bộ
+điều khiển/cảm biến khác nhau — khác hẳn vi điều khiển chỉ xử lý một tác vụ
+đơn lẻ như motor control. Nhóm có thể dùng chính ví dụ này hoặc chọn ứng dụng
+khác phù hợp hơn, miễn giữ đúng thứ tự: nhu cầu ứng dụng thực tế trước → dẫn
+ra yêu cầu xử lý đa lõi.
+
+Sau đó khảo sát hướng nghiên cứu thế giới liên quan (ví dụ: multi-core ARM
+dùng cho Flight Control), rồi dẫn vào lý do chọn multi-core RV32 thay vì ARM
+(kiến trúc mở, không tốn phí bản quyền lõi, tùy biến sâu ở mức RTL, phù hợp
+mục tiêu học thuật...).
+
+Tiếp theo mới tới khảo sát tổng quan gồm hai nhóm: (1) các đề tài cùng hướng
+đã làm ở khoa — nêu ưu/nhược điểm/kết quả (để định vị đóng góp mới, không phải
+để so sánh hơn thua); (2) các bài báo quốc tế liên quan multi-core RISC-V /
+multi-core cho ứng dụng nhúng hiệu năng cao — nên tổng hợp thành BẢNG SO SÁNH
+theo tiêu chí cụ thể (số lõi, ISA, tổ chức cache, giao thức coherence, có kiểm
+chứng FPGA thật hay chỉ mô phỏng, có kịch bản nạp chương trình từ bộ nhớ ngoài
+thực tế hay không...) để làm nổi bật khoảng trống nghiên cứu (research gap).
+
+Chỉ sau phần khảo sát tổng quan mới nên trình bày đề xuất kiến trúc, kèm hình
+vẽ kiến trúc tổng thể hệ thống 4 lõi (4-core CPU wrapper).
+
+>> CẦN QUYẾT ĐỊNH / CẦN NHÓM TỰ TÌM:
+   (1) chọn ứng dụng thực tế cụ thể làm mở đầu (UAV Flight Control theo gợi ý
+       của thầy, hoặc ứng dụng khác nhóm thấy phù hợp hơn);
+   (2) tự tìm và tổng hợp các bài báo về multi-core ARM cho Flight Control và
+       các nghiên cứu multi-core RISC-V liên quan để đưa vào bảng so sánh —
+       tôi không có khả năng tra cứu học thuật để cung cấp trích dẫn thật,
+       nhóm cần tự tìm trên IEEE Xplore/Google Scholar và xác nhận lại thông
+       tin trước khi trích dẫn, tuyệt đối không dùng trích dẫn chưa xác minh.
+
+============================================================
+B) VIẾT LẠI "MỤC TIÊU ĐỀ TÀI" — GỘP LẠI ĐÚNG 2 MỤC TIÊU LỚN
+============================================================
+Mục tiêu hiện tại đang liệt kê nhiều gạch đầu dòng rời rạc, ngang hàng nhau.
+Giảng viên đề xuất gom lại thành đúng 2 mục tiêu lớn, các ý hiện có trở thành
+nhiệm vụ con nằm dưới từng mục tiêu:
+
+  Mục tiêu 1: Thiết kế kiến trúc CPU 4 lõi (multi-core) tích hợp bộ nhớ cache
+  (L1/L2), hiện thực bằng SystemVerilog, bao gồm: thiết kế IP cache L1/L2, bộ
+  điều khiển cache với hai thuật toán quan trọng (cấp phát/thay thế kiểu
+  set-associative, và đồng bộ/coherence protocol), cùng bộ điều khiển giao
+  tiếp bus và DMA.
+
+  Mục tiêu 2: Mô phỏng, đánh giá thiết kế và hiện thực trên FPGA.
+
+Lưu ý: Mục tiêu 1 nhắc tới "bộ điều khiển giao tiếp bus + DMA" — đây là khối
+MỚI, đề cương hiện tại hoàn toàn chưa có DMA controller. DMA phục vụ trực tiếp
+cho kịch bản đọc chương trình từ bộ nhớ ngoài nạp vào DRAM (xem mục D).
+
+============================================================
+C) VIẾT LẠI "NỘI DUNG NGHIÊN CỨU / NHIỆM VỤ THỰC HIỆN" — SUY RA TỪ 2 MỤC TIÊU
+============================================================
+Từ Mục tiêu 1: IP lõi xử lý (CPU RV32IMA pipeline 5 tầng), cache L1 (I/D)
+riêng từng lõi, cache L2 dùng chung, bộ điều khiển cache set-associative, bộ
+điều khiển coherence, bộ điều khiển giao tiếp bus (cần chốt AHB hay AXI4, xem
+mục E.1), và bộ điều khiển DMA.
+
+Từ Mục tiêu 2, kịch bản kiểm tra nên chia theo nhiều mức:
+  (1) Waveform-level simulation: chỉ chứng minh đúng logic chức năng cơ bản
+      (tương tự đồ án môn học trước) — mức tối thiểu BẮT BUỘC.
+  (2) Verification bằng UVM: khuyến khích, điểm cộng, đánh giá bài bản hơn
+      trước khi synthesis — KHÔNG bắt buộc.
+  (3) Hardware-level trên FPGA: BẮT BUỘC synthesize chạy thật trên board, có
+      kịch bản đánh giá TỰ ĐỘNG (không thao tác thủ công xem waveform).
+
+>> CẦN QUYẾT ĐỊNH: có làm UVM hay không — nên quyết định sau khi ước lượng lại
+   thời gian còn dư sau phần bắt buộc, vì UVM tự nó là khối lượng đáng kể.
+
+============================================================
+D) KỊCH BẢN KIỂM TRA TRÊN FPGA PHẢI THỰC TẾ (Processor vs Microcontroller)
+============================================================
+Đây là điểm khác biệt cốt lõi giữa Processor (quad-core, đề tài này) và
+Microcontroller (đề tài khác, RV64 đơn nhân) — không được test theo kiểu
+microcontroller.
+
+CÁCH SAI (giảng viên nói rõ các luận văn trước đã làm theo hướng này, không
+thực tế): nạp sẵn chương trình vào BlockRAM của FPGA rồi cho cache/CPU đọc
+thẳng từ đó chạy luôn — chỉ là "kịch bản cho vui".
+
+CÁCH ĐÚNG (bắt buộc): chương trình phải nằm ở bộ nhớ thứ cấp (secondary
+storage) thật, ví dụ thẻ SD, giao tiếp qua bus tốc độ thấp (SPI...). Luồng:
+  (1) CPU đọc chương trình từ thiết bị lưu trữ ngoài
+  (2) nạp (load) lên bộ nhớ chính (DRAM/RAM)
+  (3) CPU thực thi từ bộ nhớ chính (không thực thi trực tiếp từ storage)
+
+Output cũng phải ghi ngược lại thiết bị lưu trữ thật (xử lý → ghi tạm ở
+DRAM/cache → khi "đóng file" thì flush xuống thẻ nhớ/ổ cứng), không chỉ lưu
+tạm trong BlockRAM rồi dừng.
+
+Cần bổ sung vào đề cương một nhiệm vụ mới, rõ ràng: thiết kế/tích hợp giao
+tiếp với bộ nhớ ngoài dạng storage (thẻ SD hoặc tương đương, qua SPI) làm một
+phần bắt buộc của kịch bản kiểm tra trên FPGA.
+
+>> CẦN QUYẾT ĐỊNH: cách hiện thực giao tiếp thẻ SD — tự thiết kế bộ điều khiển
+   SD/SPI từ đầu, hay dùng IP có sẵn của Vivado (AXI SD/SDIO), hay dùng driver
+   SPI mã nguồn mở đã kiểm chứng. Cộng thêm phần DMA (mục B) và kịch bản đánh
+   giá tự động trên FPGA (mục C), tổng khối lượng công việc mới phát sinh so
+   với bản đề cương gốc là không nhỏ — nên xem lại mốc thời gian ~3.5 tháng có
+   còn khả thi hay không (xem thêm E.2).
+
+============================================================
+E) CÁC ĐIỂM KỸ THUẬT KHÁC — GIỮ TỪ BẢN GÓP Ý TRƯỚC, VẪN CÒN HIỆU LỰC
+============================================================
+E.1) Mâu thuẫn chuẩn interconnect AHB/AXI4: "Mục tiêu"/"Phương pháp thực
+     hiện" ghi AHB, nhưng bảng kế hoạch lại ghi AXI4. Cần chốt một chuẩn duy
+     nhất, sửa thống nhất toàn bộ đề cương.
+
+E.2) Mốc thời gian 07/09/2026 - 27/12/2026 (~3.5 tháng): đã được đánh giá khá
+     gấp trước khi có thêm DMA + SD card + kịch bản đánh giá tự động (mục D)
+     — nay càng cần xem lại tiến độ theo tuần cho giai đoạn đầu và có phương
+     án dự phòng nếu không kịp.
+
+E.3) "snoop-invalidate/MESI" đang viết như một, nhưng là hai mức độ phức tạp
+     khác nhau. Cần chốt rõ một trong hai làm mục tiêu chính thức.
+
+E.4) MMU/virtual memory: đề cương (kể cả sau khi viết lại theo Mục tiêu 1/2)
+     vẫn không nhắc tới MMU/TLB/virtual memory dù nhóm đã có RTL phần này.
+     Với trọng tâm mới là cache + bus + DMA + storage thực tế, khối lượng đã
+     tăng đáng kể — cân nhắc kỹ việc đưa MMU vào phạm vi chính thức hay để hẳn
+     ngoài phạm vi cam kết lần này.
+
+E.5) Thiếu danh mục "Tài liệu tham khảo" liệt kê đầy đủ nguồn trích dẫn
+     [1]-[6] trong bản đề cương hiện có — cần kiểm tra, bổ sung nếu thiếu.
+
+E.6) Chưa nêu cụ thể tên/part number kit FPGA dự kiến dùng — nên ghi rõ,
+     đặc biệt vì giờ cần board có khe cắm SD/pin SPI phù hợp (mục D).
+
+E.7) Nếu tái sử dụng kiến trúc cache từng làm trước đây khi mở rộng 4 lõi,
+     lưu ý một bug alias địa chỉ đã từng ghi nhận (D-cache cũ bỏ qua 1 bit
+     địa chỉ khi chọn slot, khiến hai địa chỉ cách nhau 4 byte bị đè dữ liệu
+     lên nhau) — nên đưa việc kiểm tra/khắc phục thành một bước rõ ràng.
+
+E.8) Bảng phân công nên bổ sung ai phụ trách chính các phần mới phát sinh:
+     khảo sát tài liệu/bảng so sánh (mục A), DMA controller (mục B), giao
+     tiếp SD card + kịch bản test tự động trên FPGA (mục D), và UVM nếu chọn
+     làm (mục C).
+
+============================================================
+GHI CHÚ VỀ TÊN FILE .DOCX
+============================================================
+Bản .docx có góp ý ban đầu tên "De_cuong_KLTN_GopY.docx" đang bị khóa (có thể
+đang mở trong Word) nên không ghi đè lại được với nội dung mới ở trên. Bản mới
+nhất, đúng nội dung này, được lưu ở "De_cuong_KLTN_GopY_v2.docx". Sau khi đóng
+file cũ lại, có thể xóa "De_cuong_KLTN_GopY.docx" (nội dung cũ, đã lỗi thời)
+và đổi tên "De_cuong_KLTN_GopY_v2.docx" thành "De_cuong_KLTN_GopY.docx" nếu
+muốn giữ một tên file duy nhất.

@@ -1,0 +1,7 @@
+set_property SRC_FILE_INFO {cfile:C:/Users/Admin/Risc_V/Risc_V.srcs/constrs_1/new/riscv.xdc rfile:../../../Risc_V.srcs/constrs_1/new/riscv.xdc id:1} [current_design]
+set_property src_info {type:XDC file:1 line:2 export:INPUT save:INPUT read:READ} [current_design]
+set_property PACKAGE_PIN Y9 [get_ports sys_clock]
+set_property src_info {type:XDC file:1 line:6 export:INPUT save:INPUT read:READ} [current_design]
+set_property PACKAGE_PIN P16 [get_ports reset_rtl]
+set_property src_info {type:XDC file:1 line:10 export:INPUT save:INPUT read:READ} [current_design]
+set_property PACKAGE_PIN T22 [get_ports led_out]

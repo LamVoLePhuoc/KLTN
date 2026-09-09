@@ -1,0 +1,116 @@
+{
+  "design": {
+    "design_info": {
+      "boundary_crc": "0xEC09D1A65B42F280",
+      "device": "xc7z020clg484-1",
+      "gen_directory": "../../../../Risc_V.gen/sources_1/bd/RV32IMFA_DualCore",
+      "name": "RV32IMFA_DualCore",
+      "rev_ctrl_bd_flag": "RevCtrlBdOff",
+      "synth_flow_mode": "None",
+      "tool_version": "2025.2",
+      "validated": "true"
+    },
+    "design_tree": {
+      "RV32IMFA_DualCore_Bo_0": ""
+    },
+    "ports": {
+      "sys_clock_0": {
+        "type": "clk",
+        "direction": "I",
+        "parameters": {
+          "CLK_DOMAIN": {
+            "value": "RV32IMFA_DualCore_sys_clock_0",
+            "value_src": "default"
+          },
+          "FREQ_HZ": {
+            "value": "100000000",
+            "value_src": "default"
+          },
+          "FREQ_TOLERANCE_HZ": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "PHASE": {
+            "value": "0.0",
+            "value_src": "default"
+          }
+        }
+      },
+      "led_out_0": {
+        "direction": "O"
+      },
+      "reset_rtl_0": {
+        "type": "rst",
+        "direction": "I",
+        "parameters": {
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "POLARITY": {
+            "value": "ACTIVE_LOW",
+            "value_src": "default"
+          }
+        }
+      }
+    },
+    "components": {
+      "RV32IMFA_DualCore_Bo_0": {
+        "vlnv": "xilinx.com:module_ref:RV32IMFA_DualCore_BoardTop:1.0",
+        "ip_revision": "1",
+        "xci_name": "RV32IMFA_DualCore_RV32IMFA_DualCore_Bo_0_0",
+        "xci_path": "ip\\RV32IMFA_DualCore_RV32IMFA_DualCore_Bo_0_0\\RV32IMFA_DualCore_RV32IMFA_DualCore_Bo_0_0.xci",
+        "inst_hier_path": "RV32IMFA_DualCore_Bo_0",
+        "has_run_ip_tcl": "true",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "RV32IMFA_DualCore_BoardTop",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "sys_clock": {
+            "type": "clk",
+            "direction": "I",
+            "parameters": {
+              "CLK_DOMAIN": {
+                "value": "RV32IMFA_DualCore_sys_clock_0",
+                "value_src": "default_prop"
+              }
+            }
+          },
+          "reset_rtl": {
+            "type": "rst",
+            "direction": "I"
+          },
+          "led_out": {
+            "direction": "O"
+          }
+        }
+      }
+    },
+    "nets": {
+      "RV32IMFA_DualCore_Bo_0_led_out": {
+        "ports": [
+          "RV32IMFA_DualCore_Bo_0/led_out",
+          "led_out_0"
+        ]
+      },
+      "reset_rtl_0_1": {
+        "ports": [
+          "reset_rtl_0",
+          "RV32IMFA_DualCore_Bo_0/reset_rtl"
+        ]
+      },
+      "sys_clock_0_1": {
+        "ports": [
+          "sys_clock_0",
+          "RV32IMFA_DualCore_Bo_0/sys_clock"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+verilog xil_defaultlib -i "../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/a415" --include "../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/ec67/hdl" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/ALU.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/ALU_Decoder.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/Control_Unit.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/FPU.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/FPU_Decoder.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/FP_Add.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/FP_Div.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/FP_Mul.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/FP_Register_File.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/Main_Decoder.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/Mux_3_by_1.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/PC_Adder.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/PC_module.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/RV32IMFA.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/Register_File.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/Sign_Extend.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/decode_stage.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/ex_mem_registers.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/execute_stage.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/fetch_stage.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/hazard_unit.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/id_ex_registers.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/if_id_registers.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/mem_wb_registers.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/memory_stage.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/mux.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/writeback_stage.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ipshared/9e55/src/RV32_IP_Wrapper.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ip/RiscV_dualcore_RV32IMFA_IP_Wrapper_0_2/sim/RiscV_dualcore_RV32IMFA_IP_Wrapper_0_2.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ip/RiscV_dualcore_RV32IMFA_IP_Wrapper_0_3/sim/RiscV_dualcore_RV32IMFA_IP_Wrapper_0_3.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ip/RiscV_dualcore_axi_bram_ctrl_0_bram_0_1/sim/RiscV_dualcore_axi_bram_ctrl_0_bram_0.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ip/RiscV_dualcore_clk_wiz_0_1/RiscV_dualcore_clk_wiz_0_clk_wiz.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ip/RiscV_dualcore_clk_wiz_0_1/RiscV_dualcore_clk_wiz_0.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/ip/RiscV_dualcore_axi_interconnect_0_imp_xbar_0/sim/RiscV_dualcore_axi_interconnect_0_imp_xbar_0.v" \
+"../../../../Risc-V.gen/sources_1/bd/RiscV_dualcore/sim/RiscV_dualcore.v" \
+
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

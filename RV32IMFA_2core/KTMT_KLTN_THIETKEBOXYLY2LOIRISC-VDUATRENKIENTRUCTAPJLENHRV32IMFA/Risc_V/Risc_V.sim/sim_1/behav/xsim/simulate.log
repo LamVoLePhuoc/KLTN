@@ -1,0 +1,445 @@
+Time resolution is 1 ps
+[0] Loaded program.mem
+[100000] --- DUAL CORE SIMULATION STARTED ---
+[SHARED WRITE] t=31035000 g0=1 g1=0 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=31035000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[SHARED WRITE] t=31045000 g0=0 g1=1 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=31045000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[ARB] t=31055000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31065000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31075000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31085000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31095000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31105000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31115000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[ARB] t=31125000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=fff00193 wdata=00000000
+[SHARED WRITE] t=31135000 g0=1 g1=0 addr=00000021 memop=101 wdata=00000000
+[ARB] t=31135000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=31145000 g0=0 g1=1 addr=00000021 memop=101 wdata=00000000
+[ARB] t=31145000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=31155000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=31155000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=31165000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=31165000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=31175000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=31175000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=31185000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=31185000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=31195000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=31195000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=31205000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=31205000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=31215000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=31215000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=31225000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=31225000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=31235000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=31245000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=31255000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=31255000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=31265000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=31265000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=31275000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=31275000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=31285000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=31285000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=31295000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=31305000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=31495000 g0=1 g1=0 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=31495000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[SHARED WRITE] t=31505000 g0=0 g1=1 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=31505000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[ARB] t=31515000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31525000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31535000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31545000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31555000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31565000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31575000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31585000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[SHARED WRITE] t=31595000 g0=1 g1=0 addr=00000021 memop=101 wdata=00000000
+[ARB] t=31595000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=31605000 g0=0 g1=1 addr=00000021 memop=101 wdata=00000000
+[ARB] t=31605000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=31615000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=31615000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=31625000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=31625000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=31635000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=31635000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=31645000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=31645000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=31655000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=31655000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=31665000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=31665000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=31675000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=31675000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=31685000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=31685000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=31695000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=31705000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=31715000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=31715000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=31725000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=31725000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=31735000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=31735000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=31745000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=31745000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=31755000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=31765000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=31915000 g0=1 g1=0 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=31915000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[SHARED WRITE] t=31925000 g0=0 g1=1 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=31925000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[ARB] t=31935000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31945000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31955000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31965000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31975000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31985000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=31995000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32005000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[SHARED WRITE] t=32015000 g0=1 g1=0 addr=00000021 memop=101 wdata=00000000
+[ARB] t=32015000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=32025000 g0=0 g1=1 addr=00000021 memop=101 wdata=00000000
+[ARB] t=32025000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=32035000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=32035000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=32045000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=32045000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=32055000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=32055000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=32065000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=32065000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=32075000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=32075000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=32085000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=32085000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=32095000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=32095000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=32105000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=32105000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=32115000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=32125000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=32135000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=32135000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=32145000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=32145000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=32155000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=32155000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=32165000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=32165000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=32175000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=32185000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=32295000 g0=1 g1=0 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=32295000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[SHARED WRITE] t=32305000 g0=0 g1=1 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=32305000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[ARB] t=32315000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32325000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32335000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32345000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32355000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32365000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32375000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32385000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[SHARED WRITE] t=32395000 g0=1 g1=0 addr=00000021 memop=101 wdata=00000000
+[ARB] t=32395000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=32405000 g0=0 g1=1 addr=00000021 memop=101 wdata=00000000
+[ARB] t=32405000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=32415000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=32415000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=32425000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=32425000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=32435000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=32435000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=32445000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=32445000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=32455000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=32455000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=32465000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=32465000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=32475000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=32475000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=32485000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=32485000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=32495000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=32505000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=32515000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=32515000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=32525000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=32525000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=32535000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=32535000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=32545000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=32545000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=32555000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=32565000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=32635000 g0=1 g1=0 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=32635000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[SHARED WRITE] t=32645000 g0=0 g1=1 addr=00000000 memop=010 wdata=ffffffff
+[ARB] t=32645000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000000 rdata=00000000 wdata=ffffffff
+[ARB] t=32655000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32665000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32675000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32685000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32695000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32705000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32715000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32725000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[SHARED WRITE] t=32735000 g0=1 g1=0 addr=00000021 memop=101 wdata=00000000
+[ARB] t=32735000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=32745000 g0=0 g1=1 addr=00000021 memop=101 wdata=00000000
+[ARB] t=32745000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=32755000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=32755000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=32765000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=32765000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=32775000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=32775000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=32785000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=32785000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=32795000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=32795000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=32805000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=32805000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=32815000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=32815000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=32825000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=32825000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=32835000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=32845000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=32855000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=32855000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=32865000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=32865000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=32875000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=32875000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=32885000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=32885000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=32895000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=32905000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=32955000 g0=1 g1=0 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32965000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32975000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32985000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=32995000 g0=1 g1=0 turn=0 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[ARB] t=33005000 g0=0 g1=1 turn=1 re=1 we=0 addr=0000000a rdata=00000077 wdata=00000000
+[SHARED WRITE] t=33015000 g0=1 g1=0 addr=00000021 memop=101 wdata=00000000
+[ARB] t=33015000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=33025000 g0=0 g1=1 addr=00000021 memop=101 wdata=00000000
+[ARB] t=33025000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000021 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=33035000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=33035000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=33045000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=33045000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=33055000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=33055000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=33065000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=33065000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=33075000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=33075000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=33085000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=33085000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=33095000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=33095000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=33105000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=33105000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=33115000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=33125000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=33135000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33135000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33145000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33145000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33155000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33155000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=33165000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33165000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=33175000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33185000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=33245000 g0=1 g1=0 addr=00000004 memop=000 wdata=00000011
+[ARB] t=33245000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=33255000 g0=0 g1=1 addr=00000004 memop=000 wdata=00000011
+[ARB] t=33255000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000004 rdata=00000000 wdata=00000011
+[SHARED WRITE] t=33265000 g0=1 g1=0 addr=00000005 memop=000 wdata=00000022
+[ARB] t=33265000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=33275000 g0=0 g1=1 addr=00000005 memop=000 wdata=00000022
+[ARB] t=33275000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000005 rdata=00000000 wdata=00000022
+[SHARED WRITE] t=33285000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=33285000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=33295000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=33295000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=33305000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=33305000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=33315000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=33315000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=33325000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=33335000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=33345000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33345000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33355000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33355000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33365000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33365000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=33375000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33375000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=33385000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33395000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=33455000 g0=1 g1=0 addr=00000006 memop=000 wdata=00000033
+[ARB] t=33455000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=33465000 g0=0 g1=1 addr=00000006 memop=000 wdata=00000033
+[ARB] t=33465000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000006 rdata=00000000 wdata=00000033
+[SHARED WRITE] t=33475000 g0=1 g1=0 addr=00000007 memop=000 wdata=00000044
+[ARB] t=33475000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[SHARED WRITE] t=33485000 g0=0 g1=1 addr=00000007 memop=000 wdata=00000044
+[ARB] t=33485000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000007 rdata=00000000 wdata=00000044
+[ARB] t=33495000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=33505000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=33515000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33515000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33525000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33525000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33535000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33535000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=33545000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33545000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=33555000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33565000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33615000 g0=1 g1=0 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[ARB] t=33625000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000004 rdata=44332211 wdata=fffff800
+[SHARED WRITE] t=33635000 g0=1 g1=0 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33635000 g0=1 g1=0 turn=0 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33645000 g0=0 g1=1 addr=00000008 memop=010 wdata=00000055
+[ARB] t=33645000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000055
+[SHARED WRITE] t=33655000 g0=1 g1=0 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33655000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[SHARED WRITE] t=33665000 g0=0 g1=1 addr=00000008 memop=001 wdata=00000077
+[ARB] t=33665000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000008 rdata=00000000 wdata=00000077
+[ARB] t=33675000 g0=1 g1=0 turn=0 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33685000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33735000 g0=1 g1=0 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[ARB] t=33745000 g0=0 g1=1 turn=1 re=1 we=0 addr=00000008 rdata=00000077 wdata=00000001
+[SHARED WRITE] t=33825000 g0=1 g1=0 addr=00000100 memop=010 wdata=00000000
+[ARB] t=33825000 g0=1 g1=0 turn=1 re=0 we=1 addr=00000100 rdata=00000000 wdata=00000000
+[SHARED WRITE] t=33835000 g0=0 g1=1 addr=00000100 memop=010 wdata=00000000
+[ARB] t=33835000 g0=0 g1=1 turn=1 re=0 we=1 addr=00000100 rdata=00000000 wdata=00000000
+
+ERROR: TIMEOUT - dual-core program did not finish.
+
+=================================================
+ CORE 0 REGISTER FILE
+=================================================
+c0.x0  = 0x00000000
+c0.x1 = 0x0000000a
+c0.x2 = 0x0000000f
+c0.x3 = 0xffffffff
+c0.x4 = 0xfffff800
+c0.x5 = 0x000007ff
+c0.x6 = 0x00000077
+c0.x7 = 0x00000077
+c0.x8 = 0x00000001
+c0.x9 = 0x00000000
+c0.x10 = 0x00000055
+c0.x11 = 0x00000000
+c0.x12 = 0x00000000
+c0.x13 = 0x00000000
+c0.x14 = 0x00000000
+c0.x15 = 0xfffffff0
+c0.x16 = 0x00000000
+c0.x17 = 0xffffffff
+c0.x18 = 0x00000077
+c0.x19 = 0x00000077
+c0.x20 = 0x00000000
+c0.x21 = 0x00000000
+c0.x22 = 0x00000000
+c0.x23 = 0x00000000
+c0.x24 = 0x00000044
+c0.x25 = 0x44332211
+c0.x26 = 0x00000077
+c0.x27 = 0x00000077
+c0.x28 = 0x000000a0
+c0.x29 = 0x0000017d
+c0.x30 = 0x00000001
+c0.x31 = 0x00000000
+
+=================================================
+ CORE 1 REGISTER FILE
+=================================================
+c1.x0  = 0x00000000
+c1.x1 = 0x0000000a
+c1.x2 = 0x0000000f
+c1.x3 = 0xffffffff
+c1.x4 = 0xfffff800
+c1.x5 = 0x000007ff
+c1.x6 = 0x00000077
+c1.x7 = 0x00000077
+c1.x8 = 0x00000001
+c1.x9 = 0x00000000
+c1.x10 = 0x00000055
+c1.x11 = 0x00000000
+c1.x12 = 0x00000000
+c1.x13 = 0x00000000
+c1.x14 = 0x00000000
+c1.x15 = 0xfffffff0
+c1.x16 = 0x00000000
+c1.x17 = 0xffffffff
+c1.x18 = 0x00000077
+c1.x19 = 0x00000077
+c1.x20 = 0x00000000
+c1.x21 = 0x00000000
+c1.x22 = 0x00000000
+c1.x23 = 0x00000000
+c1.x24 = 0x00000044
+c1.x25 = 0x44332211
+c1.x26 = 0x00000077
+c1.x27 = 0x00000077
+c1.x28 = 0x000000a0
+c1.x29 = 0x0000017d
+c1.x30 = 0x00000001
+c1.x31 = 0x00000000
+
+=================================================
+ SELECTED MEMORY DUMP
+=================================================
+
+# Shared data region: 0x00001000 - 0x0000107C
+mem[0x00001000] = 0x00000013
+mem[0x00001004] = 0x00000013
+mem[0x00001008] = 0x00000013
+mem[0x0000100c] = 0x00000013
+mem[0x00001010] = 0x00000013
+mem[0x00001014] = 0x00000013
+mem[0x00001018] = 0x00000013
+mem[0x0000101c] = 0x00000013
+mem[0x00001020] = 0x00000013
+mem[0x00001024] = 0x00000013
+mem[0x00001028] = 0x00000013
+mem[0x0000102c] = 0x00000013
+mem[0x00001030] = 0x00000013
+mem[0x00001034] = 0x00000013
+mem[0x00001038] = 0x00000013
+mem[0x0000103c] = 0x00000013
+mem[0x00001040] = 0x00000013
+mem[0x00001044] = 0x00000013
+mem[0x00001048] = 0x00000013
+mem[0x0000104c] = 0x00000013
+mem[0x00001050] = 0x00000013
+mem[0x00001054] = 0x00000013
+mem[0x00001058] = 0x00000013
+mem[0x0000105c] = 0x00000013
+mem[0x00001060] = 0x00000013
+mem[0x00001064] = 0x00000013
+mem[0x00001068] = 0x00000013
+mem[0x0000106c] = 0x00000013
+mem[0x00001070] = 0x00000013
+mem[0x00001074] = 0x00000013
+mem[0x00001078] = 0x00000013
+mem[0x0000107c] = 0x00000013
+
+# Done flags:
+mem[0x00000f00] = 0x00000013
+mem[0x00000f04] = 0x00000013
+$finish called at time : 5 ms : File "C:/Users/Admin/Risc_V/Risc_V.srcs/sim_1/new/tb_top.v" Line 318
+INFO: xsimkernel Simulation Memory Usage: 20348 KB (Peak: 20348 KB), Simulation CPU Usage: 10906 ms
