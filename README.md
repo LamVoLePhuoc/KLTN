@@ -1,5 +1,11 @@
 # KLTN — Thiết kế bộ vi xử lý RISC-V đa lõi (RV32IMA)
 
+> **Xem [`Risc_V_new/README.md`](Risc_V_new/README.md) để biết tiến độ/việc-cần-làm
+> mới nhất** — file đó là tracker sống, cập nhật mỗi phiên (bảng khoảng cách so với
+> kiến trúc 4 lõi mục tiêu, quyết định kiến trúc còn treo, sổ rủi ro). File README
+> này (gốc repo) giữ nguyên như một bản ghi chi tiết của phiên xây MMU đầu tiên,
+> không cập nhật lại theo từng phiên sau.
+
 Tài liệu này tổng hợp (1) những thay đổi quan trọng đã thực hiện trong phiên làm việc gần nhất trên nhánh đang phát triển tích cực `Risc_V_new/Risc_V`, và (2) toàn cảnh các thư mục còn lại trong repo, để dùng làm tài liệu chuẩn bị trình bày trước hội đồng.
 
 > Lưu ý: tài liệu này mô tả **trạng thái RTL hiện tại trên đĩa**, được viết dựa trên việc đọc trực tiếp mã nguồn. Phần hành vi (behavior) của các khối mới (đặc biệt là MMU) **chưa được mô phỏng** vì máy soạn tài liệu này không có Vivado/simulator cài sẵn — xem mục "Hạn chế" bên dưới.

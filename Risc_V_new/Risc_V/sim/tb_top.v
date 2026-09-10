@@ -142,10 +142,24 @@ module tb_top();
     // ============================================================
     // DUT
     // ============================================================
-    RV32IMA_DualCore_Wrapper #(
-        .CORE0_RESET_ADDR(32'h0000_0000),
-        .CORE1_RESET_ADDR(32'h0000_0100)
-    ) dut (
+    // NOTE: RV32IMA_DualCore_Wrapper deliberately declares no
+    // parameters (see the "Synthesis note" comment on its core0/core1
+    // instances in RV32IMA_DualCore_Wrapper.v) -- a prior attempt to
+    // parameterize each core's RESET_ADDR broke Vivado synthesis
+    // against a parameterless stub, and was reverted. This testbench
+    // used to pass CORE0_RESET_ADDR/CORE1_RESET_ADDR here, which
+    // doesn't match the wrapper's (parameterless) port list and fails
+    // elaboration. Fixed by dropping the override rather than
+    // re-parameterizing the wrapper, since the wrapper is already
+    // synthesized/implemented on real hardware (see Risc_V.runs/) and
+    // that regression can't be re-verified without Vivado on hand.
+    // Consequence: both cores now boot from the same default
+    // RESET_ADDR (0x0000_1000, set inside RV32IMA.v), not from the
+    // distinct 0x0/0x100 this testbench originally intended -- so
+    // core0/core1 fetch the same instruction stream from `ram`. See
+    // Risc_V_new/README.md for the follow-up needed to restore true
+    // per-core boot addresses safely.
+    RV32IMA_DualCore_Wrapper dut (
         .clk                    (clk),
         .rst                    (rst),
 

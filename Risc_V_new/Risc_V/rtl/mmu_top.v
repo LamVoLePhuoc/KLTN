@@ -24,6 +24,26 @@
 // mmu_enable=0 makes the whole block a transparent VA=PA
 // passthrough: busy stays 0 and fetch_fault/mem_fault never
 // pulse, regardless of what va_fetch/va_mem carry.
+//
+// CAUTION -- not yet safe behind a shared/arbitrated bus:
+// mmu_ptw is instantiated below with `.mem_valid(1'b1)` hardwired,
+// i.e. it assumes ptw_mem_addr/ptw_mem_rdata sit on a dedicated,
+// single-cycle-latency memory port that always services the
+// request it sees. That is true for a private per-core memory (or
+// this repo's tb_mmu_core.v harness), but is NOT true if
+// ptw_mem_req/ptw_mem_addr/ptw_mem_rdata are wired straight into
+// RV32IMA_DualCore_Wrapper.v's round_robin_arbiter_2core: on any
+// cycle the arbiter denies this core's grant, mem_rdata is some
+// other core's data (or garbage), and the walk would silently
+// treat it as the real PTE. Do not connect this port to a shared
+// arbiter as-is. The intended fix is architectural, not a quick
+// patch: once each core has its own L1 D-cache (per
+// address_mapping / the target architecture diagram), PTW reads
+// become ordinary loads through that cache, which already needs a
+// real miss/valid handshake -- route ptw_mem_req/ptw_mem_addr
+// through the D-cache port instead of a bare word arbiter, and
+// this constraint disappears on its own. See Risc_V_new/README.md
+// for the phased plan.
 // ============================================================
 module mmu_top (
     input  wire        clk,
