@@ -31,6 +31,16 @@ module decode_stage(
     output wire        CSR_D,
     output wire        Fence_D,
 
+    // --- NEW: privileged sub-decode (see sys_decoder.v), for
+    // csr_trap_unit.v via id_ex_registers.v/ex_mem_registers.v ---
+    output wire        IsEcallD,
+    output wire        IsEbreakD,
+    output wire        IsMretD,
+    output wire        IsSretD,
+    output wire        IsSfenceVmaD,
+    output wire        IsPrivIllegalD,
+    output wire        IsIllegalOpD,
+
     // --- Dữ liệu integer RF (Output) ---
     output wire [31:0] RD1_D,
     output wire [31:0] RD2_D,
@@ -132,6 +142,30 @@ module decode_stage(
         .In      (InstrD),
         .ImmSrc  (ImmSrcD),
         .Imm_Ext (Imm_Ext_D)
+    );
+
+    // =========================================================
+    // 3b. SYS DECODER (NEW)
+    //
+    // Fine-grain decode of the SYSTEM/funct3==0 sub-space, purely
+    // for csr_trap_unit.v -- see sys_decoder.v's header for why this
+    // is separate from Main_Decoder/Control_Unit's own OP_SYSTEM
+    // handling above (which only needs the write/no-write split).
+    // =========================================================
+    sys_decoder sys_dec (
+        .InstrD         (InstrD),
+        .OpD            (InstrD[6:0]),
+        .IsSystemD      (),
+        .IsCsrD         (),
+        .IsPrivD        (),
+        .IsEcallD       (IsEcallD),
+        .IsEbreakD      (IsEbreakD),
+        .IsMretD        (IsMretD),
+        .IsSretD        (IsSretD),
+        .IsWfiD         (),
+        .IsSfenceVmaD   (IsSfenceVmaD),
+        .IsPrivIllegalD (IsPrivIllegalD),
+        .IsIllegalOpD   (IsIllegalOpD)
     );
 
     // =========================================================

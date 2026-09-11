@@ -45,6 +45,7 @@ module Control_Unit(
     Main_Decoder md (
         .Op         (Op),
         .Funct5     (Funct5),
+        .Funct3     (funct3),  // NEW: see Main_Decoder.v -- already available here, just wasn't forwarded
 
         .RegWrite   (RegWrite),
         .ALUSrc     (ALUSrc),

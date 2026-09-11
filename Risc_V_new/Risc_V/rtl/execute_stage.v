@@ -25,6 +25,12 @@ module execute_stage(
     input  wire [2:0]  BranchTypeE,
     input  wire [6:0]  OpE,
 
+    // NEW: MemOpE doubles as funct3 for CSR ops too (Control_Unit.v
+    // already sets MemOp=funct3 unconditionally, for every
+    // instruction, not just loads/stores) -- reused here instead of
+    // adding a separate CsrFunct3E field.
+    input  wire [2:0]  MemOpE,
+
     // Forwarding int
     input  wire [1:0]  ForwardA_E,
     input  wire [1:0]  ForwardB_E,
@@ -38,6 +44,7 @@ module execute_stage(
     // ==========================================
     output wire [31:0] ALUResultE,
     output wire [31:0] WriteDataE,
+    output wire [31:0] CsrWDataE,    // NEW: see below
     output wire [31:0] PCTargetE,
     output wire        PCSrcE,
 
@@ -128,6 +135,22 @@ module execute_stage(
     // SW/SB/SH dùng integer rs2.
     // ==========================================
     assign WriteDataE = SrcB_Forwarded;
+
+    // ==========================================
+    // CSR WRITE-SOURCE SELECT (NEW)
+    //
+    // CSRRW/RS/RC read rs1 (needs the SAME forwarding as any other
+    // register operand -- reuses SrcA_Forwarded, already computed
+    // above for the ALU, rather than re-deriving forwarding logic
+    // here). CSRRWI/RSI/RCI instead use a literal 5-bit unsigned
+    // immediate carried in the rs1 field position -- already
+    // available as Imm_Ext_E via Sign_Extend.v's ImmSrc=110 case
+    // (Main_Decoder.v sets that ImmSrc for every CSR op). funct3[2]
+    // is exactly the immediate-vs-register bit for CSRxx (000=RW,
+    // 010=RS, 011=RC vs 101=RWI, 110=RSI, 111=RCI) -- MemOpE doubles
+    // as funct3 here, see the port comment above.
+    // ==========================================
+    assign CsrWDataE = MemOpE[2] ? Imm_Ext_E : SrcA_Forwarded;
 
     // ==========================================
     // INTEGER ALU INPUT SELECT

@@ -3,6 +3,11 @@
 module Main_Decoder(
     input  wire [6:0] Op,
     input  wire [4:0] Funct5,   // Instr[31:27] dùng cho RV32A
+    input  wire [2:0] Funct3,   // NEW: Instr[14:12] -- only consulted for OP_SYSTEM,
+                                 // to tell a real CSRxx op (writes rd) apart from the
+                                 // ECALL/EBREAK/MRET/SRET/WFI/SFENCE.VMA sub-space
+                                 // (funct3==0, no rd write -- unchanged from before).
+                                 // See sys_decoder.v for the funct3==0 sub-decode.
 
     output reg        RegWrite,
     output reg        ALUSrc,
@@ -308,13 +313,39 @@ module Main_Decoder(
 
             // ====================================================
             // CSR / SYSTEM
-            // ecall/ebreak/csr...
+            //
+            // Funct3 != 0: a real CSRRW/CSRRS/CSRRC/CSRRWI/CSRRSI/
+            // CSRRCI -- these DO write rd (the CSR's old value), so
+            // unlike every other case here, RegWrite=1. ResultSrc=11
+            // is a previously-unused encoding (writeback_stage.v's
+            // mux only had 00/01/10 before) picked up by
+            // csr_trap_unit.v's CsrRDataM, threaded to WB via
+            // mem_wb_registers.v. ImmSrc=110 (Sign_Extend.v's existing
+            // "CSR imm" case) supplies the zero-extended 5-bit uimm
+            // for the *I variants; execute_stage.v picks between that
+            // and the forwarded rs1 value itself (see CsrWDataE there).
+            //
+            // Funct3 == 0: ECALL/EBREAK/MRET/SRET/WFI/SFENCE.VMA --
+            // none of these write rd, so RegWrite stays 0 exactly as
+            // before. csr_trap_unit.v gets its own separate, finer-
+            // grain decode of this sub-space from sys_decoder.v, not
+            // from here (Main_Decoder.v only needs the write/no-write
+            // distinction for the datapath, not which instruction).
             // ====================================================
             OP_SYSTEM: begin
-                RegWrite  = 1'b0;
-                MemRead   = 1'b0;
-                MemWrite  = 1'b0;
-                CSR       = 1'b1;
+                CSR = 1'b1;
+
+                if (Funct3 != 3'b000) begin
+                    RegWrite  = 1'b1;
+                    ALUSrc    = 1'b0;
+                    ResultSrc = 2'b11;   // CSR read value (new)
+                    ImmSrc    = 3'b110;  // zero-extended uimm (Sign_Extend.v, existing)
+                end
+                else begin
+                    RegWrite  = 1'b0;
+                    MemRead   = 1'b0;
+                    MemWrite  = 1'b0;
+                end
             end
 
             default: begin

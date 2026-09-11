@@ -93,6 +93,16 @@ module tb_mmu_core;
     wire [2:0]  MemOpM;
     wire [31:0] Mem_ReadDataM;
 
+    // This harness models a dedicated, single-cycle-latency memory
+    // (see mmu_core_wrapper.v's "Multi-cycle memory" header note),
+    // so InstrF/Mem_ReadDataM are always valid the instant they're
+    // driven, and stores complete immediately: tie all three real/
+    // valid/done inputs to 1, which reproduces the exact 0-wait
+    // behaviour this testbench was originally written against.
+    wire        Instr_ValidF       = 1'b1;
+    wire        Mem_ReadDataValidM = 1'b1;
+    wire        Mem_WriteDoneM     = 1'b1;
+
     wire [31:0] ResultW;
     wire [31:0] ALU_ResultE_Debug;
 
@@ -139,6 +149,7 @@ module tb_mmu_core;
 
         .PCF                (PCF),
         .InstrF             (InstrF),
+        .Instr_ValidF       (Instr_ValidF),
 
         .Mem_AddrM          (Mem_AddrM),
         .Mem_WriteDataM     (Mem_WriteDataM),
@@ -146,6 +157,8 @@ module tb_mmu_core;
         .Mem_ReadEnM        (Mem_ReadEnM),
         .MemOpM             (MemOpM),
         .Mem_ReadDataM      (Mem_ReadDataM),
+        .Mem_ReadDataValidM (Mem_ReadDataValidM),
+        .Mem_WriteDoneM     (Mem_WriteDoneM),
 
         .ResultW            (ResultW),
         .ALU_ResultE_Debug  (ALU_ResultE_Debug),

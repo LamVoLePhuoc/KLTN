@@ -25,25 +25,17 @@
 // passthrough: busy stays 0 and fetch_fault/mem_fault never
 // pulse, regardless of what va_fetch/va_mem carry.
 //
-// CAUTION -- not yet safe behind a shared/arbitrated bus:
-// mmu_ptw is instantiated below with `.mem_valid(1'b1)` hardwired,
-// i.e. it assumes ptw_mem_addr/ptw_mem_rdata sit on a dedicated,
-// single-cycle-latency memory port that always services the
-// request it sees. That is true for a private per-core memory (or
-// this repo's tb_mmu_core.v harness), but is NOT true if
-// ptw_mem_req/ptw_mem_addr/ptw_mem_rdata are wired straight into
-// RV32IMA_DualCore_Wrapper.v's round_robin_arbiter_2core: on any
-// cycle the arbiter denies this core's grant, mem_rdata is some
-// other core's data (or garbage), and the walk would silently
-// treat it as the real PTE. Do not connect this port to a shared
-// arbiter as-is. The intended fix is architectural, not a quick
-// patch: once each core has its own L1 D-cache (per
-// address_mapping / the target architecture diagram), PTW reads
-// become ordinary loads through that cache, which already needs a
-// real miss/valid handshake -- route ptw_mem_req/ptw_mem_addr
-// through the D-cache port instead of a bare word arbiter, and
-// this constraint disappears on its own. See Risc_V_new/README.md
-// for the phased plan.
+// Multi-cycle memory: `ptw_mem_valid` (below) is a real input, not
+// a hardcoded constant -- mmu_ptw's own S_L1/S_L0 states already
+// re-drive mem_req/mem_addr and simply wait for another cycle
+// whenever mem_valid is low (see mmu_ptw.v), so no FSM change was
+// needed there, only threading a real signal in here instead of
+// tying it to 1'b1. The caller (mmu_core_wrapper.v) is responsible
+// for driving ptw_mem_valid = "ptw_mem_rdata is valid for the
+// address currently on ptw_mem_addr" -- for a shared/arbitrated or
+// AXI-backed bus, that is NOT the same cycle the address was
+// asserted, and it is on the caller to get this right (see
+// mmu_ip_wrapper.v for a real AXI4 example).
 // ============================================================
 module mmu_top (
     input  wire        clk,
@@ -73,6 +65,7 @@ module mmu_top (
     output wire        ptw_mem_req,
     output wire [31:0] ptw_mem_addr,
     input  wire [31:0] ptw_mem_rdata,
+    input  wire        ptw_mem_valid,  // 1 exactly when ptw_mem_rdata is valid for ptw_mem_addr
 
     // Combined stall contribution: OR this into Stall_Core_External
     output wire        busy
@@ -199,7 +192,7 @@ module mmu_top (
         .mem_req(ptw_mem_req),
         .mem_addr(ptw_mem_addr),
         .mem_rdata(ptw_mem_rdata),
-        .mem_valid(1'b1)
+        .mem_valid(ptw_mem_valid)
     );
 
     assign walk_vpn = r_walk_vpn;

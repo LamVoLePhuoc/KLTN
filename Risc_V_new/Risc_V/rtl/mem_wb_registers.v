@@ -12,13 +12,15 @@ module mem_wb_registers(
     input  wire [31:0] PCPlus4M,
     input  wire [31:0] ALU_ResultM,
     input  wire [31:0] ReadDataM,
+    input  wire [31:0] CsrRDataM,   // NEW: see writeback_stage.v's ResultSrcW==2'b11 case
 
     output reg         RegWriteW,
     output reg  [1:0]  ResultSrcW,
     output reg  [4:0]  RD_W,
     output reg  [31:0] PCPlus4W,
     output reg  [31:0] ALU_ResultW,
-    output reg  [31:0] ReadDataW
+    output reg  [31:0] ReadDataW,
+    output reg  [31:0] CsrRDataW
 );
 
     always @(posedge clk) begin
@@ -29,6 +31,7 @@ module mem_wb_registers(
             PCPlus4W    <= 32'b0;
             ALU_ResultW <= 32'b0;
             ReadDataW   <= 32'b0;
+            CsrRDataW   <= 32'b0;
         end
         else if (flush) begin
             RegWriteW   <= 1'b0;
@@ -37,6 +40,7 @@ module mem_wb_registers(
             PCPlus4W    <= 32'b0;
             ALU_ResultW <= 32'b0;
             ReadDataW   <= 32'b0;
+            CsrRDataW   <= 32'b0;
         end
         else if (!stall) begin
             RegWriteW   <= RegWriteM;
@@ -45,6 +49,7 @@ module mem_wb_registers(
             PCPlus4W    <= PCPlus4M;
             ALU_ResultW <= ALU_ResultM;
             ReadDataW   <= ReadDataM;
+            CsrRDataW   <= CsrRDataM;
         end
     end
 

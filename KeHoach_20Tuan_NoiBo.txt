@@ -1,0 +1,93 @@
+LỊCH TRÌNH CHI TIẾT THEO TUẦN — DÙNG NỘI BỘ NHÓM
+(Được rút gọn khỏi đề cương chính thức để đáp ứng giới hạn 4 trang A4;
+ lưu riêng tại đây để nhóm vẫn dùng theo dõi tiến độ hằng tuần.)
+
+Phạm vi: 07/09/2026 - 25/01/2027 (20 tuần)
+Lâm = Võ Lê Phước Lâm - 23520838 | Lam = Vũ Thành Lam - 23520840
+
+Tuần 1 (07/09-13/09, đã hoàn thành)
+  Lâm: Hoàn thiện đề cương chi tiết.
+  Lam: Hoàn thiện address mapping (VA/PA, tag/index/offset cache L1/L2).
+  Mốc: Đề cương và address mapping hoàn chỉnh; cả nhóm chốt kiến trúc tổng thể.
+
+Tuần 2 (14/09-20/09)
+  Lâm: Viết testbench đơn vị cho TLB (hit/miss/refill) và PTW (page-walk 2 cấp, fault not-present/permission), kiểm chứng bằng page table mẫu.
+  Lam: Thiết kế kiến trúc AHB interconnect (core-L2) và AXI system bus (L2/DMA-DRAM/ngoại vi); bắt đầu thiết kế DMA controller (register interface, FSM cơ bản).
+
+Tuần 3 (21/09-27/09)
+  Lâm: Thiết kế và bắt đầu RTL Cache L1 (tag array, data array, FSM hit/miss, set-associative).
+  Lam: Tiếp tục DMA controller - cơ chế đọc/ghi block giữa hai vùng nhớ qua AXI, cờ done/interrupt báo CPU.
+
+Tuần 4 (28/09-04/10)
+  Lâm: Hoàn thiện Cache L1 (thuật toán thay thế set-associative), viết testbench L1 riêng.
+  Lam: Hoàn thiện DMA controller cơ bản (mem-to-mem, chưa nối SD).
+  Mốc: MMU/TLB, Cache L1, DMA v1 PASS kiểm tra đơn vị.
+
+Tuần 5 (05/10-11/10)
+  Lâm: Tích hợp lõi đơn - RV32IMA + Cache L1 + MMU thành một khối, testbench I/M/A đối chiếu Spike.
+  Lam: Rà soát/hỗ trợ tích hợp lõi đơn, chuẩn bị khung AHB interconnect cho bước nhân 4 lõi.
+  Mốc: Nội dung 2 hoàn tất.
+
+Tuần 6 (12/10-18/10)
+  Lâm: Nhân bản lõi đơn (đã có Cache L1 + MMU) thành 4 lõi, đấu nối từng lõi vào AHB interconnect.
+  Lam: Hoàn thiện AHB interconnect thật (arbiter nhiều lõi).
+
+Tuần 7 (19/10-25/10)
+  Lâm: Hỗ trợ debug kết nối 4 lõi - interconnect.
+  Lam: Thiết kế và RTL Cache L2 dùng chung (tag/data array, FSM).
+
+Tuần 8 (26/10-01/11)
+  Lâm: Bắt đầu xây dựng môi trường UVM cho Cache L1 + MMU.
+  Lam: Tích hợp Cache L2 vào hệ thống qua AHB; MESI bản tối giản (Valid/Invalid).
+
+Tuần 9 (02/11-08/11)
+  Lâm: Tiếp tục UVM cache L1/MMU.
+  Lam: Mở rộng MESI đủ 4 trạng thái (Modified/Exclusive/Shared/Invalid), quản lý quyền ghi độc quyền.
+
+Tuần 10 (09/11-15/11)
+  Lâm: Cùng Lam xây dựng testbench producer/consumer trên 4 lõi.
+  Lam: Xây dựng UVM cho Cache L2 và coherence manager; testbench producer/consumer trên 4 lõi.
+  Mốc: Nội dung 3 hoàn tất, coherence PASS mô phỏng.
+
+Tuần 11 (16/11-22/11)
+  Lâm: Thiết kế bộ điều khiển SD card/SPI (dùng IP Vivado), chuẩn bị đấu vào AXI system bus.
+  Lam: Hoàn thiện DMA đầy đủ - nối DMA vào AXI system bus thật, hỗ trợ transfer với nguồn ngoài.
+  Mốc: Tuần trọng tâm của khối DMA theo yêu cầu của giảng viên hướng dẫn.
+
+Tuần 12 (23/11-29/11)
+  Lâm: Ghép SD/SPI controller - DMA - AXI system bus, test đọc thử một block từ mô hình SD giả lập.
+  Lam: Hỗ trợ debug đường DMA-SD, hoàn thiện UVM còn lại.
+  Mốc: Đường SD - DMA - DRAM chạy được trong mô phỏng.
+
+Tuần 13 (30/11-06/12)
+  Cả hai: Tích hợp toàn hệ thống lần 1 (4 lõi + Cache L1/L2 + MESI + AHB + AXI + DMA + SD/SPI), dành trọn tuần để debug tích hợp, không thêm tính năng mới.
+  Mốc: Tuần rủi ro tiến độ cao nhất.
+
+Tuần 14 (07/12-13/12)
+  Cả hai: Fix lỗi tích hợp, hoàn thiện testbench toàn hệ thống.
+  Mốc: Demo mô phỏng RTL bắt buộc PASS.
+
+Tuần 15 (14/12-20/12)
+  Cả hai: Tổng hợp thiết kế bằng Vivado (synthesis), đánh giá tài nguyên LUT/FF/BRAM.
+
+Tuần 16 (21/12-27/12)
+  Cả hai: Bắt đầu bring-up FPGA thật trên kit AMD Virtex UltraScale+ VCU129 (clock, reset, I/O, khe SD vật lý).
+
+Tuần 17 (28/12-03/01)
+  Cả hai: Debug bring-up FPGA - giai đoạn thường phát sinh khác biệt so với mô phỏng, cần chừa đủ thời gian.
+
+Tuần 18 (04/01-10/01)
+  Cả hai: Chạy kịch bản tự động trên FPGA thật: SD - DMA - DRAM - CPU thực thi - ghi ngược SD; đo hiệu năng/tốc độ quad-core thực tế.
+  Mốc: Demo phần cứng FPGA bắt buộc PASS.
+
+Tuần 19 (11/01-17/01)
+  Dự phòng - fix lỗi FPGA nếu tuần 18 chưa đạt, hoặc hoàn thiện UVM còn thiếu. Không xếp công việc mới bắt buộc vào tuần này.
+
+Tuần 20 (18/01-24/01)
+  Cả hai: Viết Báo cáo chi tiết/tóm tắt, làm slide, dựng video demo, rà soát nội dung khớp thực tế đã làm.
+  Mốc: Nộp báo cáo trước hoặc đúng ngày 25/01/2027.
+
+Rủi ro cần lưu ý:
+- Tuần 5 lệch ~1 tuần so với mốc gốc trong đề cương — có 4 tuần đệm ở cuối (17-20) để bù.
+- Tuần 13 (tích hợp toàn hệ thống lần đầu) là điểm dễ trễ nhất trong mọi dự án phần cứng.
+- Tuần 16-18 (bring-up FPGA thật) thường phát sinh vấn đề không lường trước — không nên rút ngắn.

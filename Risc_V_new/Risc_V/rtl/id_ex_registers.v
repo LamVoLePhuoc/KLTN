@@ -27,6 +27,13 @@ module id_ex_registers(
     input  wire         Fence_D,
     input  wire [6:0]   OpD,
 
+    // --- NEW: trap/exception tagging, packed as one bus purely to
+    // keep this pipeline-register file's port count manageable --
+    // see RV32IMA.v for the bit assignment (unpacked back into named
+    // signals there, where csr_trap_unit.v actually consumes them).
+    input  wire [7:0]   ExcFlagsD,
+    input  wire [31:0]  InstrD,
+
     // --- Integer data từ Decode stage ---
     input  wire [31:0]  RD1_D,
     input  wire [31:0]  RD2_D,
@@ -58,6 +65,10 @@ module id_ex_registers(
     output reg          CSR_E,
     output reg          Fence_E,
     output reg  [6:0]   OpE,
+
+    // --- NEW: see the matching input above ---
+    output reg  [7:0]   ExcFlagsE,
+    output reg  [31:0]  InstrE,
 
     // --- Integer data sang Execute stage ---
     output reg  [31:0]  RD1_E,
@@ -93,6 +104,8 @@ module id_ex_registers(
             CSR_E       <= 1'b0;
             Fence_E     <= 1'b0;
             OpE         <= 7'b0000000;
+            ExcFlagsE   <= 8'b0;
+            InstrE      <= 32'h00000013;
 
             // =====================================================
             // RESET: clear integer data
@@ -130,6 +143,8 @@ module id_ex_registers(
             CSR_E       <= 1'b0;
             Fence_E     <= 1'b0;
             OpE         <= 7'b0000000;
+            ExcFlagsE   <= 8'b0;
+            InstrE      <= 32'h00000013;
 
             RD1_E       <= 32'b0;
             RD2_E       <= 32'b0;
@@ -167,6 +182,8 @@ module id_ex_registers(
             CSR_E       <= CSR_D;
             Fence_E     <= Fence_D;
             OpE         <= OpD;
+            ExcFlagsE   <= ExcFlagsD;
+            InstrE      <= InstrD;
 
             // --- integer data ---
             RD1_E       <= RD1_D;
