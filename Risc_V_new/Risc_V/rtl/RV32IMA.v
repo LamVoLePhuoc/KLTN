@@ -433,7 +433,14 @@ module RV32IMA #(
         .clk         (clk),
         .rst         (rst),
         .stall       (Stall_Core_External),
-        .flush       (FlushM),
+        // A trap or xRET is resolved while the responsible instruction
+        // is in M.  At that same edge the younger instruction currently
+        // in E must not be allowed to enter M, otherwise it can execute
+        // after the redirect (for example, a zero word fetched past the
+        // end of a trap handler can immediately raise a second illegal-
+        // instruction trap).  FlushD_eff/FlushE_eff only clear IF/ID and
+        // ID/EX; this EX/MEM flush is what makes the redirect precise.
+        .flush       (FlushM | TrapTakenM),
 
         .RegWriteE   (RegWriteE),
         .MemWriteE   (MemWriteE),
@@ -571,7 +578,13 @@ module RV32IMA #(
         .clk         (clk),
         .rst         (rst),
         .stall       (Stall_Core_External),
-        .flush       (1'b0),
+        // Do not let the instruction that raised an exception commit a
+        // register write.  This matters for a faulting load: returning a
+        // forced zero is not sufficient, because architecturally the
+        // destination register must remain unchanged.  TrapTakenM also
+        // covers MRET/SRET; flushing their WB slot is harmless because
+        // those instructions do not write an integer destination.
+        .flush       (TrapTakenM),
 
         .RegWriteM   (RegWriteM),
         .ResultSrcM  (ResultSrcM),
