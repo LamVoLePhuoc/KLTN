@@ -1,0 +1,16 @@
+node:internal/fs/promises:697
+  return new FileHandle(await PromisePrototypeThen(
+                        ^
+
+Error: ENOENT: no such file or directory, open 'C:\Users\ADMIN\Documents\GitHub\KLTN\output\BaoVeDeCuong_QuadCore_RV32IMA_v3_Diagram.pptx'
+    at async open (node:internal/fs/promises:697:25)
+    at async Object.readFile (node:internal/fs/promises:1348:14)
+    at async e.load (file:///C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/@oai/artifact-tool/dist/artifact_tool.mjs:3130:28783)
+    at async file:///C:/Users/ADMIN/Documents/GitHub/KLTN/.slide_work/verify_final_v3.mjs:4:43 {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ADMIN\\Documents\\GitHub\\KLTN\\output\\BaoVeDeCuong_QuadCore_RV32IMA_v3_Diagram.pptx'
+}
+
+Node.js v24.19.0

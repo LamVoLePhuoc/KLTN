@@ -11,6 +11,13 @@ module RV32IMA #(
     input  wire [31:0] Snoop_Addr,
     input  wire        Snoop_WE,
 
+    // Physical address of the current M-stage memory access -- fixes
+    // the LR/SC VA-vs-PA bug (see memory_stage.v's header). Callers
+    // with no MMU (VA=PA transparently) should tie this to this
+    // module's own Mem_AddrM output; callers with a real MMU
+    // (mmu_core_wrapper.v) wire in the MMU's own pa_mem instead.
+    input  wire [31:0] Mem_PhysAddrM,
+
     // IF
     output wire [31:0] PCF,
     input  wire [31:0] InstrF,
@@ -482,6 +489,8 @@ module RV32IMA #(
 
         .ALU_ResultM   (ALUResultM),
         .WriteDataM    (WriteDataM),
+
+        .Mem_PhysAddrM (Mem_PhysAddrM),
 
         .Snoop_Addr    (Snoop_Addr),
         .Snoop_WE      (Snoop_WE),

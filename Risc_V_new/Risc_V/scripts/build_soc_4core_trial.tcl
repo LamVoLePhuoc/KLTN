@@ -2,15 +2,28 @@
 # build_soc_4core_trial.tcl
 #
 # Second architecture trial fit: the FULL 4-core system (4x
-# core_l1_wrapper -> coherence_manager [L2 + MESI directory + the
-# AHB-stand-in arbiter] -> quad_core_axi_wrapper) wired into Vivado
-# stock AXI4 IP. This is a separate, new script -- it does NOT
-# modify build_soc_mmu_trial.tcl (the earlier 1-core, no-cache trial)
-# or any other existing file, per instruction.
+# core_l1_wrapper -> AHB-Lite -> coherence_manager [L2 + MESI directory
+# + arbiter] -> quad_core_axi_wrapper_ahb) wired into Vivado stock AXI4
+# IP. This is a separate, new script -- it does NOT modify
+# build_soc_mmu_trial.tcl (the earlier 1-core, no-cache trial) or any
+# other existing file, per instruction.
+#
+# UPDATED (Risc_V_new/README.md mục 4 -- FINAL architecture decision):
+# the bus between the 4 cores and the rest of the system (the diagram's
+# "HIGH-SPEED BUS (AHB)") is AHB-Lite -- this script now instantiates
+# cpu0 as quad_core_axi_wrapper_ahb (wraps quad_core_soc_ahb.v, the
+# AHB-Lite SoC variant, see that file's own header + mục -0.25.2), not
+# quad_core_axi_wrapper (which wraps the earlier direct-wire
+# quad_core_soc.v). Every diagram/comment below is updated to match;
+# quad_core_soc.v/quad_core_axi_wrapper.v remain valid, working files
+# (still used by scripts/build_soc_zu5ev_boot.tcl's registered-but-
+# unused reference sources) -- just no longer what this script builds
+# by default.
 #
 # WHAT THIS BUILDS:
 #
-#   cpu0 (quad_core_axi_wrapper: 4 cores + L1 I$/D$ + L2 + MESI)
+#   cpu0 (quad_core_axi_wrapper_ahb: 4 cores + L1 I$/D$ + L2 + MESI,
+#         AHB-Lite between cores and L2/coherence -- see header above)
 #              M_AXI (single combined R/W master)
 #                     |            dma0 (axi_cdma)
 #                     |               M_AXI
@@ -29,12 +42,13 @@
 #
 # CHANGES FROM build_soc_mmu_trial.tcl (the 1-core version), all per
 # instruction:
-#   - 4 cores (quad_core_axi_wrapper), not 1 (mmu_ip_wrapper) --
-#     wired through coherence_manager.v's L2/MESI/arbiter, so this
-#     script only ever touches ONE AXI master from the CPU side
-#     (unlike the 1-core script's separate IMEM/DMEM masters --
-#     coherence_manager.v already serializes everything onto one
-#     mem_* port before this wrapper's AXI logic ever sees it).
+#   - 4 cores (quad_core_axi_wrapper_ahb), not 1 (mmu_ip_wrapper) --
+#     wired through coherence_manager.v's L2/MESI/arbiter (now reached
+#     through the AHB-Lite bridge -- see above), so this script only
+#     ever touches ONE AXI master from the CPU side (unlike the 1-core
+#     script's separate IMEM/DMEM masters -- coherence_manager.v
+#     already serializes everything onto one mem_* port before this
+#     wrapper's AXI logic ever sees it).
 #   - Interrupt controller (axi_intc) and the second BRAM target
 #     (the "SRAM Controller + SRAM" stand-in) are DROPPED entirely,
 #     per instruction -- only DMA (axi_cdma) and one memory target
@@ -111,6 +125,10 @@ set new_sources {
     core_l1_wrapper.v
     l2_cache.v
     coherence_manager.v
+    ahb_lite_l1_adapter.v
+    ahb_lite_l1_slave_adapter.v
+    quad_core_soc_ahb.v
+    quad_core_axi_wrapper_ahb.v
     quad_core_soc.v
     quad_core_axi_wrapper.v
 }
@@ -168,9 +186,9 @@ set IC_ARESETN [get_bd_pins  $rst0/interconnect_aresetn]
 #---------------------------------------------------------------
 # 3. CPU (4-core, cache+coherence integrated, AXI4 master)
 #---------------------------------------------------------------
-puts "--> [3] Instantiating cpu0 = quad_core_axi_wrapper"
+puts "--> [3] Instantiating cpu0 = quad_core_axi_wrapper_ahb (AHB-Lite SoC variant -- final choice, see header)"
 
-set cpu0 [create_bd_cell -type module -reference quad_core_axi_wrapper cpu0]
+set cpu0 [create_bd_cell -type module -reference quad_core_axi_wrapper_ahb cpu0]
 # Stagger each core's boot address by 0x1000 so 4 independent program
 # regions are possible in mem_ctrl (all cores otherwise default to
 # the same RESET_ADDR, which -- like RV32IMA_DualCore_Wrapper.v's two

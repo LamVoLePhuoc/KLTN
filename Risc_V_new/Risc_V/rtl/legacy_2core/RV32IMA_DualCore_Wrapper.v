@@ -115,6 +115,16 @@ module RV32IMA_DualCore_Wrapper(
         .Fetch_PageFault_In (1'b0),
         .Data_PageFault_In  (1'b0),
 
+        // NEW (same sanctioned exception as above, a later session):
+        // RV32IMA.v gained a required Mem_PhysAddrM input for the
+        // LR/SC VA-vs-PA fix (memory_stage.v's header). No MMU in
+        // front of this design (VA=PA transparently -- c0_mem_addr
+        // already IS the physical address, this design has no
+        // translation at all), so looping Mem_AddrM back into it is
+        // exact identity -- preserves this file's exact behaviour,
+        // same reasoning as the Fetch/Data_PageFault_In tie-off above.
+        .Mem_PhysAddrM      (c0_mem_addr),
+
         // Debug
         .ResultW            (Core0_ResultW),
         .ALU_ResultE_Debug  (Core0_ALU_ResultE_Debug)
@@ -151,6 +161,9 @@ module RV32IMA_DualCore_Wrapper(
         // NEW: see core0's identical comment above.
         .Fetch_PageFault_In (1'b0),
         .Data_PageFault_In  (1'b0),
+
+        // NEW: see core0's identical comment above (LR/SC VA-vs-PA fix).
+        .Mem_PhysAddrM      (c1_mem_addr),
 
         // Debug
         .ResultW            (Core1_ResultW),

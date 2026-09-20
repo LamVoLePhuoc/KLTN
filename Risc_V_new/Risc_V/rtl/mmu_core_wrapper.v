@@ -11,7 +11,10 @@
 //
 // External port shape matches RV32IMA (drop-in replacement):
 // PCF/InstrF and the Mem_* bus now carry physical addresses
-// instead of virtual ones. RV32IMA.v itself was not touched.
+// instead of virtual ones. RV32IMA.v itself gained a small,
+// additive Mem_PhysAddrM input since this file was first written
+// (see below and memory_stage.v's header) -- every other part of
+// its port shape is unchanged.
 //
 // The core's own Stall_Core_External input (already used for
 // the MDU and for AXI store waits in RV32_IP_Wrapper.v) is
@@ -22,15 +25,18 @@
 // is then byte-for-byte identical to instantiating RV32IMA
 // directly.
 //
-// NOTE (flagged, not fixed here): memory_stage's LR/SC
-// reservation match compares Snoop_Addr (physical, coming from
-// another core) against ALU_ResultM, which above the MMU is a
-// *virtual* address. Cross-core atomics are only guaranteed
-// correct today if every core maps shared atomic locations
-// through an identical VA->PA mapping. Making LR/SC fully safe
-// under independent per-core page tables needs changes to
-// memory_stage / the arbiter's snoop path, which this task did
-// not ask for and is not done here.
+// FIXED (was previously flagged as a real, un-fixed bug here --
+// see Risc_V_new/README.md's risk register): memory_stage.v's LR/SC
+// reservation match used to compare Snoop_Addr (physical, coming
+// from another core) against ALU_ResultM, which above the MMU is a
+// *virtual* address -- correct only by coincidence, when a core's
+// own VA->PA mapping happened to be the identity function. Fixed by
+// adding RV32IMA.v's new Mem_PhysAddrM input (see memory_stage.v's
+// header for the full reasoning) and wiring this wrapper's own
+// already-computed pa_mem into it below -- reservation tracking and
+// the snoop compare are now both in the physical domain, matching
+// Snoop_Addr's domain exactly, regardless of this core's own page
+// table.
 //
 // UPDATED: the core now has a real trap/exception unit
 // (csr_trap_unit.v, instantiated inside RV32IMA.v) that
@@ -277,6 +283,17 @@ module mmu_core_wrapper #(
         .Mem_ReadEnM        (mem_re_core),
         .MemOpM             (memop_core),
         .Mem_ReadDataM      (mem_rdata_to_core),
+
+        // LR/SC VA-vs-PA fix (see memory_stage.v/RV32IMA.v headers):
+        // pa_mem is this exact cycle's already-computed physical
+        // translation of mem_addr_va -- valid and stable whenever the
+        // core is not frozen (mmu_busy=0), which is exactly when an
+        // LR/SC in M-stage would actually retire and need it. This is
+        // the ONE place in the whole design that turns the bug into a
+        // real fix: every other RV32IMA instantiation site has no MMU
+        // at all (VA=PA transparently) and just loops Mem_AddrM back
+        // into this same port instead.
+        .Mem_PhysAddrM      (pa_mem),
 
         // NEW: feed the MMU's own already-computed fault flags
         // straight into the core's trap unit -- see RV32IMA.v's port

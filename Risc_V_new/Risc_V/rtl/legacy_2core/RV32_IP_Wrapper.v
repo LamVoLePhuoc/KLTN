@@ -88,6 +88,15 @@ module RV32IMA_IP_Wrapper #(
         .Fetch_PageFault_In (1'b0),
         .Data_PageFault_In  (1'b0),
 
+        // NEW (another session, same sanctioned exception -- see
+        // RV32IMA_DualCore_Wrapper.v's identical comment): RV32IMA.v
+        // gained a required Mem_PhysAddrM input for the LR/SC VA-vs-PA
+        // fix (memory_stage.v's header). No MMU in front of this
+        // wrapper (VA=PA transparently), so looping Mem_AddrM back
+        // into it is exact identity -- keeps this file's behaviour
+        // exactly as it was.
+        .Mem_PhysAddrM      (Mem_AddrM),
+
         .ResultW            (),
         .ALU_ResultE_Debug  ()
     );

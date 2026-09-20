@@ -3,9 +3,12 @@
 // ============================================================
 // l1_dcache
 //
-// Private, per-core L1 data cache. PIPT, MESI, per address_mapping:
-//   16KB, 2-way set-associative, line = 32B (8 words)
-//   offset = 5b, index = 8b (256 sets), tag = 19b
+// Private, per-core L1 data cache. PIPT, MESI. Sized per the FINAL
+// architecture decision (Risc_V_new/README.md mục 4 -- 32KB D$
+// separate from 32KB I$, not address_mapping's earlier "16KB shared"
+// placeholder number):
+//   32KB, 2-way set-associative, line = 32B (8 words)
+//   offset = 5b, index = 9b (512 sets), tag = 18b
 //
 // Write-back, write-allocate, blocking (single outstanding request
 // -- matches the core, which has no mechanism for more than one
@@ -54,7 +57,7 @@
 // only Modified data can be lost.
 // ============================================================
 module l1_dcache #(
-    parameter INDEX_BITS  = 8,     // 256 sets
+    parameter INDEX_BITS  = 9,     // 512 sets (32KB, 2-way, 32B line)
     parameter LINE_WORDS  = 8      // 32B line = 8 x 32-bit words
 )(
     input  wire         clk,

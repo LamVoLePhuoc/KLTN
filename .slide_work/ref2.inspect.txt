@@ -1,0 +1,76 @@
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"body","type":"body","textPreview":"Địa điểm, Ngày Tháng Năm"},{"name":"body","type":"body","textPreview":"Loại trình bày"},{"name":"body","type":"body","textPreview":"Trình bày: …"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"Section Header","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"},{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 24","textPreview":"01"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"1_Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"5_Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"4_Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"3_Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"2_Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"Two Content","type":"twoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"Comparison","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 5","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"Title Only","type":"titleOnly","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout11.xml","name":"Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout12.xml","name":"2_Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout13.xml","name":"1_Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout14.xml","name":"Content with Caption","type":"objTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout15.xml","name":"Picture with Caption","type":"picTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"picture","type":"picture","textPreview":"Click icon to add picture"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout16.xml","name":"Title and Vertical Text","type":"vertTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout17.xml","name":"Vertical Title and Text","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"3 February 2026"},{"name":"footer","type":"footer","textPreview":"Copyrights 2024 CE-UIT. All Rights Reserved."},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"NGHIÊN CỨU VÀ THIẾT KẾ IP CHỐNG ỒN CHỦ ĐỘNG VỚI PHẢN HỒI DẢI HẸP","textShapes":4}
+{"kind":"textbox","id":"sh/547294r6","slide":1,"textChars":144,"textLines":2}
+{"kind":"textbox","id":"sh/k3yl0zql","slide":1,"textChars":31,"textLines":1}
+{"kind":"textbox","id":"sh/7qp4be9c","slide":1,"textChars":37,"textLines":1}
+{"kind":"textbox","id":"sh/fu94fe98","slide":1,"textChars":101,"textLines":3}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"Nội dung","textShapes":11}
+{"kind":"textbox","id":"sh/9072xkry","slide":2,"textChars":8,"textLines":1}
+{"kind":"textbox","id":"sh/b29kza94","slide":2,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/a10jqpsj","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/r65knqtk","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/q5wjelsz","slide":2,"textChars":18,"textLines":1}
+{"kind":"textbox","id":"sh/mtwrmxg7","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/nu58f2hs","slide":2,"textChars":27,"textLines":1}
+{"kind":"textbox","id":"sh/ahwrqhgj","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/bip8jmho","slide":2,"textChars":43,"textLines":1}
+{"kind":"textbox","id":"sh/s72xofmh","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/76twva5c","slide":2,"textChars":19,"textLines":1}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"Copyrights 2024 CE-UIT. All Rights Reserved.","textShapes":4}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/d0jax03i","slide":3,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/298ryl4v","slide":3,"textChars":17,"textLines":1}
+{"kind":"textbox","id":"sh/obq90bml","slide":3,"textChars":2,"textLines":1}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"1. Lí do chọn đề tài","textShapes":4}
+{"kind":"textbox","id":"sh/x8vaxsfe","slide":4,"textChars":21,"textLines":1}
+{"kind":"textbox","id":"sh/a5kr2xg3","slide":4,"textChars":18,"textLines":1}
+{"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/0ba143al","slide":4,"textChars":1,"textLines":1}
+{"kind":"image","id":"im/sbm5cbix","slide":4,"name":"Picture 2","bbox":[332.62,183.18,761.65,523.35]}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"Công nghệ chống ồn chủ động","textShapes":4}
+{"kind":"textbox","id":"sh/dgbulwnm","slide":5,"textChars":27,"textLines":1}
+{"kind":"textbox","id":"sh/cf2tcr61","slide":5,"textChars":262,"textLines":2}
+{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/yhkbe1o7","slide":5,"textChars":1,"textLines":1}
+{"kind":"image","id":"im/g7atobq5","slide":5,"name":"Picture 5","bbox":[64.76,210.63,557.48,262.02]}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"Từ những phân tích và đánh giá các công trình liên quan, có thể nhận thấy rằn...","textShapes":3}
+{"kind":"textbox","id":"sh/zi98nu94","slide":6,"textChars":533,"textLines":3}
+{"kind":"textbox","id":"sh/87ipkzal","slide":6,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/98rqt4r6","slide":6,"textChars":1,"textLines":1}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"Copyrights 2024 CE-UIT. All Rights Reserved.","textShapes":4}
+{"kind":"textbox","id":"sh/cb2tkvap","slide":7,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/dcbud0ra","slide":7,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/ydkbm5sv","slide":7,"textChars":21,"textLines":2}
+{"kind":"textbox","id":"sh/kzmdova1","slide":7,"textChars":2,"textLines":1}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"Copyrights 2024 CE-UIT. All Rights Reserved.","textShapes":4}
+{"kind":"textbox","id":"sh/ri9g7uhw","slide":8,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/6h0fypgb","slide":8,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/98rehwve","slide":8,"textChars":20,"textLines":1}
+{"kind":"textbox","id":"sh/18byd4zy","slide":8,"textChars":382,"textLines":6}
+{"kind":"image","id":"im/d4vqd4j2","slide":8,"name":"Picture 11","bbox":[842.32,200.75,397.73,428.69]}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"Copyrights 2024 CE-UIT. All Rights Reserved.","textShapes":4}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":9,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/0b65obm9","slide":9,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/nex4jq5k","slide":9,"textChars":9,"textLines":2}
+{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"textChars":2,"textLines":1}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"Copyrights 2024 CE-UIT. All Rights Reserved.","textShapes":4}
+{"kind":"textbox","id":"sh/zelojyl8","slide":10,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/ydcnatkn","slide":10,"textChars":2,"textLines":1}
+{"kind":"notice","message":"Truncated: omitted 43 lines. Increase maxChars or narrow target."}

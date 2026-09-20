@@ -7,9 +7,11 @@
 // the MMU -- cpu_addr is already a physical address, matching where
 // mmu_core_wrapper.v's own header comment said an L1 cache belongs:
 // "between the core's pipeline (VA) and whatever sits downstream on
-// the memory side"). Per address_mapping's L1 spec:
-//   16KB, 2-way set-associative, line = 32B (8 words)
-//   offset = 5b, index = 8b (256 sets), tag = 19b
+// the memory side"). Sized per the FINAL architecture decision
+// (Risc_V_new/README.md mục 4 -- 32KB I$ separate from 32KB D$, not
+// address_mapping's earlier "16KB shared" placeholder number):
+//   32KB, 2-way set-associative, line = 32B (8 words)
+//   offset = 5b, index = 9b (512 sets), tag = 18b
 //
 // Read-only, blocking (single outstanding miss -- matches the core,
 // which has no mechanism for more than one in-flight memory access
@@ -30,7 +32,7 @@
 // way index / LRU bit below are single bits, not a generic log2(WAYS)
 // width, so this is not a drop-in "set WAYS=4" parametrization.
 module l1_icache #(
-    parameter INDEX_BITS  = 8,     // 256 sets
+    parameter INDEX_BITS  = 9,     // 512 sets (32KB, 2-way, 32B line)
     parameter LINE_WORDS  = 8      // 32B line = 8 x 32-bit words
 )(
     input  wire         clk,

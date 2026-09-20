@@ -15,6 +15,10 @@ module memory_stage(
     input  wire [31:0] ALU_ResultM,
     input  wire [31:0] WriteDataM,
 
+    // --- Physical address of THIS M-stage access (see header note on
+    // LR/SC RESERVATION below -- fixes the VA-vs-PA bug) ---
+    input  wire [31:0] Mem_PhysAddrM,
+
     // --- Snoop from other core ---
     input  wire [31:0] Snoop_Addr,
     input  wire        Snoop_WE,
@@ -50,6 +54,32 @@ module memory_stage(
 
     // ============================================================
     // LR/SC RESERVATION
+    //
+    // FIXED (previously a real, documented bug -- see
+    // Risc_V_new/README.md's risk register, "LR/SC VA-vs-PA"):
+    // reservation_addr/sc_success used to compare against ALU_ResultM,
+    // which is a VIRTUAL address (this module lives entirely inside
+    // RV32IMA.v, pre-MMU) -- while Snoop_Addr always was, and still
+    // is, PHYSICAL (it comes from coherence_manager.v, post-MMU, L1
+    // layer). Comparing a stored VA against an incoming PA only ever
+    // worked by coincidence, when a core's own VA->PA mapping happened
+    // to be the identity function. Fixed by tracking/comparing the
+    // reservation in the PHYSICAL domain throughout: Mem_PhysAddrM
+    // (new input, see port list above) is the physical address of
+    // whatever THIS M-stage access resolved to -- for LR, that is the
+    // reservation's real physical address; for SC, comparing
+    // Mem_PhysAddrM (SC's own physical address) against the stored
+    // (already physical) reservation_addr is now a same-domain,
+    // apples-to-apples compare. ALU_ResultM is no longer read by any
+    // of this logic; it is still used elsewhere below (bus_addr,
+    // unrelated to LR/SC reservation tracking).
+    //
+    // Callers with no MMU at all (VA=PA transparently -- see every
+    // RV32IMA instantiation site) simply loop Mem_PhysAddrM back to
+    // the core's own Mem_AddrM output, which is exactly identity and
+    // preserves prior behavior exactly. Callers with a real MMU
+    // (mmu_core_wrapper.v) wire in the MMU's own already-computed
+    // pa_mem instead -- see that file's header.
     // ============================================================
     reg [31:0] reservation_addr;
     reg        reservation_valid;
@@ -68,7 +98,7 @@ module memory_stage(
     wire sc_success;
     assign sc_success = is_SC &&
                         reservation_valid &&
-                        (ALU_ResultM == reservation_addr);
+                        (Mem_PhysAddrM == reservation_addr);
 
     always @(posedge clk) begin
         if (rst) begin
@@ -76,10 +106,10 @@ module memory_stage(
             reservation_addr  <= 32'h00000000;
         end
         else begin
-            // LR.W tạo reservation
+            // LR.W tạo reservation (địa chỉ VẬT LÝ, không phải ảo)
             if (is_LR) begin
                 reservation_valid <= 1'b1;
-                reservation_addr  <= ALU_ResultM;
+                reservation_addr  <= Mem_PhysAddrM;
             end
 
             // SC.W luôn xóa reservation sau khi thực hiện
@@ -88,7 +118,8 @@ module memory_stage(
             end
 
             // Nếu core khác ghi vào đúng địa chỉ đang reserve,
-            // reservation bị hủy.
+            // reservation bị hủy. Snoop_Addr vốn đã là địa chỉ vật lý,
+            // giờ so khớp đúng miền với reservation_addr.
             if (reservation_valid && Snoop_WE && (Snoop_Addr == reservation_addr)) begin
                 reservation_valid <= 1'b0;
             end

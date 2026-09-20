@@ -1,0 +1,178 @@
+{"kind":"deck","id":"pr/8pg5eq","name":"Deck"}
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"BLANK","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"OBJECT","type":"obj","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"SECTION_HEADER","type":"secHead","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"TWO_OBJECTS","type":"twoObj","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"TWO_OBJECTS_WITH_TEXT","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"TITLE_ONLY","type":"titleOnly","placeholders":[{"name":"title","type":"title"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"OBJECT_WITH_CAPTION_TEXT","type":"objTx","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"PICTURE_WITH_CAPTION_TEXT","type":"picTx","placeholders":[{"name":"title","type":"title"},{"name":"picture","type":"picture"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"VERTICAL_TEXT","type":"vertTx","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"VERTICAL_TITLE_AND_VERTICAL_TEXT","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime","textPreview":"9/16/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":9}
+{"kind":"shape","id":"sh/f6x0zu58","slide":1,"name":"Google Shape;88;p1","bbox":[-3.8,0,82.88,1080]}
+{"kind":"shape","id":"sh/u5ojqpon","slide":1,"name":"Google Shape;89;p1","bbox":[-4.92,0,74.97,1080]}
+{"kind":"textbox","id":"sh/ip4zyl4f","slide":1,"name":"Google Shape;92;p1","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[-287.08,694.53,657.18,57.07]}
+{"kind":"shape","id":"sh/sf6h4v2h","slide":1,"name":"Google Shape;94;p1","bbox":[705.51,46.79,508.99,100.58]}
+{"kind":"shape","id":"sh/tgfyd032","slide":1,"name":"Google Shape;95;p1","bbox":[714.69,54.99,490.61,84.19]}
+{"kind":"shape","id":"sh/6d4z25kb","slide":1,"name":"Google Shape;96;p1","bbox":[990.7,36.78,122.13,121.01]}
+{"kind":"shape","id":"sh/7edgbalw","slide":1,"name":"Google Shape;97;p1","bbox":[807.17,40.51,137.27,113.55]}
+{"kind":"textbox","id":"sh/8j2xsbmd","slide":1,"name":"BẢO VỆ ĐỀ CƯƠNG KHÓA LUẬN TỐT NGHIỆP","text":"BẢO VỆ ĐỀ CƯƠNG KHÓA LUẬN TỐT NGHIỆP","textPreview":"BẢO VỆ ĐỀ CƯƠNG KHÓA LUẬN TỐT NGHIỆP","textChars":36,"textLines":1,"bbox":[215,270,1540,70]}
+{"kind":"textbox","id":"sh/9kby1g3i","slide":1,"name":"THIẾT KẾ BỘ VI XỬ LÝ 4 LÕI RISC-V\nDỰA TRÊN KIẾN TRÚC TẬP LỆNH RV32IMA","text":"THIẾT KẾ BỘ VI XỬ LÝ 4 LÕI RISC-V\nDỰA TRÊN KIẾN TRÚC TẬP LỆNH RV32IMA","textPreview":"THIẾT KẾ BỘ VI XỬ LÝ 4 LÕI RISC-V | DỰA TRÊN KIẾN TRÚC TẬP LỆNH RV32IMA","textChars":69,"textLines":2,"bbox":[180,405,1600,155]}
+{"kind":"textbox","id":"sh/yhkza1wv","slide":1,"name":"GVHD: TS. Nguyễn Minh Sơn","text":"GVHD: TS. Nguyễn Minh Sơn","textPreview":"GVHD: TS. Nguyễn Minh Sơn","textChars":25,"textLines":1,"bbox":[230,650,1490,60]}
+{"kind":"textbox","id":"sh/jitg36dg","slide":1,"name":"Vũ Thành Lam","text":"Vũ Thành Lam","textPreview":"Vũ Thành Lam","textChars":12,"textLines":1,"bbox":[230,742,720,58]}
+{"kind":"textbox","id":"sh/kj2hcbel","slide":1,"name":"23520840","text":"23520840","textPreview":"23520840","textChars":8,"textLines":1,"bbox":[920,742,450,58]}
+{"kind":"textbox","id":"sh/l4by5wv6","slide":1,"name":"Võ Lê Phước Lâm","text":"Võ Lê Phước Lâm","textPreview":"Võ Lê Phước Lâm","textChars":15,"textLines":1,"bbox":[230,822,720,58]}
+{"kind":"textbox","id":"sh/654ze1wr","slide":1,"name":"23520838","text":"23520838","textPreview":"23520838","textChars":8,"textLines":1,"bbox":[920,822,450,58]}
+{"kind":"textbox","id":"sh/76dg76dc","slide":1,"name":"TP. Hồ Chí Minh, tháng 9 năm 2026","text":"TP. Hồ Chí Minh, tháng 9 năm 2026","textPreview":"TP. Hồ Chí Minh, tháng 9 năm 2026","textChars":33,"textLines":1,"bbox":[230,968,1490,50]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":""}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":10}
+{"kind":"shape","id":"sh/zmtwbel8","slide":2,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/ylkfi94n","slide":2,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/knmxkjmt","slide":2,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/bitw7elc","slide":2,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/qhkfe94r","slide":2,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/dkbe9432","slide":2,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/cj2xgzmx","slide":2,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/vexwjylg","slide":2,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/wbidwb29","slide":2,"name":"Title 1","text":"Nội dung báo cáo","textPreview":"Nội dung báo cáo","textChars":16,"textLines":1,"bbox":[124.36,196.82,461.74,93.51]}
+{"kind":"shape","id":"sh/id0vylkf","slide":2,"name":"Rounded Rectangle 6","bbox":[242.14,325.49,1116.76,130.24]}
+{"kind":"textbox","id":"sh/je9crql0","slide":2,"name":"Oval 38","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[263.47,348.92,81.03,83.39]}
+{"kind":"textbox","id":"sh/ru5cbqd4","slide":2,"name":"TextBox 39","text":"Tổng quan đề tài","textPreview":"Tổng quan đề tài","textChars":16,"textLines":1,"bbox":[352.8,358.3,926.25,64.62]}
+{"kind":"shape","id":"sh/tw7ud0va","slide":2,"name":"Rounded Rectangle 10","bbox":[242.14,494.16,1116.76,123.14]}
+{"kind":"textbox","id":"sh/svedkvup","slide":2,"name":"Oval 42","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[263.47,516.31,81.03,78.84]}
+{"kind":"textbox","id":"sh/fypcfqdg","slide":2,"name":"TextBox 43","text":"Mục tiêu đề tài","textPreview":"Mục tiêu đề tài","textChars":15,"textLines":1,"bbox":[352.8,523.42,881.98,64.62]}
+{"kind":"shape","id":"sh/107uh0v6","slide":2,"name":"Rounded Rectangle 6","bbox":[242.14,657.94,1116.76,121.01]}
+{"kind":"textbox","id":"sh/gzydovul","slide":2,"name":"Oval 46","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[263.47,679.71,81.03,77.48]}
+{"kind":"textbox","id":"sh/v2lc36dw","slide":2,"name":"TextBox 47","text":"Nội dung và phương pháp thực hiện","textPreview":"Nội dung và phương pháp thực hiện","textChars":33,"textLines":1,"bbox":[352.8,686.13,881.98,64.62]}
+{"kind":"shape","id":"sh/0vq1o36x","slide":2,"name":"Rounded Rectangle 9","bbox":[242.14,819.59,1116.76,121.01]}
+{"kind":"textbox","id":"sh/1wzix87i","slide":2,"name":"Oval 50","text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[263.47,841.35,81.03,77.48]}
+{"kind":"textbox","id":"sh/et8zmto7","slide":2,"name":"TextBox 51","text":"Kế hoạch thực hiện và tiêu chí đánh giá","textPreview":"Kế hoạch thực hiện và tiêu chí đánh giá","textChars":39,"textLines":1,"bbox":[352.8,847.78,881.98,64.62]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":""}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":8}
+{"kind":"shape","id":"sh/yxoja9kz","slide":3,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/zyx03e1k","slide":3,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/l0fi5ojq","slide":3,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/a94z6pkn","slide":3,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/bad0zu18","slide":3,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/cv618z2t","slide":3,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/xwfi14je","slide":3,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/u58jitk7","slide":3,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/50jm1s3u","slide":3,"name":"1. Tổng quan đề tài","text":"1. Tổng quan đề tài","textPreview":"1. Tổng quan đề tài","textChars":19,"textLines":1,"bbox":[66,174,1780,76]}
+{"kind":"textbox","id":"sh/4zal8nm9","slide":3,"name":"Nhu cầu xử lý nhiều tác vụ đồng thời","text":"Nhu cầu xử lý nhiều tác vụ đồng thời","textPreview":"Nhu cầu xử lý nhiều tác vụ đồng thời","textChars":36,"textLines":1,"bbox":[1023.22,264.43,720.5,55]}
+{"kind":"textbox","id":"sh/jy14zilo","slide":3,"name":"Các hệ thống nhúng như khối điều khiển bay UAV đặt ra nhu cầu xử lý dữ","text":"Các hệ thống nhúng như khối điều khiển bay UAV đặt ra nhu cầu xử lý dữ liệu cảm biến, điều khiển và giao tiếp cùng lúc.","textPreview":"Các hệ thống nhúng như khối điều khiển bay UAV đặt ra nhu cầu xử lý dữ liệu cảm biến, điều khiển và giao tiếp cùng lúc.","textChars":119,"textLines":1,"bbox":[1040.5,325.21,759.5,112]}
+{"kind":"textbox","id":"sh/ixs36d43","slide":3,"name":"Lựa chọn kiến trúc RISC-V","text":"Lựa chọn kiến trúc RISC-V","textPreview":"Lựa chọn kiến trúc RISC-V","textChars":25,"textLines":1,"bbox":[1023.22,509.07,527,55]}
+{"kind":"textbox","id":"sh/hwj2x83y","slide":3,"name":"Kiến trúc tập lệnh mở cho phép nhóm chủ động thiết kế và tùy biến bộ x","text":"Kiến trúc tập lệnh mở cho phép nhóm chủ động thiết kế và tùy biến bộ xử lý ở mức RTL, phù hợp với mục tiêu nghiên cứu phần cứng.","textPreview":"Kiến trúc tập lệnh mở cho phép nhóm chủ động thiết kế và tùy biến bộ xử lý ở mức RTL, phù hợp với mục tiêu nghiên cứu phần cứng.","textChars":128,"textLines":1,"bbox":[1040.5,570.72,830,161.14]}
+{"kind":"textbox","id":"sh/wval4nmd","slide":3,"name":"Bài toán của khóa luận","text":"Bài toán của khóa luận","textPreview":"Bài toán của khóa luận","textChars":22,"textLines":1,"bbox":[1023.22,765.1,456.5,55]}
+{"kind":"textbox","id":"sh/vu1kvils","slide":3,"name":"Xây dựng hệ 4 lõi RV32IMA có bộ nhớ đệm và quản lý bộ nhớ, bảo đảm dữ ","text":"Xây dựng hệ 4 lõi RV32IMA có bộ nhớ đệm và quản lý bộ nhớ, bảo đảm dữ liệu chia sẻ nhất quán và kiểm chứng trên FPGA.","textPreview":"Xây dựng hệ 4 lõi RV32IMA có bộ nhớ đệm và quản lý bộ nhớ, bảo đảm dữ liệu chia sẻ nhất quán và kiểm chứng trên FPGA.","textChars":117,"textLines":1,"bbox":[1040.5,822.79,789.5,118]}
+{"kind":"image","id":"im/fa9snel8","slide":3,"name":"Picture 2","bbox":[16.84,251.69,1055.55,786.52]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"UAV chỉ là ví dụ tạo động lực, khóa luận không cam kết xây dựng hoặc chứng nhận hệ điều khiển bay. Nền tảng tham khảo trong khoa gồm hệ 2 lõi RV32IMFA và hệ 2 lõi RV32IA có cache/coherence. Đóng góp nhóm hướng tới là tích hợp hệ 4 lõi RV32IMA với L1/L2, coherence và MMU theo từng lõi, rồi đánh giá bằng mô phỏng và FPGA. Tránh khẳng định mọi nghiên cứu quốc tế đều chưa giải quyết cache."}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":8}
+{"kind":"shape","id":"sh/ri1onu5c","slide":4,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/qh87up4r","slide":4,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/sjapwfmx","slide":4,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/fm18ru5o","slide":4,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/els7yp43","slide":4,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/1ojqt4ne","slide":4,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/0nap0zm9","slide":4,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/vqxofa54","slide":4,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/kvmlwbmh","slide":4,"name":"2. Mục tiêu đề tài","text":"2. Mục tiêu đề tài","textPreview":"2. Mục tiêu đề tài","textChars":18,"textLines":1,"bbox":[54.44,185.67,1780,76]}
+{"kind":"textbox","id":"sh/lwvmpw32","slide":4,"name":"Mục tiêu 1  Thiết kế và hiện thực hệ vi xử lý 4 lõi","text":"Mục tiêu 1: Thiết kế và hiện thực hệ vi xử lý 4 lõi","textPreview":"Mục tiêu 1: Thiết kế và hiện thực hệ vi xử lý 4 lõi","textChars":51,"textLines":1,"bbox":[100,292,1720,55]}
+{"kind":"textbox","id":"sh/yt43u14r","slide":4,"name":"Lõi RV32IMA, cache L1 riêng và L2 dùng chung, cơ chế nhất quán dữ liệu","text":"Lõi RV32IMA, cache L1 riêng và L2 dùng chung, cơ chế nhất quán dữ liệu MESI, MMU/TLB cho từng lõi, giao tiếp bus và DMA.","textPreview":"Lõi RV32IMA, cache L1 riêng và L2 dùng chung, cơ chế nhất quán dữ liệu MESI, MMU/TLB cho từng lõi, giao tiếp bus và DMA.","textChars":120,"textLines":1,"bbox":[100,365,1720,130]}
+{"kind":"textbox","id":"sh/jud4n6lw","slide":4,"name":"Mục tiêu 2  Kiểm chứng, đánh giá và triển khai trên FPGA","text":"Mục tiêu 2: Kiểm chứng, đánh giá và triển khai trên FPGA","textPreview":"Mục tiêu 2: Kiểm chứng, đánh giá và triển khai trên FPGA","textChars":56,"textLines":1,"bbox":[100,538,1720,55]}
+{"kind":"textbox","id":"sh/wr2lsrml","slide":4,"name":"Kiểm tra đúng chức năng bằng mô phỏng RTL và demo tự động trên FPGA. Đ","text":"Kiểm tra đúng chức năng bằng mô phỏng RTL và demo tự động trên FPGA. Đánh giá hiệu năng, tài nguyên, timing và công suất ước tính.","textPreview":"Kiểm tra đúng chức năng bằng mô phỏng RTL và demo tự động trên FPGA. Đánh giá hiệu năng, tài nguyên, timing và công suất ước tính.","textChars":130,"textLines":1,"bbox":[100,612,1720,130]}
+{"kind":"textbox","id":"sh/xsvmlw36","slide":4,"name":"Phạm vi thực hiện","text":"Phạm vi thực hiện","textPreview":"Phạm vi thực hiện","textChars":17,"textLines":1,"bbox":[100,795,1720,55]}
+{"kind":"textbox","id":"sh/apk3qh4f","slide":4,"name":"4 lõi, tập lệnh RV32I/M/A. Không mở rộng F/D hoặc C. MMU giới hạn tran","text":"4 lõi, tập lệnh RV32I/M/A. Không mở rộng F/D hoặc C. MMU giới hạn trang 4 KB; CSR/trap ngoài phạm vi đề cương.","textPreview":"4 lõi, tập lệnh RV32I/M/A. Không mở rộng F/D hoặc C. MMU giới hạn trang 4 KB; CSR/trap ngoài phạm vi đề cương.","textChars":110,"textLines":1,"bbox":[100,860,1720,110]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"RV32I là tập lệnh số nguyên cơ sở, M bổ sung nhân/chia, A bổ sung thao tác nguyên tử phục vụ chia sẻ dữ liệu giữa các lõi. Hai mục tiêu bao quát phần thiết kế và phần chứng minh thiết kế hoạt động. RTL hiện có chủ yếu là Verilog .v, đề cương định hướng Verilog/SystemVerilog và môi trường kiểm chứng. MMU hiện thực theo cấu trúc Sv32 2 cấp nhưng dùng định dạng PTE/PA tùy biến 32 bit, không tuyên bố tuân thủ đầy đủ Sv32. Không có superpage, không tự cập nhật A/D, không áp dụng đầy đủ phân quyền truy cập trang S/U. "}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":2}
+{"kind":"shape","id":"sh/ne5oja5w","slide":5,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/2tw7qpob","slide":5,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/ofepsf6h","slide":5,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/fq5ofa50","slide":5,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/epwnm5of","slide":5,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/1sn6hknq","slide":5,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/0re5of65","slide":5,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/rmlobq5o","slide":5,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/gralcrm1","slide":5,"name":"3. Nội dung và phương pháp thực hiện","text":"3. Nội dung và phương pháp thực hiện","textPreview":"3. Nội dung và phương pháp thực hiện","textChars":36,"textLines":1,"bbox":[55,184.91,1780,76]}
+{"kind":"table","id":"tb/4za9kba9","slide":5,"name":"Table 241","rows":5,"cols":3,"preview":"Nội dung chính | Phương pháp thực hiện | Kết quả dự kiến","bbox":[85,300,1750,625]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":"Thiết kế tăng dần độ phức tạp để cô lập lỗi: kiểm tra khối riêng, ghép lõi đơn, tích hợp nhiều lõi, cuối cùng chạy toàn hệ thống. Vai trò các thành phần: L1 giảm truy cập bộ nhớ cho từng lõi, L2 là bộ nhớ đệm dùng chung, MESI quản lý bản sao dữ liệu giữa các cache, MMU dịch địa chỉ. AHB-Lite ở biên L1 và khối coherence, AXI4 nối phía hệ thống. RTL hiện tại có các liên kết AHB-Lite điểm nối điểm và bus snoop riêng, trọng tài nằm trong coherence_manager; DMA hiện chọn IP axi_cdma trong Tcl, chỉ cần cấu hình, tích hợp và kiểm chứng."}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":2}
+{"kind":"shape","id":"sh/orel0ve9","slide":6,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/9cn2t0fu","slide":6,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/nq5kraxo","slide":6,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/wfel4fe5","slide":6,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/xg72xkfq","slide":6,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/adw325wz","slide":6,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/be5kvaxk","slide":6,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/cju1sbe1","slide":6,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/ve9oreh4","slide":6,"name":"3. Kiểm chứng và demo hệ thống","text":"Kiến trúc đề xuất","textPreview":"Kiến trúc đề xuất","textChars":17,"textLines":1,"bbox":[55.65,112.07,402.41,76]}
+{"kind":"image","id":"im/76xczil4","slide":6,"name":"Picture 6","bbox":[199.54,167.26,1483.54,912.51]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":""}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":14}
+{"kind":"shape","id":"sh/q9crm543","slide":7,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/ral8va58","slide":7,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/dw3qhkne","slide":7,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/excrqp4z","slide":7,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/zy58ju5k","slide":7,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/0ze9szm5","slide":7,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/10nqlknq","slide":7,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/u1s7el4v","slide":7,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/xw7uto7y","slide":7,"name":"3. Kiểm chứng và demo hệ thống","text":"Kiểm chứng và demo hệ thống","textPreview":"Kiểm chứng và demo hệ thống","textChars":27,"textLines":1,"bbox":[66,174,1780,76]}
+{"kind":"shape","id":"sh/wvytkj6d","slide":7,"name":"Khung sơ đồ","bbox":[85,290,790,635]}
+{"kind":"shape","id":"sh/bupcryps","slide":7,"name":"Khung sơ đồ","bbox":[1015,290,790,635]}
+{"kind":"textbox","id":"sh/atgbito7","slide":7,"name":"Quy trình kiểm chứng","text":"Quy trình kiểm chứng","textPreview":"Quy trình kiểm chứng","textChars":20,"textLines":1,"bbox":[110,314,740,60]}
+{"kind":"textbox","id":"sh/50rux87u","slide":7,"name":"Demo dự kiến trên VCU129","text":"Demo dự kiến trên VCU129","textPreview":"Demo dự kiến trên VCU129","textChars":24,"textLines":1,"bbox":[1040,314,740,60]}
+{"kind":"textbox","id":"sh/kzito369","slide":7,"name":"Khối riêng","text":"Khối riêng","textPreview":"Khối riêng","textChars":10,"textLines":1,"bbox":[250,405,460,120]}
+{"kind":"textbox","id":"sh/jy9cvypo","slide":7,"name":"Lõi đơn","text":"Lõi đơn","textPreview":"Lõi đơn","textChars":7,"textLines":1,"bbox":[250,595,460,120]}
+{"kind":"textbox","id":"sh/ixgbmto3","slide":7,"name":"Hệ 4 lõi","text":"Hệ 4 lõi","textPreview":"Hệ 4 lõi","textChars":8,"textLines":1,"bbox":[250,785,460,120]}
+{"kind":"shape","id":"sh/yhsba9k7","slide":7,"name":"Straight Arrow Connector 276","bbox":[480,525,0,70]}
+{"kind":"shape","id":"sh/5gnux8j2","slide":7,"name":"Straight Arrow Connector 277","bbox":[480,715,0,70]}
+{"kind":"textbox","id":"sh/ov65gbup","slide":7,"name":"PASS","text":"PASS","textPreview":"PASS","textChars":4,"textLines":1,"bbox":[510,545,130,42]}
+{"kind":"textbox","id":"sh/pwf69gva","slide":7,"name":"PASS","text":"PASS","textPreview":"PASS","textChars":4,"textLines":1,"bbox":[510,735,130,42]}
+{"kind":"shape","id":"sh/2t4ne1cz","slide":7,"name":"Điểm nối nhánh kiểm tra lại","bbox":[155,655,0.1,0.1]}
+{"kind":"shape","id":"sh/3uxo76dk","slide":7,"name":"Điểm nối nhánh kiểm tra lại","bbox":[155,465,0.1,0.1]}
+{"kind":"shape","id":"sh/fapwn2l4","slide":7,"name":"Straight Arrow Connector 282","bbox":[155.1,655,94.9,0.05]}
+{"kind":"shape","id":"sh/ozixkr2l","slide":7,"name":"Straight Arrow Connector 283","bbox":[155.05,465.1,0,189.9]}
+{"kind":"shape","id":"sh/p0rytc36","slide":7,"name":"Straight Arrow Connector 284","bbox":[155.1,465,94.9,0.05]}
+{"kind":"textbox","id":"sh/f6d436d8","slide":7,"name":"FAIL","text":"FAIL","textPreview":"FAIL","textChars":4,"textLines":1,"bbox":[95.87,540.52,61.1,45]}
+{"kind":"shape","id":"sh/s3m58rux","slide":7,"name":"Điểm nối nhánh kiểm tra lại","bbox":[810,845,0.1,0.1]}
+{"kind":"shape","id":"sh/t4vm1wv2","slide":7,"name":"Điểm nối nhánh kiểm tra lại","bbox":[810,465,0.1,0.1]}
+{"kind":"shape","id":"sh/54nehs32","slide":7,"name":"Straight Arrow Connector 288","bbox":[710,845,100,0.05]}
+{"kind":"shape","id":"sh/7ax83u9w","slide":7,"name":"Straight Arrow Connector 289","bbox":[810.05,465.1,0,379.9]}
+{"kind":"shape","id":"sh/m9orap8b","slide":7,"name":"Straight Arrow Connector 290","bbox":[710,465,100,0.05]}
+{"kind":"textbox","id":"sh/wz25kryp","slide":7,"name":"FAIL","text":"FAIL","textPreview":"FAIL","textChars":4,"textLines":1,"bbox":[745.05,636.67,69.9,43.2]}
+{"kind":"textbox","id":"sh/j2tofmx0","slide":7,"name":"SD/SPI → DMA → DRAM","text":"Nạp chương trình vào DRAM","textPreview":"Nạp chương trình vào DRAM","textChars":25,"textLines":1,"bbox":[1180,405,460,120]}
+{"kind":"textbox","id":"sh/i1k7mhgf","slide":7,"name":"CPU 4 lõi thực thi","text":"CPU 4 lõi thực thi","textPreview":"CPU 4 lõi thực thi","textChars":18,"textLines":1,"bbox":[1180,595,460,120]}
+{"kind":"textbox","id":"sh/54v6hwf6","slide":7,"name":"Ghi kết quả về SD","text":"Kiểm tra kết quả PASS/FAIL","textPreview":"Kiểm tra kết quả PASS/FAIL","textChars":26,"textLines":1,"bbox":[1180,785,460,120]}
+{"kind":"shape","id":"sh/l8vq1krq","slide":7,"name":"Straight Arrow Connector 295","bbox":[1410,525,0,70]}
+{"kind":"shape","id":"sh/k7m98fq5","slide":7,"name":"Straight Arrow Connector 296","bbox":[1410,715,0,70]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"Quy trình bên trái: kiểm chứng khối riêng gồm pipeline, MMU/TLB, cache và bus; sau đó tích hợp lõi đơn, cuối cùng hệ 4 lõi. Chỉ chuyển sang mức tiếp theo khi các kiểm tra bắt buộc PASS; FAIL quay lại khối liên quan để sửa và chạy lại. Hai vòng phản hồi trên sơ đồ minh họa quy trình debug, không ngụ ý lỗi nào cũng nằm ở cùng một module. Spike chỉ đối chiếu kết quả thanh ghi/bộ nhớ I/M/A, không đối chiếu toàn bộ CSR/trap, MMU hay hệ đa lõi. Demo bên phải là luồng dự kiến: nạp chương trình vào DRAM, CPU 4 lõi thực thi, sau đó kiểm tra kết quả PASS/FAIL và đo thời gian thực thi. FPGA đích VCU129 theo đề cương."}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":3}
+{"kind":"shape","id":"sh/bmdc765o","slide":8,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/al4velo3","slide":8,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/wn6dgb69","slide":8,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/jqxwbq50","slide":8,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/ypovilof","slide":8,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/lsfed0nq","slide":8,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/kr6dkv65","slide":8,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/zutczm5g","slide":8,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/4ny1k3ih","slide":8,"name":"4. Kế hoạch thực hiện theo tháng","text":"4. Kế hoạch thực hiện và tiêu chí đánh giá","textPreview":"4. Kế hoạch thực hiện và tiêu chí đánh giá","textChars":42,"textLines":1,"bbox":[66,174,1780,76]}
+{"kind":"textbox","id":"sh/3mp0ryhw","slide":8,"name":"Lâm: lõi, L1, MMU/TLB, SD/SPI. Lam: bus, L2, MESI, DMA. Cả hai: kiểm c","text":"Lâm: lõi, L1, MMU/TLB. \nLam: bus, L2, MESI, DMA. \nCả hai: kiểm chứng, demo, báo cáo.","textPreview":"Lâm: lõi, L1, MMU/TLB.  | Lam: bus, L2, MESI, DMA.  | Cả hai: kiểm chứng, demo, báo cáo.","textChars":84,"textLines":3,"bbox":[127.97,796.04,679.2,227.69]}
+{"kind":"table","id":"tb/t0ruh0ny","slide":8,"name":"Table 245","rows":6,"cols":6,"preview":"Công việc | T9 | T10 | T11 | T12 | T1/27","bbox":[100,275.34,1750,500]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":""}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"FACULTY OF COMPUTER ENGINEERING","textShapes":4}
+{"kind":"shape","id":"sh/f6d4f2dg","slide":9,"name":"Google Shape;220;p4","bbox":[910.32,-910.48,98.98,1920.39]}
+{"kind":"shape","id":"sh/u5436xcb","slide":9,"name":"Google Shape;221;p4","bbox":[910.51,-910.71,98.98,1920.39]}
+{"kind":"shape","id":"sh/g7ml87u1","slide":9,"name":"Google Shape;223;p4","bbox":[37.84,22.27,1168.55,53.13]}
+{"kind":"textbox","id":"sh/72t4bidk","slide":9,"name":"Google Shape;224;p4","text":"FACULTY OF COMPUTER ENGINEERING","textPreview":"FACULTY OF COMPUTER ENGINEERING","textChars":31,"textLines":1,"bbox":[37.84,18.52,1168.55,56.88]}
+{"kind":"shape","id":"sh/6hk32dcz","slide":9,"name":"Google Shape;225;p4","bbox":[705.51,48.08,508.99,100.58]}
+{"kind":"shape","id":"sh/t4vmdsvq","slide":9,"name":"Google Shape;226;p4","bbox":[714.69,56.27,490.61,84.19]}
+{"kind":"shape","id":"sh/s3ml4nu5","slide":9,"name":"Google Shape;227;p4","bbox":[990.7,38.06,122.13,121.01]}
+{"kind":"shape","id":"sh/jet47ido","slide":9,"name":"Google Shape;228;p4","bbox":[807.17,41.79,137.27,113.55]}
+{"kind":"textbox","id":"sh/8jy18jal","slide":9,"name":"4. Tiêu chí đánh giá và kế hoạch theo tuần","text":"4. Kế hoạch thực hiện và tiêu chí đánh giá","textPreview":"4. Kế hoạch thực hiện và tiêu chí đánh giá","textChars":42,"textLines":1,"bbox":[66,174,1780,76]}
+{"kind":"textbox","id":"sh/9kri1ob6","slide":9,"name":"Tiêu chí đánh giá","text":"Tiêu chí đánh giá","textPreview":"Tiêu chí đánh giá","textChars":17,"textLines":1,"bbox":[85,290,680,55]}
+{"kind":"textbox","id":"sh/mhgj69sv","slide":9,"name":"Kế hoạch thực hiện","text":"Kế hoạch thực hiện","textPreview":"Kế hoạch thực hiện","textChars":18,"textLines":1,"bbox":[850,290,970,55]}
+{"kind":"table","id":"tb/258fe1sz","slide":9,"name":"Table 247","rows":6,"cols":2,"preview":"Tiêu chí | Cách đánh giá","bbox":[85,370,685,565]}
+{"kind":"table","id":"tb/xwjydgrm","slide":9,"name":"Table 248","rows":7,"cols":2,"preview":"Tuần | Công việc và mốc chính","bbox":[850,370,985,565]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":""}

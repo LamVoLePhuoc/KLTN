@@ -31,22 +31,57 @@
 //   PA 0x3000            : scratch data page
 //   PA 0x4000             : scratch RO page, pre-loaded with a sentinel
 //
+// UPDATED (see Risc_V_new/README.md mục -0.25/mục 9 for the fault
+// history): this program used to run with NO trap handler at all,
+// because when it was first written, mmu_core_wrapper.v's page
+// faults did not yet reach a real trap/exception unit (there wasn't
+// one) -- a fault only forced the fetch to a NOP or blocked the
+// store, and execution just fell through to the next instruction.
+// Once csr_trap_unit.v was built and wired into mmu_core_wrapper.v's
+// Fetch_PageFault_In/Data_PageFault_In (a later session), a page
+// fault in THIS program would have actually redirected PC to mtvec --
+// which this program never set, so it defaults to 0 on reset. PA 0x0
+// holds page-table data (0x0000_1001, the L1 root entry below), not a
+// valid instruction, so the very first fault would have made the core
+// jump into garbage and most likely illegal-instruction-trap-loop at
+// PC 0 forever (mtvec still 0), hanging until the global timeout.
+// This was caught by careful reasoning (not simulation) while working
+// on the "does a real page fault actually trap" question this session
+// -- fixed here by adding a 3-instruction mtvec setup at the very
+// start (mtvec = VA 0x1100) and a small generic handler at VA 0x1100
+// (same shape as tb_csr_trap.v's), placed inside the SAME already-
+// mapped R+X code page (VA 0x1000-0x1FFF) so fetching the handler
+// itself never faults. Every original instruction's address shifted
+// by +0xC (3 words) to make room -- see the comments on each line
+// below for the new PA/VA at every step.
+//
 // Test program (assembled by hand below; see the header comment on
 // each `ram[...] = ...` line for the disassembly):
+//   0. Set mtvec = VA 0x1100 (new, see UPDATED note above).
 //   1. Computes x3 = 5 + 10 = 15.
 //   2. Stores x3 to VA 0x2000 (mapped, writable) and loads it back
 //      into x4 -- proves the data-side translate+walk path and a
 //      plain hit/miss round trip.
-//   3. Stores to VA 0x4000 (mapped read-only) -- must fault, and the
-//      store must NOT reach memory (PTW catches this during the
-//      walk itself, since the request's is_store bit is checked
-//      against the PTE's W bit before ever refilling the TLB).
+//   3. Stores to VA 0x4000 (mapped read-only) -- must fault AND now
+//      actually trap (mcause=15, store/AMO page fault) -- the store
+//      must NOT reach memory (PTW catches this during the walk
+//      itself, since the request's is_store bit is checked against
+//      the PTE's W bit before ever refilling the TLB), and execution
+//      must resume right after the faulting instruction once the
+//      handler MRETs.
 //   4. Loads from VA 0x4000 -- must succeed (R=1) and return the
 //      untouched sentinel, proving check 3 really did block the
 //      write.
 //   5. Loads from VA 0x3000 (entry[3], invalid PTE) -- must fault
-//      with not-present and return 0.
-//   6. Self-loop (`beq x0,x0,0`) so the testbench can just run for a
+//      with not-present, actually trap (mcause=13, load page fault),
+//      and resume; the faulting load's destination register is never
+//      written (blocked, same as before), so it keeps its reset
+//      value of 0.
+//   6. Reads back mcause (expect 13, left over from the most recent
+//      trap -- the not-present load) to prove the CSR state a real
+//      trap leaves behind is consistent, not just "some redirect
+//      happened".
+//   7. Self-loop (`beq x0,x0,0`) so the testbench can just run for a
 //      fixed number of cycles and then inspect final state.
 //
 // Register file is read back via hierarchical reference (simulation
@@ -215,19 +250,34 @@ module tb_mmu_core;
         ram[32'h0000_1010 >> 2] = 32'h0000_4003;
 
         // --- Test program @ PA 0x2000 (= VA 0x1000 translated) ---
-        ram[32'h0000_2000 >> 2] = 32'h0050_0093; // addi x1, x0, 5
-        ram[32'h0000_2004 >> 2] = 32'h00A0_0113; // addi x2, x0, 10
-        ram[32'h0000_2008 >> 2] = 32'h0020_81B3; // add  x3, x1, x2      -> x3=15
-        ram[32'h0000_200C >> 2] = 32'h0000_22B7; // lui  x5, 0x2         -> x5=0x2000
-        ram[32'h0000_2010 >> 2] = 32'h0032_A023; // sw   x3, 0(x5)       -> VA 0x2000 <= 15
-        ram[32'h0000_2014 >> 2] = 32'h0002_A203; // lw   x4, 0(x5)       -> x4 <= mem[VA 0x2000]
-        ram[32'h0000_2018 >> 2] = 32'h0000_4337; // lui  x6, 0x4         -> x6=0x4000
-        ram[32'h0000_201C >> 2] = 32'h0630_0393; // addi x7, x0, 99
-        ram[32'h0000_2020 >> 2] = 32'h0073_2023; // sw   x7, 0(x6)       -> RO page: must fault, must NOT write
-        ram[32'h0000_2024 >> 2] = 32'h0003_2403; // lw   x8, 0(x6)       -> x8 <= mem[VA 0x4000] (sentinel, R ok)
-        ram[32'h0000_2028 >> 2] = 32'h0000_34B7; // lui  x9, 0x3         -> x9=0x3000
-        ram[32'h0000_202C >> 2] = 32'h0004_A503; // lw   x10, 0(x9)      -> not-present: must fault, x10 <= 0
-        ram[32'h0000_2030 >> 2] = 32'h0000_0063; // beq  x0, x0, 0       -> self-loop (halt)
+        // First 3 instructions (new, see UPDATED note above): set
+        // mtvec = VA 0x1100 before any fault can happen.
+        ram[32'h0000_2000 >> 2] = 32'h0000_1A37; // lui  x20, 0x1        -> x20=0x1000
+        ram[32'h0000_2004 >> 2] = 32'h100A_0A13; // addi x20, x20, 0x100 -> x20=0x1100
+        ram[32'h0000_2008 >> 2] = 32'h305A_1073; // csrrw x0, mtvec, x20 -> mtvec=VA 0x1100
+        // Original program, every address shifted by +0xC to make room.
+        ram[32'h0000_200C >> 2] = 32'h0050_0093; // addi x1, x0, 5
+        ram[32'h0000_2010 >> 2] = 32'h00A0_0113; // addi x2, x0, 10
+        ram[32'h0000_2014 >> 2] = 32'h0020_81B3; // add  x3, x1, x2      -> x3=15
+        ram[32'h0000_2018 >> 2] = 32'h0000_22B7; // lui  x5, 0x2         -> x5=0x2000
+        ram[32'h0000_201C >> 2] = 32'h0032_A023; // sw   x3, 0(x5)       -> VA 0x2000 <= 15
+        ram[32'h0000_2020 >> 2] = 32'h0002_A203; // lw   x4, 0(x5)       -> x4 <= mem[VA 0x2000]
+        ram[32'h0000_2024 >> 2] = 32'h0000_4337; // lui  x6, 0x4         -> x6=0x4000
+        ram[32'h0000_2028 >> 2] = 32'h0630_0393; // addi x7, x0, 99
+        ram[32'h0000_202C >> 2] = 32'h0073_2023; // sw   x7, 0(x6)       -> RO page: faults+TRAPS (mcause=15), resumes at next instr
+        ram[32'h0000_2030 >> 2] = 32'h0003_2403; // lw   x8, 0(x6)       -> x8 <= mem[VA 0x4000] (sentinel, R ok)
+        ram[32'h0000_2034 >> 2] = 32'h0000_34B7; // lui  x9, 0x3         -> x9=0x3000
+        ram[32'h0000_2038 >> 2] = 32'h0004_A503; // lw   x10, 0(x9)      -> not-present: faults+TRAPS (mcause=13), resumes at next instr, x10 stays 0
+        ram[32'h0000_203C >> 2] = 32'h3420_25F3; // csrrs x11, mcause, x0 -> x11 = mcause left by the trap above (expect 13)
+        ram[32'h0000_2040 >> 2] = 32'h0000_0063; // beq  x0, x0, 0       -> self-loop (halt)
+
+        // --- Generic trap handler @ PA 0x2100 (= VA 0x1100 translated,
+        // same R+X page as the main program, so fetching it never
+        // faults). Same shape as tb_csr_trap.v's handler. ---
+        ram[32'h0000_2100 >> 2] = 32'h3410_2FF3; // csrrs x31, mepc, x0
+        ram[32'h0000_2104 >> 2] = 32'h004F_8F93; // addi  x31, x31, 4
+        ram[32'h0000_2108 >> 2] = 32'h341F_9073; // csrrw x0, mepc, x31
+        ram[32'h0000_210C >> 2] = 32'h3020_0073; // mret
 
         // --- Scratch RO page @ PA 0x4000, pre-loaded sentinel ---
         ram[32'h0000_4000 >> 2] = 32'hDEAD_BEEF;
@@ -267,7 +317,10 @@ module tb_mmu_core;
         // sequential word reads (~a handful of cycles) per miss, and
         // this program takes at most one walk per unique page (5
         // distinct pages touched) plus the retry after the RO-store
-        // walk-time fault. 2000 cycles is a large margin over that.
+        // walk-time fault, plus 2 full trap round trips (4-instruction
+        // handler each, same handler page already TLB-mapped by then,
+        // so no extra PTW walk per trap). 2000 cycles is a large
+        // margin over all of that combined.
         repeat (2000) @(posedge clk);
 
         $display("---------------------------------------------");
@@ -284,6 +337,7 @@ module tb_mmu_core;
         check_eq32("x8 (RO load, sentinel intact)", dut.core.decode_unit.rf.Register[8], 32'hDEAD_BEEF);
         check_eq32("x9 (lui 0x3)",             dut.core.decode_unit.rf.Register[9],  32'h0000_3000);
         check_eq32("x10 (not-present fault -> 0)", dut.core.decode_unit.rf.Register[10], 32'd0);
+        check_eq32("x11 (mcause after not-present load trap)", dut.core.decode_unit.rf.Register[11], 32'd13);
 
         check_eq32("PA 0x4000 unchanged by blocked RO store", ram[32'h0000_4000 >> 2], 32'hDEAD_BEEF);
 

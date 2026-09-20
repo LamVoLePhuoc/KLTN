@@ -121,6 +121,12 @@ module tb_csr_trap;
         .Mem_WriteEnM(Mem_WriteEnM), .Mem_ReadEnM(Mem_ReadEnM),
         .MemOpM(MemOpM), .Mem_ReadDataM(Mem_ReadDataM),
 
+        // No MMU in this testbench (VA=PA transparently, see header) --
+        // loop Mem_AddrM (this core's own output) back into the new
+        // Mem_PhysAddrM input, exact identity, see memory_stage.v's
+        // header on the LR/SC VA-vs-PA fix.
+        .Mem_PhysAddrM(Mem_AddrM),
+
         .Fetch_PageFault_In(1'b0),
         .Data_PageFault_In(1'b0),
 

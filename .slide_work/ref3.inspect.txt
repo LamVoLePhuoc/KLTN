@@ -1,0 +1,78 @@
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","placeholders":[{"name":"title","type":"title"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"OBJECT","type":"obj","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"Section Header","placeholders":[{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"},{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"5_Title and Content","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"4_Title and Content","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"3_Title and Content","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"2_Title and Content","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"TWO_OBJECTS","type":"twoObj","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"TWO_OBJECTS_WITH_TEXT","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"TITLE_ONLY","type":"titleOnly","placeholders":[{"name":"title","type":"title"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout11.xml","name":"BLANK","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout12.xml","name":"2_Blank","placeholders":[{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout13.xml","name":"1_Blank","placeholders":[{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout14.xml","name":"OBJECT_WITH_CAPTION_TEXT","type":"objTx","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout15.xml","name":"PICTURE_WITH_CAPTION_TEXT","type":"picTx","placeholders":[{"name":"title","type":"title"},{"name":"picture","type":"picture"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout16.xml","name":"VERTICAL_TEXT","type":"vertTx","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout17.xml","name":"VERTICAL_TITLE_AND_VERTICAL_TEXT","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title"},{"name":"body","type":"body"},{"name":"dateTime","type":"dateTime"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"THIẾT KẾ BỘ TĂNG TỐC XÂU CHUỖI CHO CĂN CHỈNH TRÌNH TỰ GEN","textShapes":4}
+{"kind":"textbox","id":"sh/jet4rmx0","slide":1,"textChars":57,"textLines":1}
+{"kind":"textbox","id":"sh/4f2l0re5","slide":1,"textChars":33,"textLines":1}
+{"kind":"textbox","id":"sh/5gbmtwfq","slide":1,"textChars":20,"textLines":1}
+{"kind":"textbox","id":"sh/yxg3mdgv","slide":1,"textChars":113,"textLines":4}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"Nội dung báo cáo","textShapes":11}
+{"kind":"textbox","id":"sh/buhor2dg","slide":2,"textChars":16,"textLines":1}
+{"kind":"textbox","id":"sh/kjq5o7ux","slide":2,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/lkz6xcvi","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/8napsrut","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/9oj61wbe","slide":2,"textChars":16,"textLines":1}
+{"kind":"textbox","id":"sh/5knqt0fm","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/4ju90ve1","slide":2,"textChars":15,"textLines":1}
+{"kind":"textbox","id":"sh/hg3qpgfq","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/wfu9wbe5","slide":2,"textChars":21,"textLines":1}
+{"kind":"textbox","id":"sh/a50by9gr","slide":2,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/b69crexc","slide":2,"textChars":18,"textLines":1}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"1. Tổng quan đề tài (1/3)","textShapes":4}
+{"kind":"textbox","id":"sh/gbuls3mh","slide":3,"textChars":26,"textLines":1}
+{"kind":"textbox","id":"sh/e9c3qt4b","slide":3,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/falkjy5w","slide":3,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/298ryl4v","slide":3,"textChars":18,"textLines":1}
+{"kind":"image","id":"im/pwb21c7i","slide":3,"name":"Picture 2","bbox":[139.49,275.7,1001.03,373.11]}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"1. Tổng quan đề tài (2/3)","textShapes":5}
+{"kind":"textbox","id":"sh/sn21grut","slide":4,"textChars":26,"textLines":1}
+{"kind":"textbox","id":"sh/sfu10bqd","slide":4,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/tg329gry","slide":4,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"textChars":205,"textLines":3}
+{"kind":"textbox","id":"sh/rm1k7yt4","slide":4,"textChars":145,"textLines":1}
+{"kind":"image","id":"im/rixonmpw","slide":4,"name":"Google Shape;342;g3bc30b8f5e8_0_9","bbox":[93.85,198.15,1056.49,424.57]}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"1. Tổng quan đề tài (3/3)","textShapes":4}
+{"kind":"textbox","id":"sh/987y5sre","slide":5,"textChars":26,"textLines":1}
+{"kind":"textbox","id":"sh/j2tkvmtg","slide":5,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/i1kjmhsv","slide":5,"textChars":1,"textLines":1}
+{"kind":"textbox","id":"sh/cf2tcr61","slide":5,"textChars":88,"textLines":1}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"2. Mục tiêu đề tài","textShapes":4}
+{"kind":"textbox","id":"sh/rix8fy5c","slide":6,"textChars":18,"textLines":1}
+{"kind":"textbox","id":"sh/8n2pczmd","slide":6,"textChars":446,"textLines":8}
+{"kind":"textbox","id":"sh/tobq54ny","slide":6,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/98jetgbq","slide":6,"textChars":1,"textLines":1}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"3. Phương pháp thực hiện","textShapes":4}
+{"kind":"textbox","id":"sh/y5sb6p47","slide":7,"textChars":24,"textLines":1}
+{"kind":"textbox","id":"sh/l83uhkny","slide":7,"textChars":458,"textLines":6}
+{"kind":"textbox","id":"sh/07ud8fmd","slide":7,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/nulcju5o","slide":7,"textChars":1,"textLines":1}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"4. Kế hoạch thực hiện","textShapes":3}
+{"kind":"textbox","id":"sh/lsb2xo7u","slide":8,"textChars":21,"textLines":1}
+{"kind":"textbox","id":"sh/yp03m983","slide":8,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/zq9kvepo","slide":8,"textChars":1,"textLines":1}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"Tài liệu tham khảo","textShapes":4}
+{"kind":"textbox","id":"sh/1k3a1cfy","slide":9,"textChars":18,"textLines":1}
+{"kind":"textbox","id":"sh/be5cr6hg","slide":9,"textChars":820,"textLines":5}
+{"kind":"textbox","id":"sh/adwvy1gv","slide":9,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/x07utgz6","slide":9,"textChars":1,"textLines":1}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"Phụ lục","textShapes":3}
+{"kind":"textbox","id":"sh/0fep8bmx","slide":10,"textChars":7,"textLines":1}
+{"kind":"textbox","id":"sh/ja98balg","slide":10,"textChars":44,"textLines":1}
+{"kind":"textbox","id":"sh/y9gr254v","slide":10,"textChars":2,"textLines":1}
+{"kind":"image","id":"im/69cnilcv","slide":10,"name":"Google Shape;400;g3bc30b8f5e8_0_0","bbox":[337.89,202.36,604.22,472.28]}
+{"kind":"notice","message":"Truncated: omitted 0 lines. Increase maxChars or narrow target."}

@@ -23,14 +23,15 @@
 // the old round_robin_arbiter_2core's "any write commit, broadcast
 // to the other core" scheme it replaces (it now fires exactly when
 // coherence actually required invalidating this line, nothing more/
-// less) -- but it does NOT fix the VA-vs-PA mismatch already flagged
-// in mmu_core_wrapper.v's own NOTE: memory_stage.v's reservation_addr
-// is captured from ALU_ResultM, which is a *virtual* address (inside
-// RV32IMA, pre-MMU), while the snoop address here is physical
-// (post-MMU, L1 layer). The two only compare correctly if this
-// core's own VA->PA mapping happens to make them numerically equal.
-// Fixing that for real needs memory_stage.v itself to compare in the
-// physical domain, which is out of scope here (see Risc_V_new/README.md).
+// less). FIXED (was flagged as a real, un-fixed VA-vs-PA mismatch
+// here previously -- see Risc_V_new/README.md's risk register):
+// memory_stage.v's reservation_addr now tracks/compares in the
+// PHYSICAL domain throughout (via RV32IMA.v's new Mem_PhysAddrM
+// input, wired from mmu_core_wrapper.v's own pa_mem -- see that
+// file's header and memory_stage.v's header for the full reasoning),
+// the same domain the snoop address here already was. No change
+// needed in THIS file -- the fix lives entirely inside
+// mmu_core_wrapper.v/RV32IMA.v/memory_stage.v, below this wrapper.
 //
 // MMU control: mmu_core_wrapper is instantiated below with
 // MMU_CTRL_FROM_CSR=1 -- the core's own satp CSR (software-written via

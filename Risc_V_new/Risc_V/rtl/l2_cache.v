@@ -4,12 +4,16 @@
 // l2_cache
 //
 // Shared L2 storage array: tag + valid + dirty(-vs-DRAM) + data +
-// a per-line sharer bitmap (the coherence directory). Per
-// address_mapping's L2 spec (the diagram says 512KB; this repo
-// defaults to address_mapping's 256KB -- see Risc_V_new/README.md
-// for that open conflict; override L2_SIZE_BYTES to match whichever
-// gets decided):
-//   256KB, 4-way, line = 32B -> offset=5b, index=11b (2048 sets), tag=16b
+// a per-line sharer bitmap (the coherence directory). Sized per the
+// FINAL architecture decision (Risc_V_new/README.md mục 4 -- the
+// diagram's own 512KB, not address_mapping's earlier 256KB placeholder
+// number; the "open conflict" this header used to describe is now
+// resolved):
+//   512KB, 4-way, line = 32B -> offset=5b, index=12b (4096 sets), tag=15b
+// (16384 total lines / 4 ways = 4096 lines/way = 2^12 -- INDEX_BITS=12.
+// Every other size-derived constant below (TAG_BITS/SETS/etc.) is a
+// localparam computed FROM INDEX_BITS, so this is the only parameter
+// that ever needs to change for a different L2 size.)
 //
 // Inclusive of all 4 L1 D-caches (a directory-based protocol can
 // only track sharers for lines it currently holds) -- I-caches are
@@ -32,7 +36,7 @@
 // construction).
 // ============================================================
 module l2_cache #(
-    parameter INDEX_BITS    = 11,   // 2048 sets (256KB, 4-way, 32B line)
+    parameter INDEX_BITS    = 12,   // 4096 sets (512KB, 4-way, 32B line)
     parameter WAYS          = 4,
     parameter LINE_WORDS    = 8
 )(

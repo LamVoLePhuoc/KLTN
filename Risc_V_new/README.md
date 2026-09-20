@@ -362,11 +362,365 @@ phạm vi Hướng 2, có thể cân nhắc thêm vào Hướng 1 hoặc để r
 
 ---
 
+## -0.1. Phiên này: Hướng 1 — mở rộng testbench CSR/trap (M/S/U thật, `medeleg`, MMU page-fault-trap)
+
+Tiếp theo mục -0.25 (Hướng 2), đây là Hướng 1: mở rộng phần kiểm thử CSR/Trap/Privilege
+để phủ 3 việc `tb_csr_trap.v` (phiên trước) tự nhận là chưa làm — chuyển đổi M/S/U
+**thật** (test cũ ở nguyên M-mode xuyên suốt), delegation qua `medeleg`, và 1 kịch bản
+MMU-page-fault-thật-sự-trap.
+
+### -0.1.1. Bug thật phát hiện được TRƯỚC KHI viết testbench mới: `tb_mmu_core.v` đã lỗi thời
+
+Trước khi viết gì mới, việc đầu tiên là suy nghĩ xem "MMU page fault thật sự trap" nghĩa
+là gì với testbench MMU đã có sẵn (`tb_mmu_core.v`) — và phát hiện ra nó **đã âm thầm
+sai** kể từ phiên xây CSR/Trap (mục -0.5), dù chưa ai chạy lại nó để thấy:
+
+- `tb_mmu_core.v` được viết TRƯỚC KHI `csr_trap_unit.v` tồn tại — lúc đó một page fault
+  chỉ ép NOP/chặn store, không có gì để "trap" vào cả.
+- Phiên -0.5 sau đó nối `mmu_core_wrapper.v`'s `fetch_fault`/`mem_fault` thẳng vào
+  `Fetch_PageFault_In`/`Data_PageFault_In` của core bên trong — nghĩa là 1 page fault
+  bây giờ **thật sự nhảy tới `mtvec`**.
+- Nhưng `tb_mmu_core.v` **chưa từng set `mtvec`** — giá trị reset là 0. Lần fault đầu
+  tiên (RO store tại VA 0x4000) sẽ nhảy PC về địa chỉ 0, nơi chứa **dữ liệu bảng trang**
+  (`0x0000_1001`), không phải lệnh hợp lệ — dẫn tới illegal-instruction-trap-loop tại PC
+  0 mãi mãi (mtvec vẫn là 0), treo tới khi hết ngân sách chu kỳ và FAIL.
+- Đây là hệ quả tất yếu của việc nối 2 phần (CSR/trap + MMU) đã được xây RIÊNG BIỆT,
+  đúng kiểu vấn đề Hướng 1 được giao để đi tìm — tìm bằng cách suy luận cẩn thận, không
+  phải chạy simulator (vẫn không có trong môi trường này).
+
+**Đã sửa `tb_mmu_core.v`** (ngoại lệ hợp lý với "không sửa file cũ" — file này thật sự
+sai với RTL hiện tại, để nguyên sẽ đánh lừa bạn khi chạy lại): thêm 3 lệnh đầu chương
+trình set `mtvec = VA 0x1100`, thêm 1 handler chung 4 lệnh tại VA 0x1100 (cùng dạng với
+handler của `tb_csr_trap.v`), đặt bên trong CHÍNH trang đã map R+X sẵn (VA 0x1000-0x1FFF)
+để việc fetch handler không tự gây fault. Toàn bộ địa chỉ chương trình gốc dịch +0xC để
+nhường chỗ. Thêm 1 check mới: `x11 = mcause` đọc lại sau lần trap gần nhất (kỳ vọng 13,
+not-present load) — chứng minh trạng thái CSR sau trap thật là đúng, không chỉ "có nhảy
+PC là được". Các check cũ (x1-x10, "PA 0x4000 không đổi", số lần page-fault pulse) đều
+giữ nguyên kỳ vọng — trace tay xác nhận cả 2 lần fault (RO store, not-present load) vẫn
+bị chặn/trả 0 đúng như trước, CHỈ THÊM việc chúng giờ cũng thật sự trap-và-resume đúng
+chỗ.
+
+### -0.1.2. File mới: `sim/tb_csr_priv.v` — M/S/U thật + `medeleg`
+
+DUT giống `tb_csr_trap.v` (RV32IMA thô, không qua MMU — lý do y hệt: cô lập việc kiểm
+thử privilege/delegation khỏi việc PTW cũng đang chạy). Kịch bản đầy đủ, dùng đúng cách
+thật của RISC-V để đổi quyền (không có lệnh "hạ quyền" nào khác ngoài qua trap/return):
+
+```
+M (reset) --MRET(mstatus.MPP=S)--> S --SRET(sstatus.SPP=U)--> U
+  --ECALL, medeleg[8]=1--> S (delegated: dùng scause/sepc/stvec, KHÔNG dùng mcause/mepc/mtvec)
+  --SRET--> U
+  --EBREAK, medeleg[3]=0--> M (KHÔNG delegate, dù đang ở U -- chứng minh delegation chọn
+    lọc theo từng cause, không phải "cứ không phải M thì về S")
+  --MRET--> U (cuối cùng; self-loop dừng ở đây)
+```
+
+Đây là con đường "giáo khoa" thật của RISC-V: chỉ M-mode mới ghi được `mstatus.MPP`
+(S-mode không thấy field này qua `sstatus`, đã xác nhận bằng cách đọc đúng mask
+`sstatus_r`), nên M→S phải qua MRET; S→U phải qua SRET với `sstatus.SPP`, không có
+đường tắt nào khác.
+
+**2 bug thật tự bắt được khi hand-trace trước khi tin dùng chương trình** (giống tinh
+thần bug #4 ở Phase 7b, mục 7 — luôn trace tay từng lệnh CSR/immediate trước khi coi là
+đúng):
+- `ADDI x28, x0, 0x800` (định dùng để dựng bit MPP=S tại bit 11) **sai** — immediate
+  12-bit của ADDI được sign-extend, và 0x800 tự nó có bit 11 (bit dấu của trường 12-bit)
+  = 1, nên lệnh này thực ra nạp `x28 = 0xFFFFF800`, không phải `0x00000800`. Ghi thẳng
+  giá trị đó vào `mstatus` sẽ khiến MPP đọc thành "11" (M) thay vì "01" (S) — MRET đầu
+  tiên sẽ quay lại M thay vì hạ xuống S, làm hỏng toàn bộ kịch bản ngay bước đầu. Sửa
+  bằng `ADDI x28,x0,1` (an toàn, nhỏ, dương) rồi `SLLI x28,x28,11` (dịch bit trên giá trị
+  thanh ghi thật, không đi qua đường sign-extend của immediate).
+- Marker cuối `ADDI x8,x0,0x999` có đúng lỗi y hệt (0x999 cũng có bit 11 = 1) — đổi
+  thành `0x666` (an toàn, < 0x800).
+- Địa chỉ CSR (`mtvec`=0x305, `medeleg`=0x302, `mstatus`=0x300, `mepc`=0x341,
+  `stvec`=0x105, `sepc`=0x141, `scause`=0x142, `sstatus`=0x100, `mcause`=0x342) không bị
+  ảnh hưởng bởi lỗi này — chúng nằm ở `instr[31:20]`, đọc ra trực tiếp không qua đường
+  sign-extend, bất kể bit nào của địa chỉ được bật.
+
+**2 cách kiểm chứng độc lập nhau trong cùng 1 testbench** (không chỉ tin vào 1 loại
+bằng chứng):
+1. Thanh ghi marker (x1-x8) chứng minh CÓ code chạy ở đúng từng giai đoạn, VÀ (với x5,
+   x7 — đọc `scause`/`mcause`, đều là CSR bị giới hạn quyền tối thiểu S/M) việc đọc
+   thành công tự nó là bằng chứng gián tiếp priv lúc đó đúng thật là S/M — nếu sai,
+   `csr_access_bad` sẽ biến việc đọc đó thành illegal-instruction, và toàn bộ phần còn
+   lại của chương trình sẽ không bao giờ chạy tới các marker sau.
+2. Bộ đếm lịch sử `CurrentPriv` (`priv_history[]`, bắt cạnh mỗi lần đổi giá trị thật) —
+   kiểm tra trực tiếp đúng 6 lần chuyển đổi, đúng thứ tự S,U,S,U,M,U — độc lập hoàn
+   toàn với các thanh ghi marker.
+
+**Chưa mô phỏng** (như mọi file khác trong repo) — chỉ đã tự kiểm tra tĩnh (đối chiếu
+100% port với `RV32IMA.v`, cân bằng begin/end) + trace tay từng lệnh + xác minh từng mã
+lệnh hex bằng 1 assembler/decoder nháp riêng (ngoài repo, chỉ để tự kiểm, không phải
+bằng chứng RTL đúng).
+
+---
+
+## -0.05. Phiên này: Hướng 3 — Bootloader SD card, kịch bản đánh giá tự động, file `.xdc`
+
+### -0.05.1. Phát hiện quan trọng làm đổi hẳn kiến trúc: SD card trên Genesys ZU-5EV nối qua PS, KHÔNG nối qua PL
+
+Trước khi viết bất kỳ RTL/script nào, tôi tra cứu (qua web, không đoán) xem khe microSD
+trên Genesys ZU-5EV nối vào đâu — vì kế hoạch ban đầu (dùng IP `axi_quad_spi` phía PL để
+tự bit-bang giao thức SD qua SPI, giống hướng đi đã định trước đó) **chỉ khả thi nếu SD
+card nối tới chân PL**. Kết quả: **không khả thi** — bằng chứng trực tiếp từ chính quy
+trình boot Digilent công bố cho board này: SD card boot dùng `zynqmp_fsbl.elf` (First
+Stage Boot Loader, chạy trên lõi ARM của PS) đóng gói cùng bitstream + `u-boot.elf` thành
+`BOOT.BIN`, được **boot ROM cứng của PS** đọc trực tiếp từ SD — đây là cơ chế SD-boot
+chuẩn, cố định trong silicon của toàn bộ họ Zynq/Zynq UltraScale+, chỉ hoạt động khi SD
+card nối vào đúng chân MIO của PS. Không có đường điện nào từ PL tới chân SD card trên
+board này — dù RTL/phần mềm phía RISC-V (PL) viết đúng cỡ nào, nó cũng không thể tự đọc
+được SD card.
+
+**Kiến trúc đúng, khả thi, ít rủi ro hơn hẳn kế hoạch ban đầu**:
+```
+PS boot từ SD (đã hoạt động sẵn, không cần làm gì thêm) ->
+  1 loader nhỏ phía PS đọc chương trình RISC-V từ hệ thống file FAT32 trên SD card,
+  ghi vào DRAM dùng chung ->
+  PS ghi bit GO qua boot_ctrl.v (mục -0.05.2) ->
+  Các lõi RISC-V (đang bị giữ reset từ trước) bắt đầu fetch chương trình vừa nạp.
+```
+So với kế hoạch ban đầu (tự viết + tự hand-assemble 1 bootloader SPI hoàn chỉnh bằng
+RISC-V assembly, không có simulator để xác minh vòng lặp retry/timing của giao thức SD
+thật) — kiến trúc này **rủi ro thấp hơn nhiều**: phần khó nhất (giao thức SD, hệ thống
+file FAT32) do chính firmware/driver đã được Xilinx kiểm chứng kỹ (FSBL, `xilffs`) đảm
+nhận, không phải RTL/assembly tự viết trong repo này.
+
+Sources:
+- [Genesys ZU getting started / SD boot flow (FSBL, BOOT.BIN) — Digilent Forum threads](https://forum.digilent.com/topic/20053-problem-with-sd-card-boot-on-genesys-zu/)
+- [Genesys ZU Reference Manual - Digilent Reference](https://digilent.com/reference/programmable-logic/genesys-zu/reference-manual)
+
+### -0.05.2. File mới: `rtl/boot_ctrl.v` — chốt chặn reset chờ PS nạp xong
+
+Khối AXI4-Lite slave rất nhỏ, cố ý đơn giản tối đa (đúng kiểu "đúng chỉ bằng cách đọc
+lại" mà phiên này ưu tiên khi không có simulator) — 3 thanh ghi:
+- `REG_CTRL` (offset 0x0): bit0 = **GO**, ghi-1-là-set, **sticky** (ghi 0 sau đó KHÔNG
+  tắt lại được — one-shot có chủ đích, giống hệt lý do thật: một khi RISC-V đã chạy,
+  không có khái niệm "ghi phần mềm để nó tự reset lại" qua đường này).
+- `REG_STATUS` (offset 0x4): đọc lại đúng giá trị GO, tiện PS polling/debug.
+- `REG_RESULT` (offset 0x8): **RISC-V ghi mã PASS/FAIL vào đây, PS đọc lại** — xem mục
+  -0.05.3 vì sao đi qua đây thay vì UART thật.
+
+`core_go` (output) dùng để AND với `ARESETN` hệ thống tại `quad_core_axi_wrapper_bootable.v`
+(file mới, bọc `quad_core_axi_wrapper.v` gốc — không sửa file cũ) — giữ TOÀN BỘ 4 lõi +
+MMU + L1/L2/coherence (tất cả treo trên cùng 1 cây reset) ở trạng thái reset cho tới khi
+PS xác nhận đã nạp xong chương trình vào DRAM dùng chung, tránh race "RISC-V fetch trước
+khi PS ghi xong".
+
+### -0.05.3. Vì sao PASS/FAIL đi qua `boot_ctrl` thay vì UART PL thật
+
+Kế hoạch ban đầu: thêm 1 `axi_uartlite` (IP có sẵn của Vivado) ở phía PL, chương trình
+RISC-V ghi chuỗi "PASS"/"FAIL" ra đó, host đọc qua cổng COM. Nhưng suy nghĩ kỹ lại: cổng
+USB-UART DUY NHẤT có sẵn trên board gần như chắc chắn cũng nối vào UART cứng của PS (y
+hệt lý do SD card không nối PL ở mục -0.05.1) — nghĩa là 1 `axi_uartlite` tự thêm ở PL
+**không chắc có đường vật lý nào ra ngoài để host đọc được**. Thay vì đầu tư hand-assemble
++ verify 1 con đường có khả năng vô dụng trên phần cứng thật, tôi sửa lại: `boot_ctrl.v`
+đóng thêm vai trò "hộp thư kết quả" — RISC-V ghi `REG_RESULT` qua đúng đường AXI đã có sẵn
+(cùng interconnect với `boot_ctrl`'s GO), PS đọc lại và tự in "PASS"/"FAIL" ra **console
+UART của chính PS** (chắc chắn hoạt động — đó là console bạn đã dùng để xem log FSBL/
+u-boot). `axi_uartlite` vẫn được nối trong `build_soc_zu5ev_boot.tcl` như 1 ngoại vi phụ/
+debug — dùng nó cho output thật CHỈ SAU KHI bạn tự xác nhận board có đầu nối UART nào đó
+thật sự tới được PL.
+
+### -0.05.4. File mới: `scripts/build_soc_zu5ev_boot.tcl`
+
+Script thứ 3 (không sửa 2 script cũ), dựng: `ps0` (Zynq UltraScale+ PS, `zynq_ultra_ps_e`,
+cấu hình qua `apply_bd_automation` dùng board preset — KHÔNG tự tay set hàng chục property
+DDR/MIO, để tránh đúng kiểu "bịa dữ kiện phần cứng" đã cấm xuyên suốt dự án; xem
+-0.05.1) + `cpu0` (`quad_core_axi_wrapper_bootable`, mới) + `dma0` (`axi_cdma`) + 1
+`axi_interconnect_data` dùng chung (3 master: cpu0/dma0/ps0's GP master; 4 slave:
+mem_ctrl, `uart0` (`axi_uartlite`, phụ/debug), dma0's control port, `boot_ctrl`'s
+`S_AXI_BOOT`). `boot_ctrl` cố ý reachable từ CẢ 2 phía (cpu0 ghi RESULT, ps0 ghi GO/đọc
+RESULT).
+
+**Ghi chú trung thực quan trọng** (đọc trước khi coi chạy sạch = đúng hoàn toàn): các lệnh
+`apply_bd_automation` cho Zynq PS (tên rule, tên port GP master `M_AXI_HPM0_FPD`/
+`M_AXI_HPM0_LPD`) có thể lệch giữa các bản Vivado, và phiên này không có Vivado để chạy
+thử. Mọi lệnh liên quan PS đều bọc `catch` + in rõ hướng dẫn sửa tay trong GUI nếu lệch —
+đúng quy ước "WARNING không abort" đã dùng ở 2 script trước, chỉ áp dụng cho phần có nhiều
+biến thiên hơn (PS bring-up) so với IP ngoại vi thường. **Phần clock/reset cố ý KHÔNG tự
+động hoá** (đoán sai cú pháp ở đây có nguy cơ nối sai trong im lặng, tệ hơn là báo lỗi rõ
+ràng) — script in hướng dẫn rõ ràng để bạn tự làm qua GUI's Run Connection Automation.
+
+**Chưa làm trong script này**: `mem_ctrl` vẫn là BRAM (như 2 script trước), CHƯA phải DRAM
+thật qua cổng HP của PS — script này chỉ chứng minh phần dây nối elaborate được, CHƯA
+chứng minh luồng SD→DRAM→release-from-reset chạy đúng trên phần cứng thật với DRAM thật.
+Việc thay `mem_ctrl` bằng đường HP-port-tới-DDR thật là bước tiếp theo, sau khi xác nhận
+phần này elaborate sạch trong Vivado thật.
+
+### -0.05.5. Phần mềm phía PS (loader) — mô tả, KHÔNG hand-assemble
+
+Chạy trên lõi ARM Cortex-A53 của PS, toolchain hoàn toàn khác RISC-V (Vitis/PetaLinux,
+biên dịch C thật) — **ngoài phạm vi hand-assemble hex của repo này** (khác hẳn mọi
+testbench RISC-V khác trong dự án). Quy trình (thủ tục, không phải code thật):
+1. Dùng thư viện `xilffs` (FAT filesystem driver có sẵn của Xilinx, đã kiểm chứng) mở
+   file chương trình RISC-V (vd `riscv_app.bin`) trên phân vùng FAT32 của SD card.
+2. Đọc toàn bộ file, ghi vào vùng DRAM dùng chung (địa chỉ khớp với vùng `mem_ctrl`/DRAM
+   mà 4 lõi RISC-V trỏ tới sau khi dịch qua MMU/`RESET_ADDR`).
+3. Ghi `boot_ctrl`'s `REG_CTRL` bit0 = 1 (địa chỉ lấy từ Address Editor sau khi chạy
+   `build_soc_zu5ev_boot.tcl`, xem ghi chú cuối script).
+4. Polling `boot_ctrl`'s `REG_RESULT` (hoặc chờ 1 khoảng thời gian cố định) tới khi khác
+   0, rồi `printf` "PASS"/"FAIL" tương ứng ra console PS — đây chính là dòng
+   `scripts/host_eval_uart.py` (mục -0.05.6) sẽ đọc được.
+
+### -0.05.6. File mới: `scripts/host_eval_uart.py` — đánh giá tự động, không xem waveform
+
+Script Python (dùng `pyserial`, thư viện chuẩn phổ biến) mở cổng COM của board, đọc từng
+dòng, thoát với mã 0 nếu thấy "PASS", mã 1 nếu thấy "FAIL", mã 2 nếu hết thời gian chờ mà
+chưa thấy gì, mã 3 nếu không mở được cổng — đúng kiểu exit-code CI/script hoá được, không
+cần người ngồi xem terminal/waveform. Mặc định trỏ vào console UART của PS (mục -0.05.3);
+`--port`/`--baud`/`--timeout` đều chỉnh được qua tham số dòng lệnh.
+
+### -0.05.7. File `.xdc` — KHÔNG bịa số chân
+
+Thư mục mới `constraints/` với 2 file **template**, không phải file constraint hoàn
+chỉnh: `genesys_zu5ev_boot_template.xdc` và `vcu129_template.xdc`. Lý do không điền số
+chân thật: mọi lần thử trích xuất trang schematic/reference-manual PDF thật của cả 2
+board trong phiên này đều thất bại (PDF nén theo cách công cụ đọc hiện có không giải mã
+được, và không có Vivado để đối chiếu ngược qua board file) — **bịa số chân, đặc biệt
+IOSTANDARD/điện áp, có thể làm hỏng board thật**, không chỉ đơn giản là sai logic. Mỗi
+file ghi rõ: (a) vì sao ngắn/dài khác nhau (ZU-5EV dùng PS + board-preset automation nên
+hầu như không cần XDC tay cho DDR/MIO; VCU129 thuần PL nên cần XDC tay cho mọi thứ), (b)
+chính xác nguồn nào cần tra để điền đúng (link reference manual/schematic Digilent, UG1318
+của AMD), (c) với riêng VCU129: nhắc lại rõ ràng câu hỏi kiến trúc còn treo ở mục -0.05.8.
+
+### -0.05.8. VCU129: câu hỏi kiến trúc còn treo — KHÔNG đầu tư RTL khi chưa xác nhận
+
+VCU129 là board PL thuần, **không có PS** (đã xác nhận phiên trước) — nghĩa là kiến trúc
+"PS-mediated boot" ở mục -0.05.1 **không áp dụng được cho VCU129 dù nó có đúng với
+Genesys ZU-5EV**. Nếu VCU129 cần hỗ trợ SD-boot theo đúng yêu cầu giảng viên, đường duy
+nhất còn lại là 1 bootloader SD-qua-SPI thật thi hành hoàn toàn trong PL (IP
+`axi_quad_spi` + 1 chương trình RISC-V tự bit-bang giao thức SD chuẩn: CMD0 → CMD8 →
+vòng lặp ACMD41 → CMD16 → CMD17 từng block). Đây CHÍNH LÀ kế hoạch ban đầu của tôi trước
+khi phát hiện ra nó không áp dụng được cho ZU-5EV — thuật toán vẫn đúng và có thể dùng lại
+cho VCU129, NHƯNG:
+1. **Chưa xác nhận VCU129 có khe SD/microSD nào không** — danh sách tính năng chính thức
+   không nhắc tới (đã ghi ở mục -0.5.5 phiên trước).
+2. **Chưa xác nhận (nếu có) SD card có nối tới chân PL nào không** — câu hỏi giống hệt
+   mục -0.05.1 nhưng cho board này.
+3. Một bootloader SD-SPI thật, hand-assemble bằng RISC-V (không có toolchain/simulator
+   thật để verify) có rủi ro bug thật sự cao — đúng bài học ở mục -0.1 (2 bug sign-extend
+   bắt được khi hand-trace `tb_csr_priv.v`, một chương trình ĐƠN GIẢN HƠN NHIỀU so với 1
+   bootloader SD-SPI thật với vòng lặp retry/polling).
+
+**Quyết định phiên này**: KHÔNG đầu tư viết RTL/hand-assemble bootloader SD-SPI cho VCU129
+khi (1)/(2) chưa được xác nhận — tránh lặp lại đúng rủi ro "đầu tư công sức vào thứ có thể
+không dùng được trên phần cứng thật" mà mục -0.5.5 phiên trước đã cảnh báo. Thuật toán
+giao thức SD-SPI (CMD0/CMD8/ACMD41/CMD16/CMD17, hoàn toàn chuẩn, ổn định, đã hiểu rõ) sẵn
+sàng hiện thực ngay khi bạn xác nhận được (1) và (2) — chỉ cần yêu cầu lại, không cần
+nghiên cứu lại từ đầu.
+
+---
+
+## -0.02. Phiên này: chốt 5 quyết định kiến trúc còn treo + sửa LR/SC VA-vs-PA
+
+Bạn đã chốt: **bus core↔system là AHB-Lite**, **MESI đầy đủ** (đã chọn từ trước, nay xác
+nhận lại), **MMU nằm trong phạm vi báo cáo chính thức**, **L2 = 512KB**, **L1 = 32KB D$ +
+32KB I$ tách riêng**. Mục 4 (các quyết định còn treo) cập nhật lại theo đây — không còn
+"còn treo" cho 5 điểm này nữa.
+
+### -0.02.1. Resize L1/L2 — chỉ đổi 1 tham số mỗi file, không có hardcode ẩn
+
+Đọc kỹ cả 3 file trước khi sửa (đúng tinh thần "cẩn thận, tỉ mỉ") để chắc chắn không có
+giá trị hardcode nào ăn theo kích thước cũ ngoài đúng 1 tham số `INDEX_BITS`:
+- `l2_cache.v`: `TAG_BITS`/`SETS`/`addr_tag`/`addr_index` đều là `localparam` tính TỪ
+  `INDEX_BITS` — không có gì hardcode khác. 256KB→512KB: `INDEX_BITS` 11→12 (4096 sets).
+- `l1_icache.v`/`l1_dcache.v`: `WAYS=2` là `localparam` cố định (đã ghi rõ từ trước:
+  "hardcoded to WAYS=2... not a drop-in 'set WAYS=4' parametrization") — nhưng tôi
+  KHÔNG đổi `WAYS`, chỉ đổi `INDEX_BITS`, nên giới hạn đó không áp dụng ở đây. 16KB→32KB
+  (2-way, line 32B): `INDEX_BITS` 8→9 (512 sets).
+- Đã kiểm tra: không có testbench nào (`tb_coherence.v`, `tb_mmu_core.v`, `tb_csr_*.v`)
+  hardcode địa chỉ dựa theo index-width cũ, và không có chỗ nào instantiate 3 module này
+  kèm tham số ghi đè — mọi nơi đều dùng default, nên chỉ cần đổi default là đủ, không
+  phải sửa dây ở bất kỳ file nào khác.
+
+### -0.02.2. AHB-Lite trở thành bus chính thức — cần thêm 1 lớp AXI wrapper mới
+
+`quad_core_soc_ahb.v` (mục -0.25.2, phiên trước) đã có, nhưng **chưa có** bản bọc AXI4 +
+bản bootable tương ứng — `quad_core_axi_wrapper.v`/`quad_core_axi_wrapper_bootable.v` cũ
+chỉ bọc `quad_core_soc.v` (bản dây nối trực tiếp), không phải bản AHB-Lite. File mới
+(port-for-port giống hệt bản gốc, chỉ đổi module con được instantiate — đã đối chiếu port
+100% cho cả 2):
+- `rtl/quad_core_axi_wrapper_ahb.v` — bọc `quad_core_soc_ahb.v`.
+- `rtl/quad_core_axi_wrapper_ahb_bootable.v` — bọc thêm `boot_ctrl.v` (dùng cho Genesys
+  ZU-5EV).
+
+**Đã cập nhật để dùng đúng bản AHB-Lite làm mặc định** (không còn là "1 trong 2 lựa
+chọn" — giờ là lựa chọn chính thức):
+- `scripts/build_soc_zu5ev_boot.tcl`: `cpu0` giờ instantiate
+  `quad_core_axi_wrapper_ahb_bootable` thay vì `quad_core_axi_wrapper_bootable`.
+- `scripts/build_soc_4core_trial.tcl`: `cpu0` giờ instantiate `quad_core_axi_wrapper_ahb`
+  thay vì `quad_core_axi_wrapper`.
+- Cả 2 script vẫn ĐĂNG KÝ (nhưng không dùng) source của bản dây nối trực tiếp
+  (`quad_core_soc.v`/`quad_core_axi_wrapper.v`/...) — giữ lại làm tham khảo/dự phòng
+  trong cùng project, không xoá.
+
+### -0.02.3. File mới: `sim/tb_coherence_ahb.v` — đóng lỗ hổng "AHB-Lite chưa có test riêng"
+
+Đây chính là mục còn thiếu quan trọng nhất trong danh sách "chưa hoàn thiện triệt để" mà
+tôi tự liệt kê trước đó, và giờ CÀNG quan trọng hơn vì AHB-Lite đã là bus chính thức. Thay
+vì viết 1 kịch bản test từ đầu (rủi ro cao hơn), tôi **dùng lại nguyên vẹn** kịch bản
+MESI 5 bước (A-E) đã có sẵn trong `tb_coherence.v` — copy y hệt cách sequencing/assertion,
+CHỈ đổi đúng 1 điều: đường nối `l1_dcache` ↔ `coherence_manager` giờ đi qua 1 cặp
+`ahb_lite_l1_adapter` + `ahb_lite_l1_slave_adapter` (đúng như `quad_core_soc_ahb.v` đã
+làm cho D$), thay vì nối dây trực tiếp. PASS ở đây là bằng chứng trực tiếp cầu AHB-Lite
+trong suốt với giao thức — nếu FAIL đúng ở bước mà `tb_coherence.v` (bản gốc) từng PASS,
+lỗi chắc chắn nằm ở 2 file adapter, không phải ở MESI logic (đã review riêng, không đổi
+gì ở `coherence_manager.v`/`l1_dcache.v` trong file test mới này).
+
+**Khác biệt kỳ vọng so với `tb_coherence.v` (không phải bug)**: mọi giao dịch giờ chậm
+hơn hẳn (8 lần truyền word tuần tự qua AHB-Lite mỗi lần fill/writeback, thay vì gần như
+1-chu-kỳ/word của giao thức tự đặt cũ) — ngân sách chu kỳ timeout đã tăng lên tương ứng
+(40000 thay vì 20000 chu kỳ clock).
+
+**Đã tự kiểm tra tĩnh**: đối chiếu port 100% cho cả 4 loại module instantiate
+(`l1_dcache`, `ahb_lite_l1_adapter`, `ahb_lite_l1_slave_adapter`, `coherence_manager`),
+cân bằng begin/end/task/endtask. **Chưa chạy qua Vivado** (như mọi testbench khác trong
+repo).
+
+### -0.02.4. Sửa LR/SC VA-vs-PA — bug thật đã biết từ nhiều phiên trước, giờ mới sửa
+
+**Bug chính xác**: `memory_stage.v` (sống hoàn toàn bên trong `RV32IMA.v`, tức miền địa
+chỉ ẢO, trước MMU) lưu `reservation_addr <= ALU_ResultM` (địa chỉ ảo) rồi so khớp với
+`Snoop_Addr` (luôn là địa chỉ VẬT LÝ, đến từ `coherence_manager.v`, sau MMU) — 2 địa chỉ
+khác miền, chỉ tình cờ đúng nếu VA→PA của core đó là ánh xạ đồng nhất (identity mapping).
+
+**Cách sửa**: thêm 1 cổng mới `Mem_PhysAddrM` (32-bit) xuyên suốt
+`memory_stage.v` → `RV32IMA.v` → nơi gọi. `memory_stage.v` giờ lưu/so khớp reservation
+bằng `Mem_PhysAddrM` (vật lý) thay vì `ALU_ResultM` (ảo) — cùng miền với `Snoop_Addr`
+ngay từ đầu, không cần sửa gì phía snoop.
+
+**Ai cấp giá trị thật cho `Mem_PhysAddrM`**:
+- `mmu_core_wrapper.v` (nơi CÓ MMU thật): nối `pa_mem` — địa chỉ vật lý mmu_core_wrapper
+  đã tự tính sẵn mỗi chu kỳ cho đúng `mem_addr_va` hiện tại. Đã trace tay xác nhận đúng
+  thời điểm: mỗi khi lõi KHÔNG bị đóng băng (`mmu_busy=0`), `pa_mem` luôn phản ánh đúng
+  bản dịch mới nhất của `mem_addr_va` — đúng lúc 1 lệnh LR/SC ở M-stage thật sự "chốt".
+  Đây là chỗ sửa THẬT DUY NHẤT — mọi nơi khác chỉ cần nối vòng để không phá vỡ hành vi cũ.
+- 5 chỗ CÒN LẠI gọi `RV32IMA` trực tiếp (không qua MMU, VA=PA đồng nhất theo thiết kế):
+  `tb_csr_trap.v`, `tb_csr_priv.v`, `legacy_2core/RV32_IP_Wrapper.v`,
+  `legacy_2core/RV32IMA_DualCore_Wrapper.v` (core0 VÀ core1) — tất cả nối vòng
+  `Mem_PhysAddrM` = `Mem_AddrM` (output của chính core đó) — vì không có MMU nên VA=PA
+  luôn đúng 100%, nối vòng này giữ nguyên hành vi cũ tuyệt đối, không đổi gì cả.
+- 2 file `legacy_2core/*` là ngoại lệ đã có tiền lệ (đã từng sửa 1 lần để tie-off
+  `Fetch_PageFault_In`/`Data_PageFault_In`) — đây là lần sửa bắt buộc thứ 2 với cùng lý
+  do: Verilog không cho phép bỏ trống 1 port mới thêm vào module con, để trống sẽ float
+  (X trong mô phỏng) và có thể phá silently hành vi reservation của nhánh 2-lõi cũ vẫn
+  đang chạy trên FPGA thật.
+
+**Đã kiểm tra**: đối chiếu port 100% cho cả 6 chỗ gọi `RV32IMA` (0 thiếu/0 dư cho đúng
+port `Mem_PhysAddrM` ở mọi nơi — 4 output debug cũ vẫn để trống ở 3 file legacy như từ
+trước, không liên quan tới sửa lần này), cân bằng begin/end cho mọi file bị đụng tới.
+**Chưa mô phỏng** — cùng giới hạn như mọi thứ khác trong repo.
+
+---
+
 ## 0. TL;DR — trạng thái ngay lúc này
 
 - **MMU 1 lõi**: RTL xong, có testbench (`tb_mmu_core.v`), có wrapper AXI4 thật
   (`mmu_ip_wrapper.v`) + script dựng thử SoC 1 lõi trên Vivado
-  (`scripts/build_soc_mmu_trial.tcl`). Bạn đang chạy phần này.
+  (`scripts/build_soc_mmu_trial.tcl`). Bạn đang chạy phần này. **Cập nhật (mục -0.1.1,
+  phiên này): `tb_mmu_core.v` đã lỗi thời sau khi page fault được nối để trap thật
+  (mục -0.5) — tự phát hiện + đã sửa (thêm mtvec/handler), xem mục -0.1.1 trước khi
+  chạy lại.**
 - **Hệ 4 lõi đầy đủ (L1 I$/D$ + L2 + MESI coherence)**: RTL đã viết **toàn bộ**
   trong phiên này (7 file mới) + wrapper AXI4 (`quad_core_axi_wrapper.v`) + script
   dựng thử SoC 4 lõi (`scripts/build_soc_4core_trial.tcl`) + **testbench riêng cho
@@ -390,8 +744,11 @@ phạm vi Hướng 2, có thể cân nhắc thêm vào Hướng 1 hoặc để r
   dựng-thử lần này (`build_soc_4core_trial.tcl` chỉ còn DMA + 1 Memory Controller).
 - **Trap/Exception Unit + CSR + Privilege Mode (M/S/U)**: RTL mới xong
   (`csr_trap_unit.v` + `sys_decoder.v`), tích hợp sâu vào pipeline (9 file cũ sửa
-  thêm, additive) — MMU page fault giờ **trap thật** thay vì chỉ ép NOP. **Chưa mô
-  phỏng — chưa có testbench riêng cho phần này**, xem mục -0.5.
+  thêm, additive) — MMU page fault giờ **trap thật** thay vì chỉ ép NOP. Xem mục -0.5.
+  **Cập nhật (mục -0.1, phiên này)**: giờ có 3 testbench phủ 3 khía cạnh khác nhau —
+  `tb_csr_trap.v` (CSR cơ bản + trap ở M-mode, phiên trước), `tb_csr_priv.v` (**mới**:
+  M/S/U thật + `medeleg` delegation), và `tb_mmu_core.v` (đã sửa: page fault MMU giờ
+  thật sự trap-và-resume đúng). **Cả 3 đều chưa chạy qua Vivado.**
 - **AHB-Lite**: file `ahb_lite_l1_adapter.v` (chuyển đổi cổng L1 sang tín hiệu AHB-Lite
   thật), tham khảo `ahb3lite_interconnect-master_reference/` nhưng không gắn trực tiếp
   (giấy phép, thiếu dependency, thừa phức tạp — xem mục -0.5.4). **Giờ ĐÃ nối vào
@@ -406,6 +763,13 @@ phạm vi Hướng 2, có thể cân nhắc thêm vào Hướng 1 hoặc để r
   -0.5.5 để biết kịch bản triển khai 2 bước đề xuất và 1 rủi ro thật cần bạn xác nhận
   (VCU129 chưa rõ có khe SD hay không, trong khi giảng viên yêu cầu bắt buộc nạp
   chương trình từ SD card).
+- **MỚI (phiên này) — Hướng 3, kiến trúc boot SD card đã đổi hẳn so với kế hoạch ban
+  đầu**: phát hiện SD card trên Genesys ZU-5EV nối qua PS, không nối qua PL — xem mục
+  -0.05 cho toàn bộ chi tiết. File mới: `rtl/boot_ctrl.v`,
+  `rtl/quad_core_axi_wrapper_bootable.v`, `scripts/build_soc_zu5ev_boot.tcl`,
+  `scripts/host_eval_uart.py`, `constraints/*_template.xdc` (2 file, chưa điền số chân
+  thật — xem lý do ở mục -0.05.7). VCU129 vẫn còn treo (mục -0.05.8) — cần bạn xác nhận
+  vật lý trước khi đầu tư thêm.
 
 ---
 
@@ -575,60 +939,58 @@ dòng #14).
             SRAM         DDRAM
 ```
 
-`address_mapping` (file text do bạn viết) bổ sung chi tiết định lượng:
+`address_mapping` (file text do bạn viết) bổ sung chi tiết định lượng ban đầu (256KB
+L2/16KB L1 — số nháp đầu tiên, đã được thay bằng quyết định chính thức bên dưới):
 - VA 32-bit, 2 cấp trang, page 4KB.
 - TLB: 16-entry fully-associative / lõi.
-- L1 (PIPT): 16KB, 2-way, line 32B → offset 5b / index 8b / tag 19b.
-- L2 (PIPT, dùng chung): **256KB**, 4-way, line 32B → offset 5b / index 11b / tag 16b.
 - Bản đồ địa chỉ vật lý 4GB: Boot ROM 64KB @ 0x0000_0000, Main RAM (cacheable) @
   0x8000_0000–0xBFFF_FFFF, còn lại reserved.
 - Coherence: **MESI**, theo dõi theo physical line 32B, directory dạng bitmap 4-bit
   sharer (4 lõi), lưu tại L2.
 
-**Số liệu RTL phiên này thực sự dùng** (vì phải chọn 1 con số mới viết được code —
-không thay cho quyết định chính thức của bạn ở mục 4): `l1_icache.v`/`l1_dcache.v`
-= 16KB/2-way/32B mỗi cái (tức mỗi lõi có 16KB I$ **+** 16KB D$ riêng = 32KB L1/lõi
-tổng — cách đọc này dung hoà giữa số "16KB" của `address_mapping` áp cho từng cache
-và ý "có cả I$ lẫn D$ riêng" của sơ đồ, nhưng **không khớp đúng số 32KB/32KB** sơ đồ
-vẽ). `l2_cache.v` = 256KB/4-way theo `address_mapping` (tham số hoá được, đổi sang
-512KB nếu chốt theo sơ đồ + `cache_reference`).
+**Số liệu CHÍNH THỨC (đã chốt, mục 4 + mục -0.02.1 — không còn là số tạm)**:
+- `l1_icache.v` = **32KB**, 2-way, line 32B → offset 5b / index 9b (512 sets) / tag 18b.
+- `l1_dcache.v` = **32KB**, 2-way, line 32B → offset 5b / index 9b (512 sets) / tag 18b.
+  (Mỗi lõi có 1 I$ 32KB + 1 D$ 32KB độc lập, đúng ý "tách riêng" của sơ đồ — không phải
+  1 cache 32KB dùng chung.)
+- `l2_cache.v` = **512KB**, 4-way, line 32B → offset 5b / index 12b (4096 sets) / tag 15b.
+- Bus CORE↔BUS: **AHB-Lite thật** (`quad_core_soc_ahb.v`) — xem mục 4 điểm 1.
 
 ---
 
-## 4. Quyết định kiến trúc còn treo — CẦN CHỐT TRƯỚC KHI ĐI TIẾP
+## 4. Quyết định kiến trúc — 5/6 ĐÃ CHỐT (phiên này), 1 còn treo
 
-Vẫn y như phiên trước — **chưa có quyết định nào ở đây được chốt**, tôi vẫn chưa tự
-ý chọn thay bạn. Lấy từ `../Gop_y_De_cuong_KLTN.txt` (góp ý của giảng viên):
+Lấy từ `../Gop_y_De_cuong_KLTN.txt` (góp ý của giảng viên). **Cập nhật (mục -0.02):**
+bạn đã chốt 5/6 điểm dưới đây — chỉ còn điểm #6 (kịch bản SD card cho VCU129) vẫn treo,
+ngoài tầm tôi tự quyết vì phụ thuộc thông tin vật lý board bạn cần tự xác nhận.
 
-1. **AHB hay AXI4?** Sơ đồ dùng cả hai (AHB nội bộ 4 core+L2+coherence; AXI4 ra
-   ngoài). **Cập nhật (mục -0.25.2): giờ có 2 lựa chọn, bạn chọn dùng bản nào để
-   nộp/demo**:
-   - `quad_core_soc.v` (bản gốc) — CORE↔BUS nối dây trực tiếp, không có tín hiệu
-     AHB-Lite thật ở đâu cả, chỉ có logic trọng tài bên trong `coherence_manager.v`
-     đóng vai trò tương đương. Đơn giản hơn, không tốn thêm 1 vòng bus khi nâng cấp
-     E→M cục bộ.
-   - `quad_core_soc_ahb.v` (bản mới) — CORE↔BUS đi qua tín hiệu AHB-Lite **thật**
-     (HADDR/HWRITE/HTRANS/HWDATA/HRDATA/HREADY/HRESP đúng tên, đúng pha). Nếu đề
-     cương/hội đồng chấm điểm theo đúng tên tín hiệu AHB ở biên này, dùng bản này.
-     Cái giá: 1 lần RFO thêm ở lần ghi cục bộ đầu tiên sau mỗi lần nạp line mới (mất
-     ưu thế E→M âm thầm — xem mục -0.25.2), và **chưa có testbench riêng** (mới chỉ
-     tự kiểm tra tĩnh).
-   - Cả 2 đều dùng đúng 1 `coherence_manager.v` không đổi (trọng tài 8-nguồn bên
-     trong nó vẫn là giao thức tự đặt, không phải tín hiệu AHB chuẩn, ở CẢ 2 bản) —
-     nếu cần tín hiệu AHB chuẩn SÂU hơn (ngay trong chính trọng tài, không chỉ ở biên
-     L1↔BUS), đó vẫn là việc chưa làm, xem mục -0.5.4.
-2. **Coherence: MESI đầy đủ hay đơn giản hơn?** Phiên này **đã chọn MESI đầy đủ**
-   theo đúng `address_mapping` (không phải invalidate-broadcast hay MOESI của 2 tham
-   khảo) — vì đó là đặc tả rõ ràng nhất bạn tự viết. Nếu bạn định chốt phương án khác
-   (đơn giản hơn, ít rủi ro mô phỏng hơn), cần biết sớm trước khi đầu tư thêm vào
-   `coherence_manager.v`.
-3. **MMU/virtual memory: có trong phạm vi báo cáo chính thức không?** Vẫn treo.
-4. **Kích thước L2: 256KB hay 512KB?** Phiên này dùng 256KB (tham số hoá,
-   `L2_cache.v`'s `INDEX_BITS`/`WAYS` đổi được).
-5. **L1: 16KB/2-way dùng chung hay 32KB I$+32KB D$ tách riêng?** Xem cách dung hoà
-   tạm thời ở mục 3 — vẫn cần bạn chốt số thật.
-6. **Kịch bản test SD card/SPI → DRAM (bắt buộc theo giảng viên).** Chưa động tới —
-   vẫn ngoài phạm vi phiên này.
+1. **AHB hay AXI4? → ĐÃ CHỐT: AHB-Lite.** Bus giữa 4 core và phần còn lại của hệ thống
+   (đoạn "HIGH-SPEED BUS (AHB)" trong sơ đồ) là AHB-Lite thật — `quad_core_soc_ahb.v` +
+   `ahb_lite_l1_adapter.v`/`ahb_lite_l1_slave_adapter.v` (mục -0.25.2) là bản chính
+   thức. Đã cập nhật cả 2 script (`build_soc_zu5ev_boot.tcl`,
+   `build_soc_4core_trial.tcl`) dùng đúng bản này làm mặc định (mục -0.02.2), và viết
+   thêm testbench riêng cho đường AHB-Lite (`tb_coherence_ahb.v`, mục -0.02.3) — lỗ
+   hổng "chưa có test riêng" đã nêu trước đây nay đã đóng. `quad_core_soc.v` (bản dây
+   nối trực tiếp) vẫn còn trong repo, vẫn hoạt động, coi là bản tham khảo/dự phòng, đứng
+   song song không xoá. Lưu ý vẫn còn đúng như trước: trọng tài 8-nguồn BÊN TRONG
+   `coherence_manager.v` vẫn là giao thức tự đặt, không phải tín hiệu AHB chuẩn — nếu
+   cần AHB chuẩn sâu hơn (trong chính trọng tài), đó vẫn là việc chưa làm (mục -0.5.4).
+2. **Coherence: MESI đầy đủ hay đơn giản hơn? → ĐÃ CHỐT (lại lần nữa): MESI đầy đủ.**
+   Giữ nguyên `coherence_manager.v`/`l1_dcache.v`/`l2_cache.v` như đã viết.
+3. **MMU/virtual memory: có trong phạm vi báo cáo chính thức không? → ĐÃ CHỐT: CÓ.**
+   Toàn bộ MMU/TLB/PTW (mục 1), CSR/Trap/Privilege (mục -0.5), `satp`→MMU thật
+   (mục -0.25.1) đều nằm trong phạm vi chính thức từ nay.
+4. **Kích thước L2: 256KB hay 512KB? → ĐÃ CHỐT: 512KB.** `l2_cache.v`'s `INDEX_BITS`
+   đổi 11→12 (mục -0.02.1).
+5. **L1: 16KB/2-way dùng chung hay 32KB I$+32KB D$ tách riêng? → ĐÃ CHỐT: 32KB D$ +
+   32KB I$ tách riêng.** `l1_icache.v`/`l1_dcache.v`'s `INDEX_BITS` đổi 8→9 mỗi file
+   (mục -0.02.1) — đúng nghĩa "tách riêng" sẵn có từ trước (mỗi lõi vốn đã có 1
+   `l1_icache` + 1 `l1_dcache` độc lập), giờ mỗi cái đúng 32KB thay vì 16KB.
+6. **Kịch bản test SD card/SPI → DRAM (bắt buộc theo giảng viên). VẪN CÒN TREO cho
+   VCU129.** Genesys ZU-5EV đã có kiến trúc + RTL/script (PS-mediated, KHÔNG phải SPI
+   bit-banging như dự tính ban đầu — SD nối qua PS, không qua PL, xem mục -0.05.1),
+   CHƯA chạy qua Vivado thật. VCU129 vẫn treo hoàn toàn — cần bạn xác nhận vật lý
+   trước.**
 
 ---
 
@@ -638,20 +1000,20 @@ Vẫn y như phiên trước — **chưa có quyết định nào ở đây đư
 |---|---|---|---|
 | 1 | CPU core ×4 | **Có** — `quad_core_soc.v` instantiate đúng 4× `core_l1_wrapper`. `RV32IMA_DualCore_Wrapper.v` (2 lõi cũ, đã tổng hợp trên FPGA) **không bị đụng**, vẫn còn nguyên như một nhánh riêng. | Boot address mỗi lõi tham số hoá độc lập (`RESET_ADDR0..3`), không còn giới hạn "cả 2 lõi cùng boot 1 địa chỉ" như `RV32IMA_DualCore_Wrapper.v`. |
 | 2 | MMU + TLB (per-core) | RTL xong + **giờ an toàn sau bus có độ trễ thật** (mục 1) + có wrapper AXI4 (`mmu_ip_wrapper.v`, `quad_core_axi_wrapper.v` qua `core_l1_wrapper`) + **`satp`/`Mmu_Enable` CSR giờ thật sự điều khiển MMU** (mục -0.25.1, `MMU_CTRL_FROM_CSR=1`). | Vẫn cần bạn chạy `tb_mmu_core.v` xác nhận (test MMU cô lập, không qua CSR — vẫn hợp lệ, xem mục -0.25.1). |
-| 3 | L1 I-Cache / D-Cache | **Có, mới viết** (`l1_icache.v`, `l1_dcache.v`) — xem mục 2. **Chưa mô phỏng.** | Không dùng RTL tham khảo trực tiếp (viết mới, khớp giao diện `mmu_core_wrapper`) — tránh nguyên bug alias địa chỉ đã biết ở `cache_reference`. |
-| 4 | AHB shared bus | **2 lựa chọn** (mục -0.25.2, mục 4 điểm 1): `quad_core_soc.v` (logic trọng tài trong `coherence_manager.v`, không phải tín hiệu AHB chuẩn) HOẶC `quad_core_soc_ahb.v` (**mới** — tín hiệu AHB-Lite thật ở biên CORE↔BUS, qua `ahb_lite_l1_adapter.v`+`ahb_lite_l1_slave_adapter.v`, 8 liên kết điểm-nối-điểm). Trọng tài bên trong `coherence_manager.v` vẫn là giao thức tự đặt ở CẢ 2 bản. | `round_robin_arbiter_2core.v` (2 lõi cũ) không bị đụng, vẫn dùng cho nhánh `RV32IMA_DualCore_Wrapper.v`. |
-| 5 | Shared L2 Cache | **Có, mới viết** (`l2_cache.v`) — 256KB/4-way mặc định, tham số hoá. **Chưa mô phỏng.** | — |
+| 3 | L1 I-Cache / D-Cache | **Có** (`l1_icache.v`, `l1_dcache.v`) — **32KB mỗi cái, ĐÃ CHỐT** (mục -0.02.1, trước đây 16KB). **Chưa mô phỏng.** | Không dùng RTL tham khảo trực tiếp (viết mới, khớp giao diện `mmu_core_wrapper`) — tránh nguyên bug alias địa chỉ đã biết ở `cache_reference`. |
+| 4 | AHB shared bus | **ĐÃ CHỐT: AHB-Lite** (`quad_core_soc_ahb.v`, mục 4 điểm 1) — tín hiệu AHB-Lite thật ở biên CORE↔BUS, qua `ahb_lite_l1_adapter.v`+`ahb_lite_l1_slave_adapter.v`, 8 liên kết điểm-nối-điểm. **Giờ có testbench riêng** (`tb_coherence_ahb.v`, mục -0.02.3, chưa chạy qua Vivado). `quad_core_soc.v` (dây nối trực tiếp) vẫn còn, không xoá, coi là tham khảo. Trọng tài bên trong `coherence_manager.v` vẫn là giao thức tự đặt, không phải tín hiệu AHB chuẩn. | `round_robin_arbiter_2core.v` (2 lõi cũ) không bị đụng, vẫn dùng cho nhánh `RV32IMA_DualCore_Wrapper.v`. |
+| 5 | Shared L2 Cache | **Có** (`l2_cache.v`) — **512KB/4-way, ĐÃ CHỐT** (mục -0.02.1, trước đây 256KB). **Chưa mô phỏng.** | — |
 | 6 | Coherence Management Unit | **Có, mới viết** (`coherence_manager.v`) — MESI đầy đủ, atomic/tuần tự. **Rủi ro cao nhất, chưa mô phỏng** — xem mục 2.2, mục 9. | — |
-| 7 | CPU Memory Port / System Bus AXI4 | **Có** — `quad_core_axi_wrapper.v` bọc AXI4 thật quanh cổng bộ nhớ đơn của `quad_core_soc.v`; `scripts/build_soc_4core_trial.tcl` gắn vào `axi_interconnect` (IP Vivado). | — |
+| 7 | CPU Memory Port / System Bus AXI4 | **Có** — `quad_core_axi_wrapper_ahb.v` (mới, bọc bản AHB-Lite chính thức) bọc AXI4 thật quanh cổng bộ nhớ đơn của `quad_core_soc_ahb.v`; `scripts/build_soc_4core_trial.tcl`/`build_soc_zu5ev_boot.tcl` gắn vào `axi_interconnect` (IP Vivado). | `quad_core_axi_wrapper.v` (bọc bản dây nối trực tiếp) vẫn còn, không xoá. |
 | 8 | DMA Controller | **Dùng IP Vivado** (`axi_cdma`) trong cả 2 script — theo đúng yêu cầu "gọi IP có sẵn". | `axi_cdma` (memory-mapped↔memory-mapped) hợp hơn `axi_dma` (cần thiết bị AXI-Stream) cho vai trò trong sơ đồ. |
 | 9 | SRAM Controller + SRAM | **Bỏ khỏi phạm vi** theo yêu cầu mới nhất của bạn. `build_soc_mmu_trial.tcl` (bản cũ, 1 lõi) vẫn còn 1 BRAM đóng vai SRAM — không sửa lại (đã có sẵn từ trước yêu cầu bỏ); `build_soc_4core_trial.tcl` (bản mới) không có. | — |
 | 10 | Memory Controller (DDR) + DDRAM | **Dùng IP Vivado** (`axi_bram_ctrl` + `blk_mem_gen`, giả lập — chưa phải DDR/MIG/PS7 thật, xem `build_soc_mmu_trial.tcl` header vì sao chưa dùng PS7 ngay). | — |
 | 11 | Interrupt Controller | **Bỏ khỏi phạm vi** theo yêu cầu mới nhất. | `build_soc_mmu_trial.tcl` (bản cũ) vẫn còn `axi_intc` — không sửa lại. |
 | 12 | Mở rộng 2→4 core | **Xong** — `quad_core_soc.v`. | Không thay thế `RV32IMA_DualCore_Wrapper.v`/`round_robin_arbiter_2core.v` — đứng song song, độc lập. |
 | 13 | Trap/exception unit, CSR, privilege mode | **Có, mới viết** (`csr_trap_unit.v`+`sys_decoder.v`, xem mục -0.5) — M/S/U đầy đủ, ECALL/EBREAK/illegal-instruction/page-fault đều trap thật, MRET/SRET, `satp` là CSR thật **và giờ thật sự điều khiển MMU** (mục -0.25.1). **Chưa mô phỏng.** Không có interrupt (đúng như dòng #11). | — |
-| 14 | LR/SC đúng đắn khi có MMU | **Cải thiện một phần** (mục 2.3) nhưng **chưa fix triệt để** — vẫn cần sửa `memory_stage.v` để so khớp theo địa chỉ vật lý. | — |
-| 15 | Bootloader SD card (SPI) → DRAM | **Chưa có gì.** | — |
-| 16 | Kịch bản đánh giá tự động trên FPGA | **Chưa có.** | — |
+| 14 | LR/SC đúng đắn khi có MMU | **ĐÃ SỬA (mục -0.02.4)** — `memory_stage.v` giờ so khớp reservation theo địa chỉ VẬT LÝ (`Mem_PhysAddrM`, cổng mới xuyên `RV32IMA.v`), cùng miền với `Snoop_Addr`, không còn phụ thuộc VA→PA của từng core có trùng nhau hay không. **Chưa mô phỏng** (như mọi thứ khác). | 6 chỗ gọi `RV32IMA` đều đã nối cổng mới — 1 chỗ (`mmu_core_wrapper.v`) nối `pa_mem` thật, 5 chỗ còn lại (không MMU) nối vòng `Mem_AddrM`→`Mem_PhysAddrM` (VA=PA identity, giữ nguyên hành vi cũ). |
+| 15 | Bootloader SD card → DRAM | **Genesys ZU-5EV: có, mới** — kiến trúc PS-mediated (`boot_ctrl.v` + `quad_core_axi_wrapper_bootable.v` + `build_soc_zu5ev_boot.tcl`), KHÔNG phải SPI bit-banging PL như kế hoạch ban đầu (xem mục -0.05.1 vì sao đổi). **VCU129: còn treo** — cần xác nhận vật lý trước (mục -0.05.8). | Phần mềm loader phía PS (ARM, Vitis/PetaLinux) chỉ mô tả quy trình, không hand-assemble (mục -0.05.5) — khác toolchain hoàn toàn với RISC-V. |
+| 16 | Kịch bản đánh giá tự động trên FPGA | **Có, mới** — `scripts/host_eval_uart.py`, đọc PASS/FAIL qua console UART của PS (không qua waveform). | Kết quả PASS/FAIL đi qua `boot_ctrl`'s `REG_RESULT`, không qua `axi_uartlite` PL (mục -0.05.3 — lý do). |
 
 ---
 
@@ -699,10 +1061,10 @@ Vẫn y như phiên trước — **chưa có quyết định nào ở đây đư
 - [x] **Phase 7b** — `sim/tb_csr_trap.v` đã viết: chương trình tay-assemble
       exercising CSRRW/CSRRS/CSRRC/CSRRWI/CSRRSI, EBREAK, ECALL (M-mode), 1 lệnh bất
       hợp lệ (illegal instruction), và MRET quay lại đúng chỗ sau mỗi trap. **CHƯA
-      CHẠY — bạn cần chạy trong Vivado.** Chưa phủ: delegation sang S-mode (`medeleg`),
-      chuyển đổi M/S/U thật (test chỉ ở lại M-mode xuyên suốt), và trap-thật-từ-MMU
-      (page fault) — phần đó vẫn cần 1 testbench mở rộng kết hợp cách dựng page table
-      của `tb_mmu_core.v`, ghi rõ là bước tiếp theo, chưa làm.
+      CHẠY — bạn cần chạy trong Vivado.** Chưa phủ (khi viết): delegation sang S-mode
+      (`medeleg`), chuyển đổi M/S/U thật (test chỉ ở lại M-mode xuyên suốt), và
+      trap-thật-từ-MMU (page fault) — cả 3 đã được làm ở Phase 9 (mục -0.1) ngay dưới
+      đây.
 
   **Bug thật thứ 4 bắt được — lần này TRƯỚC KHI testbench chạy, chỉ bằng cách tự
   trace tay chương trình test**: `CSRRS x31,mepc,x0` rồi dùng `x31` ngay ở lệnh kế
@@ -721,21 +1083,55 @@ Vẫn y như phiên trước — **chưa có quyết định nào ở đây đư
       (`MMU_CTRL_FROM_CSR`, xem mục -0.25.1) + `ahb_lite_l1_adapter.v` → top-level 4
       lõi qua file mới `ahb_lite_l1_slave_adapter.v` + `quad_core_soc_ahb.v` (xem mục
       -0.25.2). *(Xong RTL, đã tự kiểm tra tĩnh 100% khớp port trên toàn bộ chuỗi ảnh
-      hưởng — CHƯA MÔ PHỎNG, `quad_core_soc_ahb.v` chưa có testbench riêng.)*
-- [ ] **Phase 9 (Hướng 1, tiếp theo)** — Mở rộng `tb_csr_trap.v`: chuyển đổi M/S/U
-      thật, `medeleg` delegation sang S-mode, và 1 kịch bản page-fault-từ-MMU-thật-sự-
-      trap (kết hợp cách dựng page table của `tb_mmu_core.v`). *(Chưa bắt đầu.)*
-- [ ] **Phase 10 (Hướng 3, sau cùng)** — Bootloader SD/SPI → DRAM (chưa có RTL nào),
-      kịch bản đánh giá tự động trên FPGA, file `.xdc` constraint thật cho Genesys
-      ZU-5EV + VCU129. *(Chưa bắt đầu.)*
+      hưởng — CHƯA MÔ PHỎNG. Cập nhật (mục -0.02.3): `quad_core_soc_ahb.v` giờ ĐÃ có
+      testbench riêng, `sim/tb_coherence_ahb.v`.)*
+- [x] **Phase 9 (Hướng 1, phiên này)** — M/S/U thật + `medeleg` delegation: file mới
+      `sim/tb_csr_priv.v` (xem mục -0.1.2). Page-fault-từ-MMU-thật-sự-trap: `tb_mmu_core.v`
+      đã lỗi thời (page fault không trap khi nó được viết) và đã sửa (mục -0.1.1) thay
+      vì viết trùng lặp 1 file mới dựng lại đúng page table đó. *(Xong RTL/testbench,
+      đã tự kiểm tra tĩnh (đối chiếu port + cân bằng begin/end) + trace tay + xác minh
+      encoding qua assembler/decoder nháp riêng — CHƯA CHẠY QUA VIVADO.)*
+- [x] **Phase 10 (Hướng 3, phiên này)** — Bootloader SD card (Genesys ZU-5EV: kiến trúc
+      PS-mediated, KHÁC hẳn kế hoạch SPI-bit-banging ban đầu sau khi phát hiện SD nối
+      qua PS không qua PL — xem mục -0.05.1), kịch bản đánh giá tự động
+      (`scripts/host_eval_uart.py`, đọc PASS/FAIL qua console UART của PS, không xem
+      waveform), file `.xdc` (2 file TEMPLATE, chưa điền số chân thật — xem mục -0.05.7
+      vì sao). *(Genesys ZU-5EV: xong kiến trúc + RTL (`boot_ctrl.v`,
+      `quad_core_axi_wrapper_ahb_bootable.v` — cập nhật mục -0.02.2, dùng bản AHB-Lite
+      chính thức) + script (`build_soc_zu5ev_boot.tcl`) — CHƯA CHẠY QUA VIVADO, một số
+      bước PS-automation cố ý để cảnh báo "sửa tay nếu lệch" thay vì đoán liều. VCU129:
+      còn treo, cần bạn xác nhận vật lý (mục -0.05.8) trước khi đầu tư RTL bootloader
+      SD-SPI thật.)*
+- [x] **Phase 11 (phiên này)** — Chốt 5/6 quyết định kiến trúc còn treo (AHB-Lite, MESI,
+      MMU trong phạm vi chính thức, L2 512KB, L1 32KB D$+32KB I$ — mục -0.02.1/4) + sửa
+      bug LR/SC VA-vs-PA đã biết từ nhiều phiên trước (mục -0.02.4) + đóng lỗ hổng
+      "AHB-Lite chưa có testbench riêng" (`tb_coherence_ahb.v`, mục -0.02.3) + thêm lớp
+      AXI wrapper còn thiếu cho bản AHB-Lite (`quad_core_axi_wrapper_ahb.v` +
+      `quad_core_axi_wrapper_ahb_bootable.v`, mục -0.02.2). *(Xong RTL/script, đã tự
+      kiểm tra tĩnh (đối chiếu port 100% trên MỌI chỗ gọi `RV32IMA`/L1/L2/AHB-Lite bị
+      ảnh hưởng, cân bằng begin/end) — CHƯA MÔ PHỎNG.)*
 
 ---
 
 ## 8. Cách chạy trong Vivado
 
 ### `tb_mmu_core.v` (MMU 1 lõi, mô phỏng thuần)
-Không đổi — xem hướng dẫn cũ vẫn còn đúng: add toàn bộ `rtl/*.v` liên quan +
-`sim/tb_mmu_core.v`, set làm simulation top, `run -all`, kỳ vọng `MMU_TB: PASS`.
+Cách chạy không đổi: add toàn bộ `rtl/*.v` liên quan + `sim/tb_mmu_core.v`, set làm
+simulation top, `run -all`, kỳ vọng `MMU_TB: PASS`. **Nội dung chương trình BÊN TRONG
+đã đổi (mục -0.1.1, phiên này)** — nếu bạn từng chạy file này ở phiên trước và nó PASS,
+đó là PASS của phiên bản CŨ (page fault không trap) và không còn phản ánh đúng RTL hiện
+tại; cần chạy lại. Kỳ vọng mới: vẫn `MMU_TB: PASS`, cộng 1 check mới `x11 (mcause after
+not-present load trap)` = 13.
+
+### `sim/tb_csr_priv.v` (M/S/U thật + `medeleg` delegation, mô phỏng thuần — MỚI)
+Add làm sim sources: đúng danh sách file như `tb_csr_trap.v` bên dưới (cùng DUT, RV32IMA
+thô, không cần MMU/cache/coherence) cộng `sim/tb_csr_priv.v` thay vì `tb_csr_trap.v`.
+Set `tb_csr_priv` làm simulation top, `run -all`. Kỳ vọng 8 dòng `[PASS] x1...x8`, dòng
+`CurrentPriv ended in U`, dòng `priv_hist_count: 6 transitions`, 6 dòng
+`priv_history[0..5]`, và cuối cùng `CSR_PRIV_TB: PASS`. Nếu FAIL ở bất kỳ `x5`/`x7`
+(đọc `scause`/`mcause`) — nhiều khả năng priv lúc đó KHÔNG đúng S/M như kỳ vọng (CSR đó
+sẽ tự fault illegal-instruction nếu priv sai, xem mục -0.1.2), tức là bug nằm ở chính cơ
+chế MRET/SRET/delegation trong `csr_trap_unit.v`, không phải ở testbench.
 
 ### `scripts/build_soc_mmu_trial.tcl` (SoC AXI4 1 lõi, dùng IP Vivado)
 Mở `Risc_V.xpr`, ở Tcl Console: `source {đường dẫn tới file}`. Xem chi tiết/caveat
@@ -747,14 +1143,13 @@ Tương tự: mở `Risc_V.xpr`, `source {đường dẫn tới file}`. **Đọc
 chứng minh phần *dây nối* (wiring) khớp và elaborate được; nó **không** chứng minh
 giao thức MESI bên trong đúng. `validate_bd_design` sạch ≠ coherence đúng.
 
-### `rtl/quad_core_soc_ahb.v` (biến thể AHB-Lite, MỚI — chưa có testbench riêng)
-Chưa có script/testbench riêng để "chạy" file này theo đúng nghĩa mô phỏng có kỳ vọng
-PASS/FAIL. Cách kiểm tra khả dụng duy nhất lúc này: add toàn bộ `rtl/*.v` liên quan
-(mọi file `quad_core_soc.v` cần, cộng `ahb_lite_l1_adapter.v` +
-`ahb_lite_l1_slave_adapter.v` + `quad_core_soc_ahb.v`) vào 1 project/sim fileset rồi để
-Vivado elaborate — việc này chỉ xác nhận *dây nối tồn tại và đúng tên*, không xác nhận
-logic AHB-Lite đúng thời điểm ready/valid. Nếu cần bằng chứng thật, viết 1 testbench
-mới (xem việc còn thiếu ở cuối mục -0.25.2) trước khi tin dùng bản này cho báo cáo.
+### `rtl/quad_core_soc_ahb.v` (biến thể AHB-Lite, giờ là bus chính thức — xem `sim/tb_coherence_ahb.v` bên dưới)
+Đã có testbench riêng từ phiên này — xem `sim/tb_coherence_ahb.v` bên dưới (mục -0.02.3),
+không cần "elaborate-only" nữa. Cách kiểm tra khả dụng qua elaborate (nếu chỉ muốn xác
+nhận wiring, không chạy testbench đầy đủ): add toàn bộ `rtl/*.v` liên quan (mọi file
+`quad_core_soc.v` cần, cộng `ahb_lite_l1_adapter.v` + `ahb_lite_l1_slave_adapter.v` +
+`quad_core_soc_ahb.v`) vào 1 project/sim fileset rồi để Vivado elaborate — việc này chỉ
+xác nhận *dây nối tồn tại và đúng tên*, không thay thế được việc chạy testbench thật.
 
 ### `sim/tb_coherence.v` (MESI coherence, mô phỏng thuần — CHẠY CÁI NÀY TRƯỚC TIÊN)
 Add làm sim sources: `rtl/l1_dcache.v`, `rtl/l2_cache.v`, `rtl/coherence_manager.v`,
@@ -765,6 +1160,18 @@ và cuối cùng `COHERENCE_TB: PASS`. Nếu FAIL — đặc biệt là bước 
 chắc chắn là bug thật trong logic snoop/directory, không phải lỗi testbench; gửi lại
 log đầy đủ (đặc biệt giá trị `got=`/`expected=`) để định vị đúng chỗ trong
 `coherence_manager.v`.
+
+### `sim/tb_coherence_ahb.v` (MESI qua cầu AHB-Lite, mô phỏng thuần — MỚI, CHẠY SAU `tb_coherence.v`)
+Add làm sim sources: mọi thứ `tb_coherence.v` cần, cộng `rtl/ahb_lite_l1_adapter.v` +
+`rtl/ahb_lite_l1_slave_adapter.v`, thay `sim/tb_coherence.v` bằng
+`sim/tb_coherence_ahb.v`. Set `tb_coherence_ahb` làm simulation top, `run -all`. Kỳ
+vọng đúng 5 dòng `[PASS] A/B/C/D/E` giống hệt `tb_coherence.v` và cuối cùng
+`COHERENCE_AHB_TB: PASS`. **Chỉ nên chạy sau khi `tb_coherence.v` (bản gốc) đã PASS** —
+nếu bản gốc PASS mà bản AHB-Lite này FAIL đúng ở 1 bước cụ thể, lỗi gần như chắc chắn
+nằm ở `ahb_lite_l1_adapter.v`/`ahb_lite_l1_slave_adapter.v`, không phải ở
+`coherence_manager.v`/`l1_dcache.v` (không đổi gì ở 2 file đó trong test này). Thời gian
+chạy lâu hơn hẳn bản gốc (mỗi giao dịch giờ tốn 8 lần truyền word qua AHB-Lite) — đây là
+kỳ vọng đúng, không phải dấu hiệu treo, trừ khi vượt hẳn ngân sách 40000 chu kỳ.
 
 ### `sim/tb_csr_trap.v` (CSR/Trap/Privilege, mô phỏng thuần — CHẠY CÁI NÀY THỨ HAI)
 Add làm sim sources: **toàn bộ `rtl/*.v`** liên quan tới core (không cần MMU/cache/
@@ -780,6 +1187,23 @@ CurrentPriv...` và cuối cùng `CSR_TRAP_TB: PASS`. Nếu FAIL ở `x10`/`x11`
 đúng bug forwarding đã ghi ở mục 7 (Phase 7b) nếu bạn thấy giá trị hoàn toàn vô lý
 (không phải đơn giản sai 1 bit) ở `x10`/`x11`/`x12`, vì đó là dấu hiệu core đã nhảy
 sai địa chỉ (MRET dùng `mepc` bị hỏng do forward sai).
+
+### `scripts/build_soc_zu5ev_boot.tcl` (SD boot Genesys ZU-5EV — MỚI, cần board part)
+Mở `Risc_V.xpr` **với board part Genesys ZU-5EV đã chọn trong Project Settings** (bắt
+buộc — script dùng board-preset automation cho PS, không set tay từng property DDR/MIO).
+Ở Tcl Console: `source {đường dẫn tới file}`. **Đọc kỹ mọi dòng WARNING** — khác 2 script
+trước ở chỗ phần PS bring-up (bước [2], [5]) và TOÀN BỘ clock/reset (bước [6]) cố ý để
+bạn tự hoàn thiện qua GUI's Run Connection Automation thay vì đoán liều cú pháp Tcl chính
+xác cho version Vivado của bạn — xem "Ghi chú trung thực" ở mục -0.05.4. Sau khi
+`validate_bd_design` sạch, mở Address Editor ghi lại địa chỉ của `boot_ctrl` (nhìn từ cả
+`cpu0/M_AXI` lẫn `ps0`'s GP master) — cần cho bước viết loader phía PS (mục -0.05.5).
+
+### `scripts/host_eval_uart.py` (đánh giá tự động qua UART — MỚI)
+Cần `pip install pyserial` trước. Sau khi board đã boot xong (SD → PS loader → ghi GO →
+RISC-V chạy → RISC-V ghi `REG_RESULT` → PS đọc lại + in "PASS"/"FAIL" ra console UART của
+chính nó — xem mục -0.05.5): `python host_eval_uart.py --port COM5 --baud 115200` (đổi
+`COM5` thành cổng COM thật của board). Mã thoát: 0=PASS, 1=FAIL, 2=timeout (kiểm tra lại
+board đã boot chưa, GO đã ghi chưa), 3=không mở được cổng.
 
 ---
 
@@ -802,6 +1226,13 @@ trong cả `mmu_ip_wrapper.v` lẫn `tb_mmu_core.v` — xác nhận 2 chỗ này
 trong `quad_core_soc_ahb.v` (1× `coherence_manager`, 16× adapter) — tất cả khớp chính
 xác 100%.
 
+**Cập nhật (mục -0.1, phiên này)**: đối chiếu port cho `RV32IMA`↔`dut` trong
+`sim/tb_csr_priv.v` (mới) — khớp chính xác 100%, 21/21 port. Ngoài ra, phát hiện +
+sửa 1 bug thật trong `sim/tb_mmu_core.v` (đã lỗi thời so với RTL hiện tại — xem mục
+-0.1.1) và 2 bug thật trong lúc hand-assemble chương trình cho `tb_csr_priv.v` (đường
+sign-extend của ADDI ăn vào đúng bit mstatus.MPP cần dựng — xem mục -0.1.2) — không bug
+nào trong số này nằm trong RTL, cả 3 đều nằm trong testbench/chương trình test tự viết.
+
 **Rủi ro cao nhất, đọc trước tiên**: `coherence_manager.v` + `l1_dcache.v` +
 `l2_cache.v` hiện thực một giao thức MESI directory viết hoàn toàn mới, **chưa từng
 chạy qua bất kỳ simulator nào**. Đã tự review nhiều vòng và bắt được 4 bug logic
@@ -820,12 +1251,16 @@ chạy 1 testbench trong Vivado (xem Phase 4b ở mục 7).
 3. `tb_top.v` (2 lõi cũ) vẫn để 2 lõi boot cùng địa chỉ — không đổi trong phiên này
    (không đụng file 2-lõi cũ). `quad_core_soc.v` (4 lõi mới) đã tham số hoá đúng,
    không bị hạn chế này.
-4. LR/SC qua nhiều lõi: cải thiện tín hiệu (mục 2.3) nhưng **chưa** fix triệt để vấn
-   đề VA-vs-PA đã biết.
+4. LR/SC qua nhiều lõi: **ĐÃ SỬA (mục -0.02.4)** — `memory_stage.v` giờ so khớp
+   reservation theo địa chỉ vật lý (`Mem_PhysAddrM`) thay vì địa chỉ ảo, cùng miền với
+   `Snoop_Addr`. Mục này trước đây cảnh báo "chưa fix triệt để", giữ lại số thứ tự để
+   không nhầm khi đọc lại lịch sử — đã lỗi thời, xem mục -0.02.4 cho chi tiết đầy đủ.
+   Vẫn **chưa mô phỏng** như mọi thứ khác.
 5. `moesi_controller.v` (tham khảo, không dùng) — vẫn cần xác minh nguồn gốc nếu
    định trích dẫn.
-6. Kích thước L2/L1 dùng trong RTL (256KB/4-way, 16+16KB) là **lựa chọn tạm để viết
-   được code**, không phải quyết định chính thức — xem mục 4.
+6. Kích thước L2/L1 **ĐÃ CHỐT chính thức** (mục 4, mục -0.02.1) — **512KB/4-way L2,
+   32KB I$ + 32KB D$ mỗi lõi**. Mục này trước đây ghi "256KB/16+16KB, lựa chọn tạm" —
+   đã lỗi thời, giữ số thứ tự để không nhầm khi đọc lại lịch sử.
 7. **Trọng tài trong `coherence_manager.v` là ưu tiên cố định, không round-robin** —
    đừng nhầm là round-robin khi đọc code; đây là giới hạn công bằng đã biết, ghi rõ
    trong header file, không phải để tự ý "tối ưu" mà chưa hiểu lý do.
@@ -863,6 +1298,66 @@ chạy 1 testbench trong Vivado (xem Phase 4b ở mục 7).
     luôn cần 1 vòng RFO thêm ở lần ghi cục bộ đầu tiên nếu dùng `quad_core_soc_ahb.v`
     thay vì `quad_core_soc.v`. Không sai kết quả, chỉ chậm hơn — đừng nhầm là bug khi
     thấy nhiều traffic RFO hơn dự kiến lúc so sánh 2 bản.
-15. **`quad_core_soc_ahb.v` + `ahb_lite_l1_slave_adapter.v` chưa có testbench riêng
-    nào** — chỉ mới đối chiếu port tĩnh + trace tay (mục -0.25.2). Cùng bài học như
-    coherence/CSR: chưa test không có nghĩa là đúng, chỉ có nghĩa là chưa biết.
+15. **`quad_core_soc_ahb.v` + `ahb_lite_l1_slave_adapter.v` giờ ĐÃ có testbench riêng**
+    (`sim/tb_coherence_ahb.v`, mục -0.02.3) — mục này trước đây ghi "chưa có", đã lỗi
+    thời. Testbench này CHƯA CHẠY qua Vivado — chỉ đối chiếu port tĩnh + trace tay, cùng
+    bài học như mọi thứ khác: chưa test không có nghĩa là đúng, chỉ có nghĩa là chưa
+    biết.
+16. **Bài học chung, đáng nhớ khi sửa/thêm testbench sau này**: nối 2 subsystem đã
+    review riêng biệt (ở đây: MMU + CSR/trap) có thể làm MỘT trong 2 testbench cũ trở
+    nên sai mà không ai nhận ra cho tới khi thật sự chạy lại — `tb_mmu_core.v` đã âm
+    thầm lỗi thời đúng kiểu này (mục -0.1.1). Sau bất kỳ lần nối 2 khối RTL đã có test
+    riêng, nên tự hỏi lại: "testbench A còn đúng giả định gì về khối B mà giờ đã đổi?"
+    thay vì chỉ tin PASS cũ.
+17. **Immediate 12-bit của ADDI/CSRRWI-style bị sign-extend — bẫy dễ gặp lại khi hand-
+    assemble thêm chương trình test sau này** (mục -0.1.2): bất kỳ giá trị immediate
+    nào có bit 11 = 1 (tức >= 0x800 khi coi là dương) sẽ bị nạp thành số ÂM
+    (sign-extend), không phải giá trị dương như "nhìn mặt chữ". Gặp đúng 2 lần trong
+    cùng 1 lần viết chương trình (`0x800` để dựng `mstatus.MPP`, marker `0x999`) — cả
+    2 đều bắt được bằng trace tay TRƯỚC KHI chạy, không phải bằng simulator. Cách né:
+    hoặc giữ mọi immediate trong khoảng an toàn `0x000-0x7FF`, hoặc dựng giá trị qua
+    `ADDI` (giá trị nhỏ, an toàn) + `SLLI` (dịch bit trên thanh ghi, không qua đường
+    sign-extend của immediate) khi cần bit cao hơn.
+18. **`sim/tb_csr_priv.v` (M/S/U + `medeleg`, mục -0.1.2) chưa chạy qua Vivado** — cùng
+    trạng thái như mọi testbench khác trong repo: chỉ tự kiểm tra tĩnh + trace tay,
+    chưa có xác nhận từ simulator thật.
+19. **Kế hoạch bootloader SD/SPI ban đầu (tự bit-bang giao thức SD ở PL) KHÔNG áp dụng
+    được cho Genesys ZU-5EV** — SD card nối qua PS, không nối qua PL (mục -0.05.1). Nếu
+    có ghi chú/ý tưởng nào từ trước phiên này còn nhắc "dùng `axi_quad_spi` để tự đọc SD
+    card từ RISC-V", đó là kế hoạch đã bị thay thế — kiến trúc đúng là PS-mediated (mục
+    -0.05.1-.05.2). Kế hoạch SPI-bit-banging ban đầu vẫn còn giá trị, nhưng CHỈ cho
+    VCU129 (mục -0.05.8), và CHỈ sau khi xác nhận (1) có khe SD, (2) SD nối tới chân PL.
+20. **PASS/FAIL tự động đi qua `boot_ctrl`'s `REG_RESULT` + console UART của PS, KHÔNG
+    qua `axi_uartlite` (uart0)** — lý do ở mục -0.05.3 (không chắc `axi_uartlite`'s chân
+    vật lý có đường ra ngoài nào không). `uart0` vẫn được nối trong
+    `build_soc_zu5ev_boot.tcl` như ngoại vi phụ/debug — đừng nhầm nó là đường PASS/FAIL
+    chính khi đọc lại script sau này.
+21. **`constraints/*_template.xdc` (2 file, mục -0.05.7) KHÔNG có số chân/PACKAGE_PIN/
+    IOSTANDARD thật** — mọi giá trị đều là placeholder `<FILL_ME...>`, cố ý để trống vì
+    không trích xuất được PDF schematic/reference-manual thật trong phiên này (lỗi công
+    cụ đọc PDF, không phải không tồn tại). **Tuyệt đối không tự điền số chân đoán chừng**
+    trước khi build thật — đặc biệt IOSTANDARD/điện áp sai có thể làm hỏng board thật,
+    không chỉ đơn giản là không chạy được. Lấy số chân thật từ chính nguồn đã ghi trong
+    từng file template (schematic/reference-manual Digilent cho ZU-5EV, UG1318 của AMD
+    cho VCU129).
+22. **`build_soc_zu5ev_boot.tcl` chưa chạy qua Vivado thật** (không có Vivado trong môi
+    trường này) — phần PS bring-up (`apply_bd_automation` cho `zynq_ultra_ps_e`) và toàn
+    bộ clock/reset đặc biệt có khả năng cần sửa tay cao hơn 2 script trước, vì cú pháp/
+    tên rule/tên pin của PS đã đổi qua nhiều bản Vivado (xem "Ghi chú trung thực" ở mục
+    -0.05.4). Đọc kỹ mọi WARNING khi chạy lần đầu, đừng chạy lại mù nếu có lỗi.
+23. **`quad_core_axi_wrapper_ahb.v`/`quad_core_axi_wrapper_ahb_bootable.v` (mục -0.02.2)
+    là file mới, chưa mô phỏng** — về mặt cấu trúc là bản copy port-for-port của
+    `quad_core_axi_wrapper.v`/`quad_core_axi_wrapper_bootable.v` (đã đối chiếu port 100%
+    với cả `quad_core_soc_ahb.v` lẫn `boot_ctrl.v`), chỉ đổi module con được instantiate
+    — rủi ro sai sót thấp hơn RTL logic mới hoàn toàn, nhưng vẫn chưa có xác nhận từ
+    simulator thật, giữ nguyên nguyên tắc "chưa test = chưa biết, không phải đã đúng".
+24. **2 script (`build_soc_4core_trial.tcl`, `build_soc_zu5ev_boot.tcl`) giờ mặc định
+    dùng bản AHB-Lite (`quad_core_axi_wrapper_ahb[_bootable]`)** — nếu có ghi chú/lệnh
+    chạy nào từ phiên trước còn ghi "cpu0 = quad_core_axi_wrapper" (không có `_ahb`),
+    đó là hành vi CŨ, đã đổi theo quyết định kiến trúc mới (mục 4, mục -0.02.2). Cả 2
+    bản RTL (dây nối trực tiếp và AHB-Lite) vẫn cùng tồn tại trong repo, không xoá —
+    chỉ có bản nào được 2 script này INSTANTIATE là đổi.
+25. **L1/L2 đã đổi kích thước (32KB I$/D$, 512KB L2) — nếu có sóng mô phỏng/log cũ từ
+    trước phiên này**, những con số địa chỉ index/tag suy ra từ đó (8-bit/11-bit index)
+    không còn đúng với RTL hiện tại (giờ 9-bit/12-bit) — đừng dùng lại số cũ khi đối
+    chiếu waveform mới với ghi chú cũ.

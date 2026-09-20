@@ -1,0 +1,6 @@
+{"kind":"deck","id":"pr/ddm3au","name":"Deck"}
+{"kind":"layout","layoutId":"7e8ed28b-2a2e-4e38-92c6-c02b0d9e667a","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"9f186123-1d5c-459e-aea0-1ab2702f1a24","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/kw5mmd","slide":1,"title":"Slide 1","textShapes":0}
+{"kind":"image","id":"im/g3q10r2p","slide":1,"name":"","alt":"Corrected quad-core shared conflict monitor architecture with four independent trace inputs and four one-way two-bit control outputs","bbox":[0,0,1920,1080]}
+{"kind":"notes","id":"nt/kw5mmd","slide":1,"text":"Trace0..3 carry valid physical data access metadata into the shared monitor. CtrlState0..3 are independent one-way 2-bit outputs to each pipeline: 00 Ignore, 01 Halt, 10 Resume, 11 Reserved. A conflict occurs when simultaneous valid requests have the same physical address and at least one request is a write. This monitor is a proposed extension and remains separate from the coherence controller."}
