@@ -4,7 +4,7 @@
 // quad_core_soc_ahb
 //
 // Same system as quad_core_soc.v (4x core_l1_wrapper + one shared
-// coherence_manager: L2 + MESI directory + arbiter), but with each
+// coherence_manager: L2 + MSI directory + arbiter), but with each
 // core's I$ and D$ line-fill/writeback port reaching coherence_manager
 // through a LITERAL AHB-Lite link (ahb_lite_l1_adapter.v as the
 // master side, ahb_lite_l1_slave_adapter.v as the slave side) instead
@@ -38,7 +38,7 @@
 // was reviewed but not instantiated -- see ahb_lite_l1_adapter.v's
 // header: wrong license, missing submodule, multi-layer topology
 // overkill for this). Building a second, redundant arbiter here would
-// be pointless: coherence_manager.v's own fixed-priority 8-source
+// be pointless: coherence_manager.v's own round-robin 8-source
 // arbiter (see its header) ALREADY does the real cross-core
 // arbitration, immediately on the other side of the 8 slave adapters.
 // One dedicated point-to-point link per core per cache is standard
@@ -59,20 +59,16 @@
 // only more complicated. This matches ahb_lite_l1_adapter.v's own
 // documented scope (line-fill/writeback traffic only).
 //
-// KNOWN COST vs quad_core_soc.v: see ahb_lite_l1_slave_adapter.v's
-// header for the MESI-state-over-AHB limitation (every fill is
-// reported as S regardless of what was actually granted, so a first
-// local write after a fill costs an extra RFO round trip it would not
-// have needed with the direct wiring). This is the price of putting a
-// literal, protocol-compliant AHB-Lite link on that path; use
-// quad_core_soc.v instead if that cost matters more than having a
-// literal AHB-Lite boundary in the design.
+// MSI maps directly onto this bridge: every read fill is S, and an
+// RFO/upgrade is marked with HMASTLOCK so the slave reconstructs the
+// ownership request before forwarding it to coherence_manager.
 // ============================================================
 module quad_core_soc_ahb #(
     parameter [31:0] RESET_ADDR0 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR1 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR2 = 32'h0000_1000,
-    parameter [31:0] RESET_ADDR3 = 32'h0000_1000
+    parameter [31:0] RESET_ADDR3 = 32'h0000_1000,
+    parameter        CACHE_DEBUG_TRACE_ENABLE = 0
 )(
     input  wire        clk,
     input  wire        rst,
@@ -124,14 +120,29 @@ module quad_core_soc_ahb #(
     wire [1:0]  fpc_unused0, fpc_unused1, fpc_unused2, fpc_unused3;
     wire [1:0]  dpc_unused0, dpc_unused1, dpc_unused2, dpc_unused3;
 
+    (* mark_debug = "true" *) wire [31:0] cache_perf_total_requests;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_d_bus_reads;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_d_rfos;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_d_writebacks;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_i_reads;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_hits;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_misses;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_snoop_requests;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_read_words;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_write_words;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_busy_cycles;
+    (* mark_debug = "true" *) wire        cache_protocol_error;
+    (* mark_debug = "true" *) wire        cache_timeout_error;
+    (* mark_debug = "true" *) wire [95:0] cache_debug_trace_entry0;
+    (* mark_debug = "true" *) wire [4:0]  cache_debug_trace_count;
+    (* mark_debug = "true" *) wire [3:0]  cache_debug_trace_write_index;
+    (* mark_debug = "true" *) wire [3:0]  cache_debug_controller_state;
+
     // ------------------------------------------------------
     // AHB-Lite link wires, per core, I$ and D$ each -- point-to-point
     // (see header: no shared-bus arbiter needed here). HSIZE/HBURST/
-    // HPROT/HMASTLOCK are left unconnected at every adapter instance
-    // below: the slave adapter has no matching input for them (it
-    // always does fixed word/SINGLE transfers by construction, the
-    // same fixed shape the master always drives), so there is nothing
-    // for them to connect to.
+    // HPROT remain fixed/unconnected. HMASTLOCK is connected because
+    // the MSI bridge uses it to preserve RFO/upgrade semantics.
     // ------------------------------------------------------
     wire [31:0] i_haddr   [0:3];
     wire        i_hwrite  [0:3];
@@ -140,6 +151,7 @@ module quad_core_soc_ahb #(
     wire [31:0] i_hrdata  [0:3];
     wire        i_hready  [0:3];
     wire [1:0]  i_hresp   [0:3];
+    wire        i_hmastlock [0:3];
 
     wire [31:0] d_haddr   [0:3];
     wire        d_hwrite  [0:3];
@@ -148,6 +160,7 @@ module quad_core_soc_ahb #(
     wire [31:0] d_hrdata  [0:3];
     wire        d_hready  [0:3];
     wire [1:0]  d_hresp   [0:3];
+    wire        d_hmastlock [0:3];
 
     // ------------------------------------------------------
     // Post-bridge request/response wires (coherence_manager side --
@@ -192,12 +205,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[0]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[0]), .bus_resp_line(ibus_resp_line[0]), .bus_resp_state(),
         .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HSIZE(), .HTRANS(i_htrans[0]),
-        .HWDATA(i_hwdata[0]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(i_hwdata[0]), .HBURST(), .HPROT(), .HMASTLOCK(i_hmastlock[0]),
         .HRDATA(i_hrdata[0]), .HREADY(i_hready[0]), .HRESP(i_hresp[0])
     );
     ahb_lite_l1_slave_adapter u0_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HTRANS(i_htrans[0]), .HWDATA(i_hwdata[0]),
+        .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HTRANS(i_htrans[0]), .HWDATA(i_hwdata[0]), .HMASTLOCK(i_hmastlock[0]),
         .HREADYOUT(i_hready[0]), .HRDATA(i_hrdata[0]), .HRESP(i_hresp[0]),
         .dreq_valid(ireq_valid_w[0]), .dreq_type(), .dreq_addr(ireq_addr_w[0]), .dreq_line(),
         .dresp_valid(iresp_valid_w[0]), .dresp_line(iresp_line_w[0]), .dresp_state(2'b00)
@@ -209,12 +222,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[0]), .bus_req_line(dbus_req_line[0]),
         .bus_resp_valid(dbus_resp_valid[0]), .bus_resp_line(dbus_resp_line[0]), .bus_resp_state(dbus_resp_state[0]),
         .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HSIZE(), .HTRANS(d_htrans[0]),
-        .HWDATA(d_hwdata[0]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(d_hwdata[0]), .HBURST(), .HPROT(), .HMASTLOCK(d_hmastlock[0]),
         .HRDATA(d_hrdata[0]), .HREADY(d_hready[0]), .HRESP(d_hresp[0])
     );
     ahb_lite_l1_slave_adapter u0_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HTRANS(d_htrans[0]), .HWDATA(d_hwdata[0]),
+        .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HTRANS(d_htrans[0]), .HWDATA(d_hwdata[0]), .HMASTLOCK(d_hmastlock[0]),
         .HREADYOUT(d_hready[0]), .HRDATA(d_hrdata[0]), .HRESP(d_hresp[0]),
         .dreq_valid(dreq_valid_w[0]), .dreq_type(dreq_type_w[0]),
         .dreq_addr(dreq_addr_w[0]), .dreq_line(dreq_line_w[0]),
@@ -246,12 +259,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[1]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[1]), .bus_resp_line(ibus_resp_line[1]), .bus_resp_state(),
         .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HSIZE(), .HTRANS(i_htrans[1]),
-        .HWDATA(i_hwdata[1]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(i_hwdata[1]), .HBURST(), .HPROT(), .HMASTLOCK(i_hmastlock[1]),
         .HRDATA(i_hrdata[1]), .HREADY(i_hready[1]), .HRESP(i_hresp[1])
     );
     ahb_lite_l1_slave_adapter u1_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HTRANS(i_htrans[1]), .HWDATA(i_hwdata[1]),
+        .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HTRANS(i_htrans[1]), .HWDATA(i_hwdata[1]), .HMASTLOCK(i_hmastlock[1]),
         .HREADYOUT(i_hready[1]), .HRDATA(i_hrdata[1]), .HRESP(i_hresp[1]),
         .dreq_valid(ireq_valid_w[1]), .dreq_type(), .dreq_addr(ireq_addr_w[1]), .dreq_line(),
         .dresp_valid(iresp_valid_w[1]), .dresp_line(iresp_line_w[1]), .dresp_state(2'b00)
@@ -263,12 +276,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[1]), .bus_req_line(dbus_req_line[1]),
         .bus_resp_valid(dbus_resp_valid[1]), .bus_resp_line(dbus_resp_line[1]), .bus_resp_state(dbus_resp_state[1]),
         .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HSIZE(), .HTRANS(d_htrans[1]),
-        .HWDATA(d_hwdata[1]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(d_hwdata[1]), .HBURST(), .HPROT(), .HMASTLOCK(d_hmastlock[1]),
         .HRDATA(d_hrdata[1]), .HREADY(d_hready[1]), .HRESP(d_hresp[1])
     );
     ahb_lite_l1_slave_adapter u1_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HTRANS(d_htrans[1]), .HWDATA(d_hwdata[1]),
+        .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HTRANS(d_htrans[1]), .HWDATA(d_hwdata[1]), .HMASTLOCK(d_hmastlock[1]),
         .HREADYOUT(d_hready[1]), .HRDATA(d_hrdata[1]), .HRESP(d_hresp[1]),
         .dreq_valid(dreq_valid_w[1]), .dreq_type(dreq_type_w[1]),
         .dreq_addr(dreq_addr_w[1]), .dreq_line(dreq_line_w[1]),
@@ -300,12 +313,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[2]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[2]), .bus_resp_line(ibus_resp_line[2]), .bus_resp_state(),
         .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HSIZE(), .HTRANS(i_htrans[2]),
-        .HWDATA(i_hwdata[2]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(i_hwdata[2]), .HBURST(), .HPROT(), .HMASTLOCK(i_hmastlock[2]),
         .HRDATA(i_hrdata[2]), .HREADY(i_hready[2]), .HRESP(i_hresp[2])
     );
     ahb_lite_l1_slave_adapter u2_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HTRANS(i_htrans[2]), .HWDATA(i_hwdata[2]),
+        .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HTRANS(i_htrans[2]), .HWDATA(i_hwdata[2]), .HMASTLOCK(i_hmastlock[2]),
         .HREADYOUT(i_hready[2]), .HRDATA(i_hrdata[2]), .HRESP(i_hresp[2]),
         .dreq_valid(ireq_valid_w[2]), .dreq_type(), .dreq_addr(ireq_addr_w[2]), .dreq_line(),
         .dresp_valid(iresp_valid_w[2]), .dresp_line(iresp_line_w[2]), .dresp_state(2'b00)
@@ -317,12 +330,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[2]), .bus_req_line(dbus_req_line[2]),
         .bus_resp_valid(dbus_resp_valid[2]), .bus_resp_line(dbus_resp_line[2]), .bus_resp_state(dbus_resp_state[2]),
         .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HSIZE(), .HTRANS(d_htrans[2]),
-        .HWDATA(d_hwdata[2]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(d_hwdata[2]), .HBURST(), .HPROT(), .HMASTLOCK(d_hmastlock[2]),
         .HRDATA(d_hrdata[2]), .HREADY(d_hready[2]), .HRESP(d_hresp[2])
     );
     ahb_lite_l1_slave_adapter u2_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HTRANS(d_htrans[2]), .HWDATA(d_hwdata[2]),
+        .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HTRANS(d_htrans[2]), .HWDATA(d_hwdata[2]), .HMASTLOCK(d_hmastlock[2]),
         .HREADYOUT(d_hready[2]), .HRDATA(d_hrdata[2]), .HRESP(d_hresp[2]),
         .dreq_valid(dreq_valid_w[2]), .dreq_type(dreq_type_w[2]),
         .dreq_addr(dreq_addr_w[2]), .dreq_line(dreq_line_w[2]),
@@ -354,12 +367,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[3]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[3]), .bus_resp_line(ibus_resp_line[3]), .bus_resp_state(),
         .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HSIZE(), .HTRANS(i_htrans[3]),
-        .HWDATA(i_hwdata[3]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(i_hwdata[3]), .HBURST(), .HPROT(), .HMASTLOCK(i_hmastlock[3]),
         .HRDATA(i_hrdata[3]), .HREADY(i_hready[3]), .HRESP(i_hresp[3])
     );
     ahb_lite_l1_slave_adapter u3_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HTRANS(i_htrans[3]), .HWDATA(i_hwdata[3]),
+        .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HTRANS(i_htrans[3]), .HWDATA(i_hwdata[3]), .HMASTLOCK(i_hmastlock[3]),
         .HREADYOUT(i_hready[3]), .HRDATA(i_hrdata[3]), .HRESP(i_hresp[3]),
         .dreq_valid(ireq_valid_w[3]), .dreq_type(), .dreq_addr(ireq_addr_w[3]), .dreq_line(),
         .dresp_valid(iresp_valid_w[3]), .dresp_line(iresp_line_w[3]), .dresp_state(2'b00)
@@ -371,12 +384,12 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[3]), .bus_req_line(dbus_req_line[3]),
         .bus_resp_valid(dbus_resp_valid[3]), .bus_resp_line(dbus_resp_line[3]), .bus_resp_state(dbus_resp_state[3]),
         .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HSIZE(), .HTRANS(d_htrans[3]),
-        .HWDATA(d_hwdata[3]), .HBURST(), .HPROT(), .HMASTLOCK(),
+        .HWDATA(d_hwdata[3]), .HBURST(), .HPROT(), .HMASTLOCK(d_hmastlock[3]),
         .HRDATA(d_hrdata[3]), .HREADY(d_hready[3]), .HRESP(d_hresp[3])
     );
     ahb_lite_l1_slave_adapter u3_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HTRANS(d_htrans[3]), .HWDATA(d_hwdata[3]),
+        .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HTRANS(d_htrans[3]), .HWDATA(d_hwdata[3]), .HMASTLOCK(d_hmastlock[3]),
         .HREADYOUT(d_hready[3]), .HRDATA(d_hrdata[3]), .HRESP(d_hresp[3]),
         .dreq_valid(dreq_valid_w[3]), .dreq_type(dreq_type_w[3]),
         .dreq_addr(dreq_addr_w[3]), .dreq_line(dreq_line_w[3]),
@@ -384,13 +397,15 @@ module quad_core_soc_ahb #(
     );
 
     // ------------------------------------------------------
-    // Shared L2 + MESI directory + arbiter. Same instantiation as
+    // Shared L2 + MSI directory + arbiter. Same instantiation as
     // quad_core_soc.v, except the dreq/dresp/ireq/iresp connections
     // now come from the far side of the AHB-Lite bridge above instead
     // of directly from core_l1_wrapper -- dsnoop_* still connects
     // directly to each core (see header: not bridged).
     // ------------------------------------------------------
-    coherence_manager u_coherence_manager (
+    coherence_manager #(
+        .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE)
+    ) u_coherence_manager (
         .clk(clk), .rst(rst),
 
         .c0_dreq_valid(dreq_valid_w[0]), .c0_dreq_type(dreq_type_w[0]), .c0_dreq_addr(dreq_addr_w[0]), .c0_dreq_line(dreq_line_w[0]),
@@ -426,7 +441,18 @@ module quad_core_soc_ahb #(
         .c3_iresp_valid(iresp_valid_w[3]), .c3_iresp_line(iresp_line_w[3]),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid)
+        .mem_rdata(mem_rdata), .mem_valid(mem_valid),
+        .perf_total_requests(cache_perf_total_requests), .perf_d_bus_reads(cache_perf_d_bus_reads),
+        .perf_d_rfos(cache_perf_d_rfos), .perf_d_writebacks(cache_perf_d_writebacks),
+        .perf_i_reads(cache_perf_i_reads), .perf_l2_hits(cache_perf_l2_hits),
+        .perf_l2_misses(cache_perf_l2_misses), .perf_snoop_requests(cache_perf_snoop_requests),
+        .perf_mem_read_words(cache_perf_mem_read_words), .perf_mem_write_words(cache_perf_mem_write_words),
+        .perf_busy_cycles(cache_perf_busy_cycles), .protocol_error(cache_protocol_error),
+        .timeout_error(cache_timeout_error),
+        .debug_trace_rd_index(4'b0), .debug_trace_rd_data(cache_debug_trace_entry0),
+        .debug_trace_count(cache_debug_trace_count),
+        .debug_trace_write_index(cache_debug_trace_write_index),
+        .debug_controller_state(cache_debug_controller_state)
     );
 
 endmodule

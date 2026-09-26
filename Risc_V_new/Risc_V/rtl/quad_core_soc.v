@@ -5,7 +5,7 @@
 //
 // The full "4-CORE CPU WRAPPER" box from the architecture diagram:
 // 4x core_l1_wrapper (RV32IMA + MMU + private L1 I$/D$) feeding one
-// coherence_manager (shared L2 + directory MESI + the AHB-stand-in
+// coherence_manager (shared L2 + directory MSI + the AHB-stand-in
 // arbiter -- see coherence_manager.v's header for why those two
 // diagram boxes are one module here), with a single flat physical
 // memory port out (the diagram's "CPU MEMORY PORT") for whatever
@@ -31,7 +31,8 @@ module quad_core_soc #(
     parameter [31:0] RESET_ADDR0 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR1 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR2 = 32'h0000_1000,
-    parameter [31:0] RESET_ADDR3 = 32'h0000_1000
+    parameter [31:0] RESET_ADDR3 = 32'h0000_1000,
+    parameter        CACHE_DEBUG_TRACE_ENABLE = 0
 )(
     input  wire        clk,
     input  wire        rst,
@@ -79,6 +80,26 @@ module quad_core_soc #(
     wire [31:0] alu_dbg_unused0, alu_dbg_unused1, alu_dbg_unused2, alu_dbg_unused3;
     wire [1:0]  fpc_unused0, fpc_unused1, fpc_unused2, fpc_unused3;
     wire [1:0]  dpc_unused0, dpc_unused1, dpc_unused2, dpc_unused3;
+
+    // Kept internal to preserve the stable board-facing port list,
+    // but marked for direct ILA probing during cache bring-up.
+    (* mark_debug = "true" *) wire [31:0] cache_perf_total_requests;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_d_bus_reads;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_d_rfos;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_d_writebacks;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_i_reads;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_hits;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_misses;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_snoop_requests;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_read_words;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_write_words;
+    (* mark_debug = "true" *) wire [31:0] cache_perf_busy_cycles;
+    (* mark_debug = "true" *) wire        cache_protocol_error;
+    (* mark_debug = "true" *) wire        cache_timeout_error;
+    (* mark_debug = "true" *) wire [95:0] cache_debug_trace_entry0;
+    (* mark_debug = "true" *) wire [4:0]  cache_debug_trace_count;
+    (* mark_debug = "true" *) wire [3:0]  cache_debug_trace_write_index;
+    (* mark_debug = "true" *) wire [3:0]  cache_debug_controller_state;
 
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0)) core0 (
         .clk(clk), .rst(rst),
@@ -144,7 +165,9 @@ module quad_core_soc #(
         .dsnoop_ack_dirty(dsnoop_ack_dirty[3]), .dsnoop_ack_line(dsnoop_ack_line[3])
     );
 
-    coherence_manager u_coherence_manager (
+    coherence_manager #(
+        .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE)
+    ) u_coherence_manager (
         .clk(clk), .rst(rst),
 
         .c0_dreq_valid(dbus_req_valid[0]), .c0_dreq_type(dbus_req_type[0]), .c0_dreq_addr(dbus_req_addr[0]), .c0_dreq_line(dbus_req_line[0]),
@@ -180,7 +203,18 @@ module quad_core_soc #(
         .c3_iresp_valid(ibus_resp_valid[3]), .c3_iresp_line(ibus_resp_line[3]),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid)
+        .mem_rdata(mem_rdata), .mem_valid(mem_valid),
+        .perf_total_requests(cache_perf_total_requests), .perf_d_bus_reads(cache_perf_d_bus_reads),
+        .perf_d_rfos(cache_perf_d_rfos), .perf_d_writebacks(cache_perf_d_writebacks),
+        .perf_i_reads(cache_perf_i_reads), .perf_l2_hits(cache_perf_l2_hits),
+        .perf_l2_misses(cache_perf_l2_misses), .perf_snoop_requests(cache_perf_snoop_requests),
+        .perf_mem_read_words(cache_perf_mem_read_words), .perf_mem_write_words(cache_perf_mem_write_words),
+        .perf_busy_cycles(cache_perf_busy_cycles), .protocol_error(cache_protocol_error),
+        .timeout_error(cache_timeout_error),
+        .debug_trace_rd_index(4'b0), .debug_trace_rd_data(cache_debug_trace_entry0),
+        .debug_trace_count(cache_debug_trace_count),
+        .debug_trace_write_index(cache_debug_trace_write_index),
+        .debug_controller_state(cache_debug_controller_state)
     );
 
 endmodule

@@ -49,13 +49,15 @@
 // flush without executing real supervisor code.
 // ============================================================
 module core_l1_wrapper #(
-    parameter [31:0] RESET_ADDR = 32'h0000_1000
+    parameter [31:0] RESET_ADDR = 32'h0000_1000,
+    parameter        MMU_REGION_POLICY_ENABLE = 1,
+    parameter        MMU_DEBUG_TRACE_ENABLE   = 0
 )(
     input  wire        clk,
     input  wire        rst,
 
     input  wire        Mmu_Flush,
-    input  wire        Cache_Flush,   // sim/debug only -- drops all L1 lines with no writeback
+    input  wire        Cache_Flush,   // pulse: clean/invalidate D$, then invalidate I$
 
     output wire [31:0] ResultW,
     output wire [31:0] ALU_ResultE_Debug,
@@ -98,19 +100,85 @@ module core_l1_wrapper #(
     wire        Mem_WriteEnM;
     wire        Mem_ReadEnM;
     wire [2:0]  MemOpM;
+    wire        Mem_AmoRmwM;
+    wire [4:0]  Mem_AmoOpM;
+    wire [31:0] Mem_AmoOperandM;
     wire [31:0] Mem_ReadDataM;
     wire        Mem_DataValid;
 
     wire [31:0] snoop_addr_to_core;
     wire        snoop_we_to_core;
 
+    wire        fence_i_m;
+    reg         cache_flush_seen;
+    reg         fence_i_seen;
+    reg         cache_flush_active;
+    reg         cache_flush_queued;
+    reg         dcache_flush_pulse;
+    reg         icache_flush_pulse;
+    wire        dcache_flush_busy;
+    wire        dcache_flush_done;
+
+    wire cache_flush_trigger = (Cache_Flush && !cache_flush_seen) ||
+                               (fence_i_m && !fence_i_seen);
+    // Keep the core frozen for the cycle in which I$ consumes its
+    // invalidate pulse; otherwise it could retire one stale fetch on
+    // the same edge that the valid bits are being cleared.
+    wire cache_maintenance_stall = cache_flush_active | cache_flush_trigger |
+                                   icache_flush_pulse;
+
+    // FENCE.I and the external maintenance hook use the same ordered
+    // sequence: freeze this in-order core, write back every Modified
+    // D$ line, then invalidate I$.  A second edge received while the
+    // walker is busy is remembered and starts another pass.
+    always @(posedge clk) begin
+        if (rst) begin
+            cache_flush_seen   <= 1'b0;
+            fence_i_seen       <= 1'b0;
+            cache_flush_active <= 1'b0;
+            cache_flush_queued <= 1'b0;
+            dcache_flush_pulse <= 1'b0;
+            icache_flush_pulse <= 1'b0;
+        end
+        else begin
+            cache_flush_seen   <= Cache_Flush;
+            fence_i_seen       <= fence_i_m;
+            dcache_flush_pulse <= 1'b0;
+            icache_flush_pulse <= 1'b0;
+
+            if (!cache_flush_active) begin
+                if (cache_flush_trigger) begin
+                    cache_flush_active <= 1'b1;
+                    dcache_flush_pulse <= 1'b1;
+                end
+            end
+            else begin
+                if (cache_flush_trigger)
+                    cache_flush_queued <= 1'b1;
+
+                if (dcache_flush_done) begin
+                    icache_flush_pulse <= 1'b1;
+                    if (cache_flush_queued || cache_flush_trigger) begin
+                        cache_flush_queued <= 1'b0;
+                        dcache_flush_pulse <= 1'b1;
+                    end
+                    else begin
+                        cache_flush_active <= 1'b0;
+                    end
+                end
+            end
+        end
+    end
+
     mmu_core_wrapper #(
         .RESET_ADDR(RESET_ADDR),
-        .MMU_CTRL_FROM_CSR(1)
+        .MMU_CTRL_FROM_CSR(1),
+        .MMU_REGION_POLICY_ENABLE(MMU_REGION_POLICY_ENABLE),
+        .MMU_DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE)
     ) mmu_core (
         .clk                (clk),
         .rst                (rst),
-        .Stall_Core_External(1'b0),
+        .Stall_Core_External(cache_maintenance_stall),
 
         // Ignored inside mmu_core_wrapper when MMU_CTRL_FROM_CSR=1 (see
         // its header) -- tied to the transparent-bypass/root-0 values
@@ -132,6 +200,9 @@ module core_l1_wrapper #(
         .Mem_WriteEnM       (Mem_WriteEnM),
         .Mem_ReadEnM        (Mem_ReadEnM),
         .MemOpM             (MemOpM),
+        .Mem_AmoRmwM        (Mem_AmoRmwM),
+        .Mem_AmoOpM         (Mem_AmoOpM),
+        .Mem_AmoOperandM    (Mem_AmoOperandM),
         .Mem_ReadDataM      (Mem_ReadDataM),
         .Mem_ReadDataValidM (Mem_DataValid),
         .Mem_WriteDoneM     (Mem_DataValid),
@@ -142,13 +213,22 @@ module core_l1_wrapper #(
         .Fetch_PageFault       (Fetch_PageFault),
         .Data_PageFault        (Data_PageFault),
         .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
-        .Data_PageFault_Cause  (Data_PageFault_Cause)
+        .Data_PageFault_Cause  (Data_PageFault_Cause),
+
+        // The integrated 4-core path consumes satp internally through
+        // MMU_CTRL_FROM_CSR=1; these are observability-only outputs at
+        // this wrapper level, so terminate them explicitly.
+        .CurrentPriv           (),
+        .Mmu_Enable_Csr        (),
+        .Satp_PPN_Csr          (),
+        .Mmu_Flush_Csr         (),
+        .FenceI_M              (fence_i_m)
     );
 
     l1_icache u_icache (
         .clk            (clk),
         .rst            (rst),
-        .flush          (Cache_Flush),
+        .flush          (icache_flush_pulse),
 
         .cpu_addr       (PCF),
         .cpu_rdata      (InstrF),
@@ -163,13 +243,18 @@ module core_l1_wrapper #(
     l1_dcache u_dcache (
         .clk            (clk),
         .rst            (rst),
-        .flush          (Cache_Flush),
+        .flush          (dcache_flush_pulse),
+        .flush_busy     (dcache_flush_busy),
+        .flush_done     (dcache_flush_done),
 
         .cpu_addr       (Mem_AddrM),
         .cpu_wdata      (Mem_WriteDataM),
         .cpu_we         (Mem_WriteEnM),
         .cpu_re         (Mem_ReadEnM),
         .cpu_memop      (MemOpM),
+        .cpu_amo        (Mem_AmoRmwM),
+        .cpu_amo_op     (Mem_AmoOpM),
+        .cpu_amo_operand(Mem_AmoOperandM),
         .cpu_rdata      (Mem_ReadDataM),
         .cpu_valid      (Mem_DataValid),
 

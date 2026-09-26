@@ -28,6 +28,9 @@ module RV32IMA #(
     output wire        Mem_WriteEnM,
     output wire        Mem_ReadEnM,
     output wire [2:0]  MemOpM,
+    output wire        Mem_AmoRmwM,
+    output wire [4:0]  Mem_AmoOpM,
+    output wire [31:0] Mem_AmoOperandM,
     input  wire [31:0] Mem_ReadDataM,
 
     // NEW: trap/exception unit inputs -- page faults from whatever
@@ -52,7 +55,15 @@ module RV32IMA #(
     output wire [1:0]  CurrentPriv,
     output wire        Mmu_Enable_Csr,
     output wire [19:0] Satp_PPN_Csr,
-    output wire        Mmu_Flush_Csr
+    output wire        Mstatus_Sum,
+    output wire        Mstatus_Mxr,
+    output wire        Mmu_Flush_Csr,
+
+    // Architectural FENCE.I reaches M only after all older
+    // instructions in this in-order pipeline.  The cache wrapper
+    // uses this level request to clean D$ and invalidate I$ while
+    // holding the pipeline through Stall_Core_External.
+    output wire        FenceI_M
 );
 
     // =========================================================
@@ -128,12 +139,23 @@ module RV32IMA #(
     wire [31:0] InstrM;        // NEW
     wire [31:0] CsrWDataM;     // NEW
 
+    assign FenceI_M = Fence_M && (InstrM[14:12] == 3'b001);
+
     wire [4:0]  RD_M;
     wire [31:0] PCPlus4M, ALUResultM, WriteDataM;
 
     // Memory stage
     wire [31:0] ReadDataM;
     wire [2:0]  Mem_BusOpM_unused;
+
+    // A cached AMO miss cannot compute its new word until the old
+    // line arrives.  Export the raw rs2 operand/opcode so l1_dcache
+    // performs the RMW at the actual ownership/fill point.  LR/SC use
+    // the ordinary read/store paths and are therefore excluded.
+    assign Mem_AmoRmwM     = AtomicM && (AmoOpM != 5'b00010) &&
+                             (AmoOpM != 5'b00011);
+    assign Mem_AmoOpM      = AmoOpM;
+    assign Mem_AmoOperandM = WriteDataM;
 
     // MEM / WB outputs
     wire        RegWriteW;
@@ -487,6 +509,7 @@ module RV32IMA #(
     memory_stage memory_unit (
         .clk           (clk),
         .rst           (rst),
+        .Stall_Core_External(Stall_Core_External),
 
         .MemWriteM     (MemWriteM),
         .MemReadM      (MemReadM),
@@ -568,6 +591,8 @@ module RV32IMA #(
         .CurrentPriv   (CurrentPriv),
         .Mmu_Enable_Csr(Mmu_Enable_Csr),
         .Satp_PPN_Csr  (Satp_PPN_Csr),
+        .Mstatus_Sum    (Mstatus_Sum),
+        .Mstatus_Mxr    (Mstatus_Mxr),
         .Mmu_Flush_Csr (Mmu_Flush_Csr)
     );
 

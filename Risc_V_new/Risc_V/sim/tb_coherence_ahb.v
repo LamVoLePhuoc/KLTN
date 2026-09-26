@@ -13,7 +13,7 @@
 // alternative, it is the architecture going in the report.
 //
 // Deliberately NOT a from-scratch test: this is tb_coherence.v's own
-// 5-step MESI scenario (steps A-E, same addresses, same expected
+// 5-step MSI scenario (steps A-E, same addresses, same expected
 // values, same checks), copied verbatim, with exactly one structural
 // change -- each of the 4 l1_dcache instances' bus_req/bus_resp port
 // no longer wires DIRECTLY to coherence_manager.v's dreq/dresp port;
@@ -24,8 +24,8 @@
 // not a shared multi-master AHB-Lite bus needing its own arbiter).
 // Reusing the exact same test sequence this way means a PASS here is
 // strong, direct evidence that the AHB-Lite bridge is protocol-
-// transparent -- the same MESI invariant tb_coherence.v already
-// checks (mandatory snoop of a lone sharer) has to keep holding with
+// transparent -- the same MSI ownership/data-forwarding invariant has
+// to keep holding with
 // the bridge spliced in, or this fails exactly where tb_coherence.v
 // would have passed, pointing straight at the adapters as the cause.
 //
@@ -49,6 +49,7 @@ module tb_coherence_ahb;
 
     localparam CLK_PERIOD = 10;
     localparam LINE_ADDR  = 32'h0000_1000;
+    localparam L1_EVICT0  = 32'h0000_2200;
 
     reg clk, rst;
     initial clk = 1'b0;
@@ -111,14 +112,17 @@ module tb_coherence_ahb;
     wire [31:0] hrdata [0:3];
     wire        hready [0:3];
     wire [1:0]  hresp  [0:3];
+    wire        hmastlock [0:3];
 
     genvar gi;
     generate
         for (gi = 0; gi < 4; gi = gi + 1) begin : DCACHES
             l1_dcache u_dc (
                 .clk(clk), .rst(rst), .flush(1'b0),
+                .flush_busy(), .flush_done(),
                 .cpu_addr(c_addr[gi]), .cpu_wdata(c_wdata[gi]),
                 .cpu_we(c_we[gi]), .cpu_re(c_re[gi]), .cpu_memop(c_memop[gi]),
+                .cpu_amo(1'b0), .cpu_amo_op(5'b0), .cpu_amo_operand(32'b0),
                 .cpu_rdata(c_rdata[gi]), .cpu_valid(c_valid[gi]),
                 .bus_req_valid(bus_req_valid[gi]), .bus_req_type(bus_req_type[gi]),
                 .bus_req_addr(bus_req_addr[gi]), .bus_req_line(bus_req_line[gi]),
@@ -134,13 +138,13 @@ module tb_coherence_ahb;
                 .bus_req_addr(bus_req_addr[gi]), .bus_req_line(bus_req_line[gi]),
                 .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
                 .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HSIZE(), .HTRANS(htrans[gi]),
-                .HWDATA(hwdata[gi]), .HBURST(), .HPROT(), .HMASTLOCK(),
+                .HWDATA(hwdata[gi]), .HBURST(), .HPROT(), .HMASTLOCK(hmastlock[gi]),
                 .HRDATA(hrdata[gi]), .HREADY(hready[gi]), .HRESP(hresp[gi])
             );
 
             ahb_lite_l1_slave_adapter u_ahb_s (
                 .HCLK(clk), .HRESETn(HRESETn),
-                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]),
+                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]),
                 .HREADYOUT(hready[gi]), .HRDATA(hrdata[gi]), .HRESP(hresp[gi]),
                 .dreq_valid(dreq_valid[gi]), .dreq_type(dreq_type[gi]),
                 .dreq_addr(dreq_addr[gi]), .dreq_line(dreq_line[gi]),
@@ -176,7 +180,6 @@ module tb_coherence_ahb;
             end
         end
     end
-
     // ------------------------------------------------------
     // DUT -- coherence_manager.v itself is completely unmodified from
     // tb_coherence.v's own instantiation (same port shape, same
@@ -215,21 +218,54 @@ module tb_coherence_ahb;
         .c3_ireq_valid(1'b0), .c3_ireq_addr(32'b0), .c3_iresp_valid(), .c3_iresp_line(),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid)
+        .mem_rdata(mem_rdata), .mem_valid(mem_valid),
+        .perf_total_requests(), .perf_d_bus_reads(), .perf_d_rfos(), .perf_d_writebacks(),
+        .perf_i_reads(), .perf_l2_hits(), .perf_l2_misses(), .perf_snoop_requests(),
+        .perf_mem_read_words(), .perf_mem_write_words(), .perf_busy_cycles(), .protocol_error(), .timeout_error(),
+        .debug_trace_rd_index(4'b0), .debug_trace_rd_data(), .debug_trace_count(),
+        .debug_trace_write_index(), .debug_controller_state()
     );
 
     // ------------------------------------------------------
-    // Bus-traffic monitor -- identical purpose to tb_coherence.v's
-    // (catch step B's E->M upgrade accidentally reaching the bus), now
-    // watching the PRE-bridge bus_req_valid[0] (the point closest to
-    // the cache itself -- if the upgrade stayed local, NOTHING past
-    // this point, AHB-Lite included, should ever see traffic for it).
+    // Verify an MSI S->M upgrade crosses the bridge as an RFO, uses
+    // HMASTLOCK, reaches the CM with type=RFO, and exercises HREADY
+    // back-pressure while the serialized transaction is pending.
     // ------------------------------------------------------
     reg monitor_core0_bus;
     integer core0_bus_events;
+    integer core0_lock_cycles;
+    integer core0_backend_rfo_cycles;
+    integer core0_backend_rfo_total;
+    integer backend_wb_total;
+    integer core0_wait_cycles;
+    integer e_grant_count;
+    integer mon_i;
     always @(posedge clk) begin
-        if (rst) core0_bus_events <= 0;
-        else if (monitor_core0_bus && bus_req_valid[0]) core0_bus_events <= core0_bus_events + 1;
+        if (rst) begin
+            core0_bus_events <= 0;
+            core0_lock_cycles <= 0;
+            core0_backend_rfo_cycles <= 0;
+            core0_backend_rfo_total <= 0;
+            backend_wb_total <= 0;
+            core0_wait_cycles <= 0;
+            e_grant_count <= 0;
+        end
+        else begin
+            if (monitor_core0_bus && bus_req_valid[0]) core0_bus_events <= core0_bus_events + 1;
+            if (monitor_core0_bus && hmastlock[0]) core0_lock_cycles <= core0_lock_cycles + 1;
+            if (monitor_core0_bus && dreq_valid[0] && dreq_type[0] == 2'b01)
+                core0_backend_rfo_cycles <= core0_backend_rfo_cycles + 1;
+            if (dreq_valid[0] && dreq_type[0] == 2'b01)
+                core0_backend_rfo_total <= core0_backend_rfo_total + 1;
+            for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1)
+                if (dreq_valid[mon_i] && dreq_type[mon_i] == 2'b10)
+                    backend_wb_total <= backend_wb_total + 1;
+            if (monitor_core0_bus && !hready[0])
+                core0_wait_cycles <= core0_wait_cycles + 1;
+            for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1)
+                if (dresp_valid[mon_i] && dresp_state[mon_i] == 2'b10)
+                    e_grant_count <= e_grant_count + 1;
+        end
     end
 
     // ------------------------------------------------------
@@ -266,7 +302,7 @@ module tb_coherence_ahb;
         end
     endtask
 
-    task check_eq32(input [8*40-1:0] name, input [31:0] got, input [31:0] exp);
+    task check_eq32(input [8*80-1:0] name, input [31:0] got, input [31:0] exp);
         begin
             if (got !== exp) begin
                 $display("[FAIL] %0s: got=0x%08h expected=0x%08h", name, got, exp);
@@ -278,7 +314,21 @@ module tb_coherence_ahb;
         end
     endtask
 
+    task check_true(input [8*80-1:0] name, input condition);
+        begin
+            if (!condition) begin
+                $display("[FAIL] %0s", name);
+                errors = errors + 1;
+            end
+            else $display("[PASS] %0s", name);
+        end
+    endtask
+
     reg [31:0] rd;
+    reg [31:0] rd0_concurrent;
+    reg [31:0] rd3_concurrent;
+    integer snap_backend_rfo;
+    integer snap_backend_wb;
 
     initial begin
         errors = 0;
@@ -292,42 +342,61 @@ module tb_coherence_ahb;
         repeat (2) @(posedge clk);
 
         $display("---------------------------------------------");
-        $display("tb_coherence_ahb: step A -- core0 cold read (expect 0, grant E), through AHB-Lite bridge");
+        $display("MSI/AHB A: cold read returns S through the bridge");
         do_read(0, LINE_ADDR, rd);
         check_eq32("A: core0 initial read", rd, 32'h0000_0000);
 
-        $display("tb_coherence_ahb: step B -- core0 local write (E->M, no bridge/bus traffic expected)");
+        $display("MSI/AHB B: S->M must cross AHB as locked RFO");
         monitor_core0_bus = 1'b1;
         core0_bus_events  = 0;
+        core0_lock_cycles = 0;
+        core0_backend_rfo_cycles = 0;
+        core0_wait_cycles = 0;
+        snap_backend_rfo = core0_backend_rfo_total;
         do_write(0, LINE_ADDR, 32'hAAAA_0001);
         monitor_core0_bus = 1'b0;
-        if (core0_bus_events != 0) begin
-            $display("[FAIL] B: core0's E->M write reached the AHB-Lite bridge %0d time(s) -- should be silent/local", core0_bus_events);
-            errors = errors + 1;
-        end
-        else begin
-            $display("[PASS] B: core0's E->M write stayed local (no bridge/bus traffic)");
-        end
+        check_true("B: upgrade generated cache-side traffic", core0_bus_events > 0);
+        check_true("B: RFO encoded with HMASTLOCK", core0_lock_cycles > 0);
+        check_true("B: slave reconstructed backend RFO", core0_backend_rfo_total > snap_backend_rfo);
+        check_true("B: HREADY inserted back-pressure", core0_wait_cycles > 0);
 
-        $display("tb_coherence_ahb: step C -- core1 read (must catch core0's silent M via mandatory snoop)");
+        $display("MSI/AHB C: another reader snoops M and gets latest data");
         do_read(1, LINE_ADDR, rd);
         check_eq32("C: core1 sees core0's dirty write", rd, 32'hAAAA_0001);
 
-        $display("tb_coherence_ahb: step D -- core2 RFO write (must invalidate core0 AND core1)");
+        $display("MSI/AHB D: another writer invalidates both sharers");
         do_write(2, LINE_ADDR, 32'hBBBB_0002);
         do_read(0, LINE_ADDR, rd); // core0 must miss now (was invalidated) and re-fetch
         check_eq32("D: core0 re-read after being invalidated by core2's RFO", rd, 32'hBBBB_0002);
 
-        $display("tb_coherence_ahb: step E -- re-check core1 also invalidated, core2's data is authoritative");
+        $display("MSI/AHB E: invalidated reader re-fetches authoritative value");
         do_read(1, LINE_ADDR, rd);
         check_eq32("E: core1 re-read after being invalidated by core2's RFO", rd, 32'hBBBB_0002);
 
+        $display("MSI/AHB F: dirty L1 eviction crosses AHB as a writeback");
+        do_write(0, L1_EVICT0,                32'hCAFE_0000);
+        do_write(0, L1_EVICT0 + 32'h00004000, 32'hCAFE_0001);
+        snap_backend_wb = backend_wb_total;
+        do_write(0, L1_EVICT0 + 32'h00008000, 32'hCAFE_0002);
+        check_true("F: slave reconstructed backend WRITEBACK", backend_wb_total > snap_backend_wb);
+        do_read(1, L1_EVICT0, rd);
+        check_eq32("F: consumer sees value written back through AHB", rd, 32'hCAFE_0000);
+
+        $display("MSI/AHB G: simultaneous cores hold requests under CM back-pressure");
+        fork
+            begin do_read(0, 32'h0000_2A00, rd0_concurrent); end
+            begin do_read(3, 32'h0000_2E00, rd3_concurrent); end
+        join
+        check_eq32("G: first concurrent read completes", rd0_concurrent, 32'h0000_0000);
+        check_eq32("G: second held concurrent read is not lost", rd3_concurrent, 32'h0000_0000);
+
+        check_true("MSI/AHB never granted Exclusive", e_grant_count == 0);
         $display("---------------------------------------------");
         if (errors == 0) begin
-            $display("COHERENCE_AHB_TB: PASS");
+            $display("MSI_COHERENCE_AHB_TB: PASS");
         end
         else begin
-            $display("COHERENCE_AHB_TB: FAIL (%0d check(s) failed)", errors);
+            $display("MSI_COHERENCE_AHB_TB: FAIL (%0d check(s) failed)", errors);
         end
         $display("---------------------------------------------");
         $finish;
@@ -338,7 +407,7 @@ module tb_coherence_ahb;
     // instead of tb_coherence.v's direct ~1-cycle-per-word protocol.
     initial begin
         #(CLK_PERIOD * 40000);
-        $display("COHERENCE_AHB_TB: FAIL (global timeout -- likely a hang in the AHB-Lite bridge or coherence_manager's FSM; dump waves)");
+        $display("MSI_COHERENCE_AHB_TB: FAIL (global timeout -- dump AHB/coherence waves)");
         $finish;
     end
 

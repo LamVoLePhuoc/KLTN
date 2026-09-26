@@ -2,7 +2,7 @@
 # build_soc_4core_trial.tcl
 #
 # Second architecture trial fit: the FULL 4-core system (4x
-# core_l1_wrapper -> AHB-Lite -> coherence_manager [L2 + MESI directory
+# core_l1_wrapper -> AHB-Lite -> coherence_manager [L2 + MSI directory
 # + arbiter] -> quad_core_axi_wrapper_ahb) wired into Vivado stock AXI4
 # IP. This is a separate, new script -- it does NOT modify
 # build_soc_mmu_trial.tcl (the earlier 1-core, no-cache trial) or any
@@ -22,7 +22,7 @@
 #
 # WHAT THIS BUILDS:
 #
-#   cpu0 (quad_core_axi_wrapper_ahb: 4 cores + L1 I$/D$ + L2 + MESI,
+#   cpu0 (quad_core_axi_wrapper_ahb: 4 cores + L1 I$/D$ + L2 + MSI,
 #         AHB-Lite between cores and L2/coherence -- see header above)
 #              M_AXI (single combined R/W master)
 #                     |            dma0 (axi_cdma)
@@ -43,7 +43,7 @@
 # CHANGES FROM build_soc_mmu_trial.tcl (the 1-core version), all per
 # instruction:
 #   - 4 cores (quad_core_axi_wrapper_ahb), not 1 (mmu_ip_wrapper) --
-#     wired through coherence_manager.v's L2/MESI/arbiter (now reached
+#     wired through coherence_manager.v's L2/MSI/arbiter (now reached
 #     through the AHB-Lite bridge -- see above), so this script only
 #     ever touches ONE AXI master from the CPU side (unlike the 1-core
 #     script's separate IMEM/DMEM masters -- coherence_manager.v
@@ -77,14 +77,11 @@
 #
 # CORRECTNESS CAVEAT (read before trusting results from this BD):
 # coherence_manager.v / l1_dcache.v / l2_cache.v implement a from-
-# scratch MESI directory protocol that has NOT been simulated --
-# only reasoned through by hand (see each file's header and
-# Risc_V_new/README.md's risk register). This script proves the
-# *wiring* fits together and elaborates; it proves nothing about
-# whether the coherence protocol itself is correct. Do not treat a
-# clean `validate_bd_design` here as evidence the MESI logic works --
-# only a passing testbench (Risc_V/sim/tb_coherence.v, if present, or
-# one you write) is evidence of that.
+# scratch MSI directory protocol. The direct and AHB self-checking
+# testbenches pass in Questa, including ownership transfer and dirty
+# eviction. This script still proves only that the Vivado wiring fits;
+# board synthesis/timing and a full-program multicore run remain
+# separate validation steps.
 #
 # HOW TO RUN
 #   1. Open Risc_V_new/Risc_V/Risc_V.xpr in Vivado (must already be
@@ -120,10 +117,15 @@ set script_dir [file dirname [file normalize [info script]]]
 set rtl_dir     [file normalize [file join $script_dir .. rtl]]
 
 set new_sources {
+    mmu_region_decode.v
+    mmu_debug_buffer.v
+    mmu_super_tlb.v
+    mmu_super_tlb.v
     l1_icache.v
     l1_dcache.v
     core_l1_wrapper.v
     l2_cache.v
+    cache_debug_buffer.v
     coherence_manager.v
     ahb_lite_l1_adapter.v
     ahb_lite_l1_slave_adapter.v
@@ -332,8 +334,7 @@ puts "  2. If any WARNING printed above, fix that one connection/address by hand
 puts "  3. MMU enable/satp are CSR-driven now (no external pin) -- each core boots"
 puts "     with paging off and only translates once ITS OWN boot code executes"
 puts "     CSRRW satp, ... after preloading a page table into mem_ctrl."
-puts "  4. Re-read the CORRECTNESS CAVEAT at the top of this file before trusting any"
-puts "     result beyond 'the wiring elaborates' -- the MESI protocol itself is"
-puts "     unsimulated. Run/write a coherence testbench before relying on it."
+puts "  4. Run the MSI regressions (sim/tb_coherence.v and"
+puts "     sim/tb_coherence_ahb.v) in addition to validating this block design."
 puts "  5. To simulate: set the generated <BD_NAME>_wrapper as the simulation top,"
 puts "     or instantiate it from your own testbench."

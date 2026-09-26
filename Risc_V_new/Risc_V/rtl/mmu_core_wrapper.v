@@ -61,12 +61,9 @@
 // three to a constant 1 and gets the exact same 0-wait behaviour as
 // before; a caller backed by real multi-cycle memory (mmu_ip_wrapper.v,
 // AXI4) pulses each exactly on the cycle its data/response is
-// actually valid. ptw_mem_valid (into mmu_top) is just
-// Mem_ReadDataValidM again, since PTW reads share the same
-// Mem_AddrM/Mem_ReadEnM path as the core's own loads (see the
-// mmu_busy mux below) -- whatever "the data on Mem_ReadDataM is
-// valid for the address I'm currently driving" means, it means the
-// same thing regardless of who asked.
+// actually valid. PTW reads use Mem_ReadDataValidM; Accessed/Dirty
+// PTE writes use Mem_WriteDoneM. The wrapper selects the completion
+// source from ptw_mem_we while mmu_busy owns the D-memory bus.
 // ============================================================
 module mmu_core_wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_1000,
@@ -80,7 +77,19 @@ module mmu_core_wrapper #(
     // one real source of truth -- used by the real system
     // (core_l1_wrapper.v). See csr_trap_unit.v's header for why this
     // is a parameter rather than always-on.
-    parameter          MMU_CTRL_FROM_CSR = 0
+    parameter          MMU_CTRL_FROM_CSR       = 0,
+
+    // Permission context used only in external-control mode. The
+    // integrated system instead takes privilege/SUM/MXR from CSRs.
+    parameter [1:0]    EXTERNAL_PRIV            = 2'b01,
+    parameter          EXTERNAL_SUM             = 0,
+    parameter          EXTERNAL_MXR             = 0,
+
+    // Optional coarse VA-region guard and trace storage from
+    // mmu_top.  Both default off for backward compatibility and so
+    // board bitstreams contain no debug buffer unless requested.
+    parameter          MMU_REGION_POLICY_ENABLE = 0,
+    parameter          MMU_DEBUG_TRACE_ENABLE   = 0
 )(
     input  wire        clk,
     input  wire        rst,
@@ -106,6 +115,9 @@ module mmu_core_wrapper #(
     output wire        Mem_WriteEnM,
     output wire        Mem_ReadEnM,
     output wire [2:0]  MemOpM,
+    output wire        Mem_AmoRmwM,
+    output wire [4:0]  Mem_AmoOpM,
+    output wire [31:0] Mem_AmoOperandM,
     input  wire [31:0] Mem_ReadDataM,
     input  wire        Mem_ReadDataValidM, // 1 exactly when Mem_ReadDataM is valid for Mem_AddrM
     input  wire        Mem_WriteDoneM,     // 1 exactly when the store at Mem_AddrM has completed
@@ -129,7 +141,8 @@ module mmu_core_wrapper #(
     output wire [1:0]  CurrentPriv,
     output wire        Mmu_Enable_Csr,
     output wire [19:0] Satp_PPN_Csr,
-    output wire        Mmu_Flush_Csr
+    output wire        Mmu_Flush_Csr,
+    output wire        FenceI_M
 );
 
     // ------------------------------------------------------
@@ -146,6 +159,12 @@ module mmu_core_wrapper #(
     wire [31:0] mem_rdata_to_core;
 
     wire mem_req_core = mem_re_core | mem_we_core;
+    // A cache hit may complete while the pipeline remains frozen for an
+    // unrelated instruction miss or external maintenance operation.  Remember
+    // that completion so a level-held M-stage store/AMO is not issued again on
+    // every stalled cycle.  The bit clears exactly when the pipeline can
+    // advance, which also permits truly back-to-back identical accesses.
+    reg  core_data_completed;
 
     // ------------------------------------------------------
     // MMU
@@ -157,7 +176,21 @@ module mmu_core_wrapper #(
     wire        mmu_busy;
 
     wire        ptw_mem_req;
+    wire        ptw_mem_we;
     wire [31:0] ptw_mem_addr;
+    wire [31:0] ptw_mem_wdata;
+    wire        mstatus_sum_csr;
+    wire        mstatus_mxr_csr;
+
+    // Kept as internal observability nets.  A simulation testbench or
+    // an FPGA ILA can reach these hierarchically without widening the
+    // stable core wrapper interface.
+    wire [79:0] mmu_debug_trace_data;
+    wire [4:0]  mmu_debug_trace_count;
+    wire [3:0]  mmu_debug_trace_write_index;
+    wire [1:0]  mmu_debug_controller_state;
+    wire [2:0]  mmu_debug_fetch_region;
+    wire [2:0]  mmu_debug_mem_region;
 
     // ------------------------------------------------------
     // CSR-vs-external MMU control mux (see MMU_CTRL_FROM_CSR above).
@@ -177,13 +210,23 @@ module mmu_core_wrapper #(
     wire        mmu_enable_eff = MMU_CTRL_FROM_CSR ? Mmu_Enable_Csr : Mmu_Enable;
     wire [19:0] satp_ppn_eff   = MMU_CTRL_FROM_CSR ? Satp_PPN_Csr   : Satp_PPN;
     wire        mmu_flush_eff  = Mmu_Flush | Mmu_Flush_Csr;
+    wire [1:0]  mmu_priv_eff   = MMU_CTRL_FROM_CSR ? CurrentPriv : EXTERNAL_PRIV;
+    wire        mmu_sum_eff    = MMU_CTRL_FROM_CSR ? mstatus_sum_csr : EXTERNAL_SUM;
+    wire        mmu_mxr_eff    = MMU_CTRL_FROM_CSR ? mstatus_mxr_csr : EXTERNAL_MXR;
+    wire        ptw_mem_valid  = ptw_mem_we ? Mem_WriteDoneM : Mem_ReadDataValidM;
 
-    mmu_top mmu (
+    mmu_top #(
+        .REGION_POLICY_ENABLE(MMU_REGION_POLICY_ENABLE),
+        .DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE)
+    ) mmu (
         .clk(clk), .rst(rst),
 
         .mmu_enable(mmu_enable_eff),
         .satp_ppn(satp_ppn_eff),
         .flush(mmu_flush_eff),
+        .current_priv(mmu_priv_eff),
+        .mstatus_sum(mmu_sum_eff),
+        .mstatus_mxr(mmu_mxr_eff),
 
         .va_fetch(pcf_va),
         .pa_fetch(pa_fetch),
@@ -199,11 +242,21 @@ module mmu_core_wrapper #(
         .mem_fault_cause(Data_PageFault_Cause),
 
         .ptw_mem_req(ptw_mem_req),
+        .ptw_mem_we(ptw_mem_we),
         .ptw_mem_addr(ptw_mem_addr),
+        .ptw_mem_wdata(ptw_mem_wdata),
         .ptw_mem_rdata(Mem_ReadDataM),
-        .ptw_mem_valid(Mem_ReadDataValidM),
+        .ptw_mem_valid(ptw_mem_valid),
 
-        .busy(mmu_busy)
+        .busy(mmu_busy),
+
+        .debug_trace_rd_index(4'b0000),
+        .debug_trace_rd_data(mmu_debug_trace_data),
+        .debug_trace_count(mmu_debug_trace_count),
+        .debug_trace_write_index(mmu_debug_trace_write_index),
+        .debug_controller_state(mmu_debug_controller_state),
+        .debug_fetch_region(mmu_debug_fetch_region),
+        .debug_mem_region(mmu_debug_mem_region)
     );
 
     assign Fetch_PageFault = fetch_fault;
@@ -215,12 +268,11 @@ module mmu_core_wrapper #(
     // is already gated by ptw_mem_valid above and by mmu_busy
     // itself -- so these two only need to fire for the core's OWN,
     // non-PTW fetch/load/store traffic, i.e. exactly when NOT busy.
-    // mem_re_core/mem_we_core/pcf_va all stay parked on the same
-    // value every cycle the core is frozen (the pipeline register
-    // driving them simply doesn't advance), so re-checking the
-    // *_Valid/*_Done input every cycle is both correct and
-    // sufficient -- no extra "outstanding transaction" state needed
-    // here, the caller owns that bookkeeping (see mmu_ip_wrapper.v).
+    // mem_re_core/mem_we_core/pcf_va all stay parked while the core is
+    // frozen. core_data_completed remembers a data response if some
+    // independent fetch/maintenance stall keeps that same M-stage
+    // request parked afterwards; its bus enables are then suppressed
+    // so stores and AMOs cannot be accepted twice.
     // ------------------------------------------------------
     // NOTE: keyed off Mem_WriteEnM/Mem_ReadEnM (the *actual*, already
     // fault-gated bus outputs below), not the raw core-side
@@ -230,11 +282,29 @@ module mmu_core_wrapper #(
     // *load* is different: Mem_ReadEnM is NOT suppressed on fault
     // (only the returned data is, via mem_rdata_to_core below), so a
     // real read is genuinely issued and genuinely needs to complete.
+    wire core_store_req = mem_we_core & ~mem_fault;
+    wire core_load_req  = mem_re_core;
     wire fetch_wait = ~mmu_busy & ~Instr_ValidF;
-    wire data_wait  = ~mmu_busy & (Mem_WriteEnM ? ~Mem_WriteDoneM :
-                                    Mem_ReadEnM  ? ~Mem_ReadDataValidM :
-                                                    1'b0);
+    wire data_wait  = ~mmu_busy & ~core_data_completed &
+                      (core_store_req ? ~Mem_WriteDoneM :
+                       core_load_req  ? ~Mem_ReadDataValidM :
+                                        1'b0);
     wire mem_stall  = fetch_wait | data_wait;
+    wire core_pipeline_stall = Stall_Core_External | mmu_busy | mem_stall;
+    wire core_data_response = ~mmu_busy & ~core_data_completed &
+                              ((core_store_req & Mem_WriteDoneM) |
+                               (core_load_req  & Mem_ReadDataValidM));
+
+    always @(posedge clk) begin
+        if (rst)
+            core_data_completed <= 1'b0;
+        else if (!core_pipeline_stall)
+            core_data_completed <= 1'b0;
+        else if (core_data_response)
+            core_data_completed <= 1'b1;
+        else if (!mem_req_core)
+            core_data_completed <= 1'b0;
+    end
 
     // ------------------------------------------------------
     // Instruction side: pure passthrough. Reads have no side
@@ -254,10 +324,12 @@ module mmu_core_wrapper #(
     // zeroed) on its one-cycle resume/gate window.
     // ------------------------------------------------------
     assign Mem_AddrM      = mmu_busy ? ptw_mem_addr : pa_mem;
-    assign Mem_ReadEnM    = mmu_busy ? ptw_mem_req   : mem_re_core;
-    assign Mem_WriteEnM   = mmu_busy ? 1'b0          : (mem_fault ? 1'b0 : mem_we_core);
+    assign Mem_ReadEnM    = mmu_busy ? (ptw_mem_req & ~ptw_mem_we) :
+                                      (mem_re_core & ~core_data_completed);
+    assign Mem_WriteEnM   = mmu_busy ? (ptw_mem_req &  ptw_mem_we) :
+                                      (core_store_req & ~core_data_completed);
     assign MemOpM         = mmu_busy ? 3'b010        : memop_core;
-    assign Mem_WriteDataM = mmu_busy ? 32'b0         : mem_wdata_core;
+    assign Mem_WriteDataM = mmu_busy ? ptw_mem_wdata : mem_wdata_core;
 
     assign mem_rdata_to_core = mem_fault ? 32'b0 : Mem_ReadDataM;
 
@@ -269,7 +341,7 @@ module mmu_core_wrapper #(
     ) core (
         .clk                (clk),
         .rst                (rst),
-        .Stall_Core_External(Stall_Core_External | mmu_busy | mem_stall),
+        .Stall_Core_External(core_pipeline_stall),
 
         .Snoop_Addr         (Snoop_Addr),
         .Snoop_WE           (Snoop_WE),
@@ -282,6 +354,9 @@ module mmu_core_wrapper #(
         .Mem_WriteEnM       (mem_we_core),
         .Mem_ReadEnM        (mem_re_core),
         .MemOpM             (memop_core),
+        .Mem_AmoRmwM        (Mem_AmoRmwM),
+        .Mem_AmoOpM         (Mem_AmoOpM),
+        .Mem_AmoOperandM    (Mem_AmoOperandM),
         .Mem_ReadDataM      (mem_rdata_to_core),
 
         // LR/SC VA-vs-PA fix (see memory_stage.v/RV32IMA.v headers):
@@ -311,7 +386,10 @@ module mmu_core_wrapper #(
         .CurrentPriv        (CurrentPriv),
         .Mmu_Enable_Csr     (Mmu_Enable_Csr),
         .Satp_PPN_Csr       (Satp_PPN_Csr),
-        .Mmu_Flush_Csr      (Mmu_Flush_Csr)
+        .Mstatus_Sum         (mstatus_sum_csr),
+        .Mstatus_Mxr         (mstatus_mxr_csr),
+        .Mmu_Flush_Csr      (Mmu_Flush_Csr),
+        .FenceI_M           (FenceI_M)
     );
 
 endmodule

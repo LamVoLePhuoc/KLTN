@@ -22,20 +22,12 @@
 // new top-level variant rather than being wired into the already-
 // reviewed quad_core_soc.v in place.
 //
-// KNOWN, DELIBERATE LIMITATION -- read before assuming this is a
-// drop-in, zero-cost replacement: coherence_manager.v's dresp_state
-// (the granted MESI state, S/E/M) has no representation in standard
-// AHB-Lite (HRESP only encodes OKAY/ERROR) and is DISCARDED by
-// ahb_lite_l1_adapter.v, which always reports state=S (2'b01) to
-// l1_dcache.v regardless of what was actually granted. This is safe
-// (S is always a valid, conservative under-approximation -- a later
-// write-hit check correctly sees "not M/E" and issues a proper RFO)
-// but NOT free: a line that coherence_manager.v actually granted
-// Exclusive now needs a second bus round-trip (the RFO) on its first
-// local write, instead of the silent local E->M upgrade it would
-// otherwise get. A real system wanting to preserve E over a literal
-// AHB-Lite link would need a side-channel or a different encoding
-// convention (e.g. stealing an HPROT bit) -- out of scope here.
+// MSI request semantics over AHB-Lite: HWRITE distinguishes a
+// WRITEBACK from a line read. HMASTLOCK distinguishes an RFO/upgrade
+// from a plain BusRd. This is a standard AHB signal and avoids the
+// old correctness bug where the bridge collapsed RFO into READ and
+// let an L1 enter M without invalidating sibling sharers. MSI read
+// fills are always S, so no response-state sideband is needed.
 //
 // Read path: on the FIRST word (word_idx==0) of a fresh line-read,
 // immediately issues dreq_valid (type=READ) and holds HREADYOUT low
@@ -63,6 +55,7 @@ module ahb_lite_l1_slave_adapter (
     input  wire          HWRITE,
     input  wire [1:0]    HTRANS,
     input  wire [31:0]   HWDATA,
+    input  wire          HMASTLOCK,
     output reg            HREADYOUT,
     output reg  [31:0]    HRDATA,
     output wire [1:0]     HRESP,      // tied OKAY -- see ahb_lite_l1_adapter.v's header
@@ -79,13 +72,14 @@ module ahb_lite_l1_slave_adapter (
 );
 
     localparam [1:0] TRANS_NONSEQ = 2'b10;
-    localparam [1:0] REQ_READ = 2'b00, REQ_WRITEBACK = 2'b10;
+    localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01, REQ_WRITEBACK = 2'b10;
 
     assign HRESP = 2'b00; // OKAY, always -- see ahb_lite_l1_adapter.v's header
 
     localparam [1:0] S_IDLE       = 2'd0,
-                      S_WAIT_READ  = 2'd1,
-                      S_WAIT_WRITE = 2'd2;
+                     S_WAIT_READ  = 2'd1,
+                     S_WAIT_WRITE = 2'd2,
+                     S_WRITE_DATA = 2'd3;
 
     reg [1:0]   state;
     reg [2:0]   word_idx;
@@ -102,51 +96,31 @@ module ahb_lite_l1_slave_adapter (
             dreq_valid <= 1'b0;
         end
         else begin
-            dreq_valid <= 1'b0; // 1-cycle pulse, default low
-
             case (state)
                 // ------------------------------------------------
                 S_IDLE: begin
+                    dreq_valid <= 1'b0;
                     if (HTRANS == TRANS_NONSEQ) begin
-                        if (word_idx == 3'd0) begin
-                            line_addr <= HADDR;
-                            is_write  <= HWRITE;
-
-                            if (HWRITE) begin
-                                // Word 0 of a write: just buffer it, complete immediately.
-                                wr_buf[0 +: 32] <= HWDATA;
-                                HREADYOUT       <= 1'b1;
-                                word_idx        <= 3'd1;
-                            end
-                            else begin
-                                // Word 0 of a read: can't complete until the whole
-                                // line comes back from coherence_manager.v.
-                                HREADYOUT  <= 1'b0;
-                                dreq_valid <= 1'b1;
-                                dreq_type  <= REQ_READ;
-                                dreq_addr  <= HADDR;
-                                state      <= S_WAIT_READ;
-                            end
+                        if (HWRITE) begin
+                            // Address phase only. HWDATA belongs to the
+                            // following data phase and is captured in
+                            // S_WRITE_DATA, not here.
+                            if (word_idx == 3'd0) line_addr <= HADDR;
+                            is_write <= 1'b1;
+                            HREADYOUT <= (word_idx == 3'd7) ? 1'b0 : 1'b1;
+                            state <= S_WRITE_DATA;
                         end
                         else begin
-                            // word_idx 1..7 of an in-progress sequence.
-                            if (is_write) begin
-                                wr_buf[word_idx*32 +: 32] <= HWDATA;
-                                if (word_idx == 3'd7) begin
-                                    // Last word: hold this transfer until
-                                    // coherence_manager.v actually acks the
-                                    // writeback (see header -- no posted writes).
-                                    HREADYOUT  <= 1'b0;
-                                    dreq_valid <= 1'b1;
-                                    dreq_type  <= REQ_WRITEBACK;
-                                    dreq_addr  <= line_addr;
-                                    dreq_line  <= { HWDATA, wr_buf[223:0] };
-                                    state      <= S_WAIT_WRITE;
-                                end
-                                else begin
-                                    HREADYOUT <= 1'b1;
-                                    word_idx  <= word_idx + 3'd1;
-                                end
+                            is_write <= 1'b0;
+                            if (word_idx == 3'd0) begin
+                                line_addr <= HADDR;
+                                // Word 0 of a read: wait for the whole
+                                // line from the coherence manager.
+                                HREADYOUT  <= 1'b0;
+                                dreq_valid <= 1'b1;
+                                dreq_type  <= HMASTLOCK ? REQ_RFO : REQ_READ;
+                                dreq_addr  <= HADDR;
+                                state      <= S_WAIT_READ;
                             end
                             else begin
                                 // Read, word_idx 1..7: already have the
@@ -166,9 +140,35 @@ module ahb_lite_l1_slave_adapter (
                     end
                 end
 
+                // AHB write data phase. For words 0..6 the transfer
+                // completes immediately. Word 7 is held with HREADY
+                // low until the assembled full-line writeback is
+                // acknowledged by the coherence manager.
+                S_WRITE_DATA: begin
+                    wr_buf[word_idx*32 +: 32] <= HWDATA;
+                    if (word_idx == 3'd7) begin
+                        HREADYOUT  <= 1'b0;
+                        dreq_valid <= 1'b1;
+                        dreq_type  <= REQ_WRITEBACK;
+                        dreq_addr  <= line_addr;
+                        dreq_line  <= {HWDATA, wr_buf[223:0]};
+                        state      <= S_WAIT_WRITE;
+                    end
+                    else begin
+                        HREADYOUT <= 1'b1;
+                        word_idx  <= word_idx + 3'd1;
+                        state     <= S_IDLE;
+                    end
+                end
+
                 // ------------------------------------------------
                 S_WAIT_READ: begin
+                    // Hold valid until the serialized coherence
+                    // manager returns a response; a one-cycle pulse
+                    // can be lost while another core owns the CM.
+                    dreq_valid <= 1'b1;
                     if (dresp_valid) begin
+                        dreq_valid <= 1'b0;
                         rd_buf    <= dresp_line;
                         HRDATA    <= dresp_line[0 +: 32]; // word 0
                         HREADYOUT <= 1'b1;                // complete transfer 0 now
@@ -180,7 +180,9 @@ module ahb_lite_l1_slave_adapter (
 
                 // ------------------------------------------------
                 S_WAIT_WRITE: begin
+                    dreq_valid <= 1'b1;
                     if (dresp_valid) begin
+                        dreq_valid <= 1'b0;
                         HREADYOUT <= 1'b1; // complete the final (8th) transfer now
                         word_idx  <= 3'd0;
                         state     <= S_IDLE;

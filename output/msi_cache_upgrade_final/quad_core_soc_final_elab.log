@@ -1,0 +1,29 @@
+# vsim -do {quit -f} -l output/msi_cache_upgrade_final/quad_core_soc_final_elab.log -lib output/msi_cache_upgrade_final/work -c quad_core_soc 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2135) Too many port connections. Expected 33, found 35.
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Sum' not found in module 'mmu_core_wrapper' (32nd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Mxr' not found in module 'mmu_core_wrapper' (33rd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2135) Too many port connections. Expected 33, found 35.
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Sum' not found in module 'mmu_core_wrapper' (32nd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Mxr' not found in module 'mmu_core_wrapper' (33rd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2135) Too many port connections. Expected 33, found 35.
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Sum' not found in module 'mmu_core_wrapper' (32nd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Mxr' not found in module 'mmu_core_wrapper' (33rd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2135) Too many port connections. Expected 33, found 35.
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Sum' not found in module 'mmu_core_wrapper' (32nd connection).
+# 
+# ** Error: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v(228): (vopt-2912) Port 'Mstatus_Mxr' not found in module 'mmu_core_wrapper' (33rd connection).
+# 
+# Optimization failed
+# Error loading design

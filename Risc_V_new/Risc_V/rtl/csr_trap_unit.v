@@ -21,7 +21,8 @@
 //     Only *synchronous* exceptions (instruction-caused) are handled.
 //   - mstatus/sstatus implement only the fields that matter for this
 //     core's own trap-entry/return stacking: MIE/SIE, MPIE/SPIE,
-//     MPP/SPP. Other fields (FS, XS, MXR, SUM, MPRV, TVM, TW, TSR,
+//     MPP/SPP plus MXR/SUM for MMU permission checks. Other fields
+//     (FS, XS, MPRV, TVM, TW, TSR,
 //     SD, ...) read as 0 and writes to their bit positions are
 //     ignored -- legal (WPRI-like) for unimplemented optional
 //     behaviour, and honest about what's NOT implemented (MPRV in
@@ -99,6 +100,8 @@ module csr_trap_unit #(
     output wire [1:0]    CurrentPriv,
     output wire          Mmu_Enable_Csr,
     output wire [19:0]   Satp_PPN_Csr,
+    output wire          Mstatus_Sum,
+    output wire          Mstatus_Mxr,
     output reg           Mmu_Flush_Csr
 );
 
@@ -137,6 +140,7 @@ module csr_trap_unit #(
 
     // mstatus fields actually implemented (rest read 0 / ignore writes)
     reg mie_bit, mpie_bit, sie_bit, spie_bit;
+    reg sum_bit, mxr_bit;
     reg [1:0] mpp_bit;
     reg spp_bit;
 
@@ -157,8 +161,8 @@ module csr_trap_unit #(
                                8'b0,                 // WPRI / not implemented
                                1'b0, 1'b0,           // TSR, TW
                                1'b0,                 // TVM
-                               1'b0,                 // MXR
-                               1'b0,                 // SUM
+                               mxr_bit,              // MXR
+                               sum_bit,              // SUM
                                1'b0,                 // MPRV
                                2'b0,                 // XS
                                2'b0,                 // FS
@@ -303,6 +307,8 @@ module csr_trap_unit #(
     // automatically instead of re-deriving this rule themselves.
     assign Mmu_Enable_Csr = satp_mode & (priv != PRIV_M);
     assign Satp_PPN_Csr   = satp_ppn[19:0];
+    assign Mstatus_Sum     = sum_bit;
+    assign Mstatus_Mxr     = mxr_bit;
 
     // ------------------------------------------------------
     // CSR write value computation (RW/RS/RC on the raw storage bits
@@ -342,6 +348,7 @@ module csr_trap_unit #(
         if (rst) begin
             priv         <= PRIV_M;
             mie_bit <= 1'b0; mpie_bit <= 1'b0; sie_bit <= 1'b0; spie_bit <= 1'b0;
+            sum_bit <= 1'b0; mxr_bit <= 1'b0;
             mpp_bit <= PRIV_M; spp_bit <= 1'b0;
             mtvec <= 32'b0; stvec <= 32'b0;
             mscratch <= 32'b0; sscratch <= 32'b0;
@@ -364,6 +371,8 @@ module csr_trap_unit #(
             if (do_csr_write) begin
                 case (CsrAddrM)
                     CSR_SSTATUS: begin
+                        mxr_bit  <= sstatus_next[19];
+                        sum_bit  <= sstatus_next[18];
                         spp_bit  <= sstatus_next[8];
                         spie_bit <= sstatus_next[5];
                         sie_bit  <= sstatus_next[1];
@@ -380,6 +389,8 @@ module csr_trap_unit #(
                         satp_ppn  <= satp_next[19:0];
                     end
                     CSR_MSTATUS: begin
+                        mxr_bit  <= mstatus_next[19];
+                        sum_bit  <= mstatus_next[18];
                         mpp_bit  <= mstatus_next[12:11];
                         spp_bit  <= mstatus_next[8];
                         mpie_bit <= mstatus_next[7];

@@ -1,0 +1,133 @@
+m255
+K4
+z2
+13
+cModel Technology
+Z0 dC:/Users/ADMIN/Documents/GitHub/KLTN
+!s112 0.1
+!i10d 8192
+!i10e 25
+!i10f 100
+T_opt
+!s110 1790422291
+VNYKhZbn2el1T:gYgHjT8_2
+04 12 4 work tb_coherence fast 0
+=1-8cf8c581fdee-6ab7ad12-399-1578
+o-quiet -auto_acc_if_foreign -work output/msi_cache_upgrade_direct3/work
+n@_opt
+OL;O;10.2c;57
+vcoherence_manager
+Z1 DXx6 sv_std 3 std 0 22 `a<MJET1=lN@jzbA7kHm;1
+Z2 !s110 1790422289
+IWAVo;oUzB5C=JXd0_SXA]0
+Z3 V`JN@9S9cnhjKRR_L]QIcM3
+S1
+Z4 dC:/Users/ADMIN/Documents/GitHub/KLTN
+w1790420651
+8Risc_V_new/Risc_V/rtl/coherence_manager.v
+FRisc_V_new/Risc_V/rtl/coherence_manager.v
+L0 64
+Z5 OL;L;10.2c;57
+r1
+31
+Z6 !s108 1790422289.576000
+Z7 !s107 Risc_V_new/Risc_V/sim/tb_coherence.v|Risc_V_new/Risc_V/rtl/coherence_manager.v|Risc_V_new/Risc_V/rtl/l2_cache.v|Risc_V_new/Risc_V/rtl/l1_dcache.v|Risc_V_new/Risc_V/rtl/load_unit.v|
+Z8 !s90 -sv|-work|output/msi_cache_upgrade_direct3/work|Risc_V_new/Risc_V/rtl/load_unit.v|Risc_V_new/Risc_V/rtl/l1_dcache.v|Risc_V_new/Risc_V/rtl/l2_cache.v|Risc_V_new/Risc_V/rtl/coherence_manager.v|Risc_V_new/Risc_V/sim/tb_coherence.v|
+Z9 o-sv -work output/msi_cache_upgrade_direct3/work -L mtiAvm -L mtiOvm -L mtiUvm -L mtiUPF
+!i10b 1
+!s100 RTEY0k`o6DLZU3VJ_>hN40
+!s105 coherence_manager_v_unit
+!s85 0
+!i111 0
+vl1_dcache
+R1
+R2
+I86GN<[lYJ=Rd17mPk5H=O2
+R3
+S1
+R4
+w1790420624
+8Risc_V_new/Risc_V/rtl/l1_dcache.v
+FRisc_V_new/Risc_V/rtl/l1_dcache.v
+L0 61
+R5
+r1
+31
+R6
+R7
+R8
+R9
+!i10b 1
+!s100 bdUam;MWQbII>TW<O6l>k3
+!s105 l1_dcache_v_unit
+!s85 0
+!i111 0
+vl2_cache
+R1
+R2
+I6R8IVZ^hJaWM^AjR5XUAQ0
+R3
+S1
+R4
+w1790415409
+8Risc_V_new/Risc_V/rtl/l2_cache.v
+FRisc_V_new/Risc_V/rtl/l2_cache.v
+L0 35
+R5
+r1
+31
+R6
+R7
+R8
+R9
+!i10b 1
+!s100 b><IfmB@HYP>>R1UPPcM23
+!s105 l2_cache_v_unit
+!s85 0
+!i111 0
+vload_unit
+R1
+R2
+I>LG1R]z4_R>U_kgK>7zd72
+R3
+S1
+R4
+w1785479879
+8Risc_V_new/Risc_V/rtl/load_unit.v
+FRisc_V_new/Risc_V/rtl/load_unit.v
+L0 3
+R5
+r1
+31
+R6
+R7
+R8
+R9
+!i10b 1
+!s100 XIO[fg]G?kReSFiXEWhO]1
+!s105 load_unit_v_unit
+!s85 0
+!i111 0
+vtb_coherence
+R1
+R2
+IOobR[`J1DP^mgjG09g<W42
+R3
+S1
+R4
+w1790422281
+8Risc_V_new/Risc_V/sim/tb_coherence.v
+FRisc_V_new/Risc_V/sim/tb_coherence.v
+L0 34
+R5
+r1
+31
+R6
+R7
+R8
+R9
+!i10b 1
+!s100 MT89A4Z0LWNA;>QCE:dLg1
+!s105 tb_coherence_v_unit
+!s85 0
+!i111 0

@@ -20,7 +20,7 @@
 // several times over. This adapter instead sits at the OTHER
 // natural AHB boundary in the diagram -- the "CORE -> HIGH-SPEED
 // BUS" link -- as a new, small, self-contained file: it changes
-// nothing about coherence_manager.v's arbitration or MESI logic,
+// nothing about coherence_manager.v's arbitration or MSI logic,
 // only the wire protocol one core's cache uses to reach it. Wire
 // core_l1_wrapper.v's l1_icache/l1_dcache bus_req/bus_resp ports
 // through this adapter, and the far end presents literal AHB-Lite
@@ -64,19 +64,15 @@ module ahb_lite_l1_adapter (
     input  wire         bus_req_valid,
     input  wire [1:0]   bus_req_type,   // 0=READ, 1=RFO(treated as a plain read
                                           // here -- the adapter only moves bytes;
-                                          // MESI semantics live in coherence_manager.v,
+                                          // MSI semantics live in coherence_manager.v,
                                           // not on this wire), 2=WRITEBACK
     input  wire [31:0]  bus_req_addr,   // line-aligned
     input  wire [255:0] bus_req_line,   // valid for WRITEBACK
     output reg          bus_resp_valid,
     output reg  [255:0] bus_resp_line,
-    output reg  [1:0]   bus_resp_state, // hardwired S (2'b01) on every fill -- this
-                                          // adapter has no directory/sharer concept;
-                                          // whoever it's wired to (e.g. a future AHB-
-                                          // side coherence unit) decides the real
-                                          // grant state, same division of concerns
-                                          // l1_dcache.v already has with
-                                          // coherence_manager.v today.
+    output reg  [1:0]   bus_resp_state, // MSI read fills are always S; write/RFO
+                                          // completion is promoted to M locally by
+                                          // l1_dcache after the locked request returns.
 
     // ---- AHB-Lite master ----
     output reg  [31:0]  HADDR,
@@ -86,7 +82,7 @@ module ahb_lite_l1_adapter (
     output reg  [31:0]   HWDATA,
     output wire [2:0]    HBURST,     // tied SINGLE (3'b000) -- see header
     output wire [3:0]    HPROT,      // tied to a fixed, reasonable default
-    output wire          HMASTLOCK,  // tied 0 -- never requests exclusive bus ownership
+    output wire          HMASTLOCK,  // asserted for every RFO/upgrade transfer
     input  wire [31:0]   HRDATA,
     input  wire          HREADY,
     input  wire [1:0]    HRESP
@@ -97,7 +93,6 @@ module ahb_lite_l1_adapter (
     assign HSIZE     = 3'b010;      // word
     assign HBURST    = 3'b000;      // SINGLE (see header)
     assign HPROT     = 4'b0011;     // privileged, non-bufferable, non-cacheable data access
-    assign HMASTLOCK = 1'b0;
 
     wire HRESETn_sync = HRESETn;    // kept as its own wire so the intent (active-low
                                      // input, used directly -- no internal inversion
@@ -106,7 +101,8 @@ module ahb_lite_l1_adapter (
 
     localparam [1:0] S_IDLE  = 2'd0,
                       S_ADDR  = 2'd1,
-                      S_DATA  = 2'd2;
+                      S_DATA  = 2'd2,
+                      S_WAIT_REQ_DROP = 2'd3;
 
     reg [1:0]   state;
     reg [2:0]   word_idx;
@@ -114,6 +110,9 @@ module ahb_lite_l1_adapter (
     reg [255:0] wr_line_buf;
     reg [255:0] rd_line_buf;
     reg         is_write;
+    reg         is_rfo;
+
+    assign HMASTLOCK = is_rfo;
 
     always @(posedge HCLK or negedge HRESETn_sync) begin
         if (!HRESETn_sync) begin
@@ -123,6 +122,7 @@ module ahb_lite_l1_adapter (
             HWRITE         <= 1'b0;
             HWDATA         <= 32'b0;
             word_idx       <= 3'd0;
+            is_rfo         <= 1'b0;
             bus_resp_valid <= 1'b0;
         end
         else begin
@@ -136,6 +136,7 @@ module ahb_lite_l1_adapter (
                         line_addr   <= bus_req_addr;
                         wr_line_buf <= bus_req_line;
                         is_write    <= (bus_req_type == 2'b10);
+                        is_rfo      <= (bus_req_type == 2'b01);
                         word_idx    <= 3'd0;
 
                         HADDR  <= bus_req_addr;
@@ -155,6 +156,11 @@ module ahb_lite_l1_adapter (
                     if (is_write) begin
                         HWDATA <= wr_line_buf[word_idx*32 +: 32];
                     end
+                    // No address pipelining: the following cycle is
+                    // only this transfer's data phase, so advertise
+                    // IDLE rather than letting the slave interpret the
+                    // same NONSEQ address more than once.
+                    HTRANS <= TRANS_IDLE;
                     state <= S_DATA;
                 end
 
@@ -173,7 +179,7 @@ module ahb_lite_l1_adapter (
                                                         : { HRDATA, rd_line_buf[223:0] };
                             bus_resp_state <= 2'b01; // S -- see port comment
                             word_idx       <= 3'd0;
-                            state          <= S_IDLE;
+                            state          <= S_WAIT_REQ_DROP;
                         end
                         else begin
                             // Next word: back to a fresh address phase.
@@ -194,6 +200,16 @@ module ahb_lite_l1_adapter (
                     // else: HREADY==0, insert a wait state -- hold
                     // HADDR/HWRITE/HWDATA/HTRANS exactly as they are
                     // (all registered, nothing reassigned this branch).
+                end
+
+                // The L1 request is level-held and only drops after
+                // observing bus_resp_valid. Without this dead-band,
+                // the adapter can reaccept the just-completed request
+                // one cycle before the L1's nonblocking deassertion is
+                // visible, creating a duplicate line transaction.
+                S_WAIT_REQ_DROP: begin
+                    HTRANS <= TRANS_IDLE;
+                    if (!bus_req_valid) state <= S_IDLE;
                 end
 
                 default: state <= S_IDLE;

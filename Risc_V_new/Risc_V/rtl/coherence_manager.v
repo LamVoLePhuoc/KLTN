@@ -6,7 +6,7 @@
 // The "COHERENCE MANAGEMENT UNIT" + "HIGH-SPEED BUS (AHB)" boxes
 // from the 4-CORE CPU WRAPPER diagram, realized as one module: an
 // 8-source (4x D$ + 4x I$) arbiter feeding a single ATOMIC
-// transaction engine that drives l2_cache.v and issues MESI snoops
+// transaction engine that drives l2_cache.v and issues MSI snoops
 // to the D$s, plus the L2-miss path out to external memory (the
 // diagram's "CPU MEMORY PORT").
 //
@@ -35,41 +35,34 @@
 // deliberate choice. Pipelining this is a well-defined, bounded
 // future improvement, not a redesign.
 //
-// DIRECTORY INVARIANT (why l2_cache.v's sharers[3:0] needs no
-// separate "dirty owner" bit): a line can only ever transition from
-// 1 sharer to 2+ sharers by first snooping that lone existing
-// sharer (see the SNOOP state below, entered whenever popcount==1,
-// for BOTH read and write requests). MESI's E state permits a core
-// to silently upgrade E->M with no bus transaction, so a lone
-// sharer's *directory* entry can't be trusted to mean "still just
-// reading" -- but because every path that would grow the sharer set
-// past 1 is forced through that snoop first, the snoop always
-// catches a silent upgrade before a second reader could ever see
-// stale data. Consequence: once a line legitimately has 2+ sharers,
-// none of them can possibly be Modified (by induction on the above),
-// so those cases never need a snoop at all for a plain read.
+// DIRECTORY INVARIANT: the directory stores a sharer bitmap but no
+// separate dirty-owner ID. Under MSI every transition S->M is an RFO
+// observed here, so an M line has exactly one directory bit set. A
+// BusRd/BusRdX snoops every other listed holder; an M holder returns
+// the authoritative line and then moves to S/I. This keeps L2 data
+// coherent without relying on MESI's silent E->M transition.
 //
 // Local-hit races: see l1_dcache.v's header for why a core's own
 // local cache hit and an incoming snoop for the exact same line can
 // still race even under this module's atomicity (a local hit never
 // touches the arbiter) -- resolved there, not here.
 //
-// Arbitration: fixed priority (c0 D$, c0 I$, c1 D$, c1 I$, ... c3
-// I$), not round-robin. This is a fairness limitation (a
-// pathological access pattern from core 0 could in principle starve
-// core 3), not a correctness one -- flagged, not fixed, to keep the
-// one already-large state machine below easier to reason about by
-// hand. Swap for real round-robin once this is simulated and
-// verified functionally correct.
+// Arbitration is starvation-free round-robin over all eight D$/I$
+// sources.  The pointer advances only when S_IDLE accepts a request;
+// a level-held requester therefore cannot be skipped or accepted
+// twice while another transaction is in flight.
 //
 // Encodings (shared with l1_dcache.v -- keep in sync if either
 // changes):
 //   dreq_type:  2'b00=READ, 2'b01=RFO, 2'b10=WRITEBACK
-//   dresp_state: 2'b01=S, 2'b10=E, 2'b11=M
+//   dresp_state: 2'b01=S, 2'b11=M (2'b10 is unused)
 //   snoop_type: 1'b0=INVALIDATE, 1'b1=DOWNGRADE
 // ============================================================
 module coherence_manager #(
-    parameter LINE_WORDS = 8
+    parameter LINE_WORDS = 8,
+    parameter PERF_COUNTER_ENABLE = 1,
+    parameter DEBUG_TRACE_ENABLE = 0,
+    parameter integer WATCHDOG_LIMIT = 1024
 )(
     input  wire clk,
     input  wire rst,
@@ -112,7 +105,31 @@ module coherence_manager #(
     output reg  [31:0]  mem_addr,
     output reg  [31:0]  mem_wdata,
     input  wire [31:0]  mem_rdata,
-    input  wire         mem_valid
+    input  wire         mem_valid,
+
+    // ---- Bring-up observability (free-running, saturating only by 32-bit wrap) ----
+    output reg [31:0] perf_total_requests,
+    output reg [31:0] perf_d_bus_reads,
+    output reg [31:0] perf_d_rfos,
+    output reg [31:0] perf_d_writebacks,
+    output reg [31:0] perf_i_reads,
+    output reg [31:0] perf_l2_hits,
+    output reg [31:0] perf_l2_misses,
+    output reg [31:0] perf_snoop_requests,
+    output reg [31:0] perf_mem_read_words,
+    output reg [31:0] perf_mem_write_words,
+    output reg [31:0] perf_busy_cycles,
+    output reg        protocol_error,
+    output reg        timeout_error,
+
+    // Optional 16-entry circular transaction trace. Record format:
+    // {cycle[31:0], event[3:0], core[2:0], is_d, type[1:0],
+    //  state[3:0], l2_hit, dirty, sharers[3:0], reserved[11:0], addr[31:0]}.
+    input  wire [3:0]  debug_trace_rd_index,
+    output wire [95:0] debug_trace_rd_data,
+    output wire [4:0]  debug_trace_count,
+    output wire [3:0]  debug_trace_write_index,
+    output wire [3:0]  debug_controller_state
 );
 
     localparam LINE_BITS = LINE_WORDS * 32;
@@ -156,6 +173,8 @@ module coherence_manager #(
     assign dsnoop_ack_valid[1]=c1_dsnoop_ack_valid; assign dsnoop_ack_hit[1]=c1_dsnoop_ack_hit; assign dsnoop_ack_dirty[1]=c1_dsnoop_ack_dirty; assign dsnoop_ack_line[1]=c1_dsnoop_ack_line;
     assign dsnoop_ack_valid[2]=c2_dsnoop_ack_valid; assign dsnoop_ack_hit[2]=c2_dsnoop_ack_hit; assign dsnoop_ack_dirty[2]=c2_dsnoop_ack_dirty; assign dsnoop_ack_line[2]=c2_dsnoop_ack_line;
     assign dsnoop_ack_valid[3]=c3_dsnoop_ack_valid; assign dsnoop_ack_hit[3]=c3_dsnoop_ack_hit; assign dsnoop_ack_dirty[3]=c3_dsnoop_ack_dirty; assign dsnoop_ack_line[3]=c3_dsnoop_ack_line;
+    wire [3:0] dsnoop_ack_valid_vec = {dsnoop_ack_valid[3], dsnoop_ack_valid[2],
+                                       dsnoop_ack_valid[1], dsnoop_ack_valid[0]};
 
     assign c0_dresp_valid=dresp_valid_r[0]; assign c0_dresp_line=dresp_line_r[0]; assign c0_dresp_state=dresp_state_r[0];
     assign c1_dresp_valid=dresp_valid_r[1]; assign c1_dresp_line=dresp_line_r[1]; assign c1_dresp_state=dresp_state_r[1];
@@ -186,7 +205,7 @@ module coherence_manager #(
     wire         l2_resp_valid;
     wire         l2_resp_hit;
     wire [1:0]   l2_resp_way;
-    wire [15:0]  l2_resp_victim_tag;
+    wire [14:0]  l2_resp_victim_tag;
     wire         l2_resp_victim_valid;
     wire         l2_resp_victim_dirty;
     wire [3:0]   l2_resp_victim_sharers;
@@ -219,9 +238,12 @@ module coherence_manager #(
         S_SHARER_SNOOP_WAIT = 4'd9,
         S_GRANT_WRITE_L2    = 4'd10,
         S_RESPOND           = 4'd11,
-        S_WB_UPDATE_L2      = 4'd12;
+        S_WB_UPDATE_L2      = 4'd12,
+        S_WAIT_REQ_DROP     = 4'd13;
 
     reg [3:0] state;
+    reg [3:0] watchdog_state;
+    reg [31:0] watchdog_cycles;
 
     // ---- Latched transaction context ----
     reg [2:0]   req_core;      // 0-3 = D$ of that core, 4-7 = I$ of core (req_core-4)
@@ -245,24 +267,100 @@ module coherence_manager #(
     reg [2:0]   mem_word_idx;
     reg [31:0]  mem_line_addr;
     reg [255:0] mem_line_buf;
+    // One request pulse is emitted per external-memory word, then the
+    // FSM waits for mem_valid before advancing to the next word.
+    reg         mem_waiting;
 
     integer i;
 
-    // ---- Fixed-priority arbiter (combinational) ----
+    // ---- Starvation-free round-robin arbiter (combinational) ----
+    // Source encoding remains 0..3=D$0..D$3, 4..7=I$0..I$3 so
+    // req_core[2] still selects instruction versus data.  rr_next
+    // advances only when S_IDLE actually accepts a request.
     reg        arb_valid;
     reg [2:0]  arb_core;
+    reg [2:0]  rr_next;
+    reg [2:0]  arb_candidate;
+    reg [7:0]  arb_requests;
+    integer    arb_offset;
     always @(*) begin
-        arb_valid = 1'b0;
-        arb_core  = 3'd0;
-        if      (dreq_valid[0]) begin arb_valid=1'b1; arb_core=3'd0; end
-        else if (ireq_valid[0]) begin arb_valid=1'b1; arb_core=3'd4; end
-        else if (dreq_valid[1]) begin arb_valid=1'b1; arb_core=3'd1; end
-        else if (ireq_valid[1]) begin arb_valid=1'b1; arb_core=3'd5; end
-        else if (dreq_valid[2]) begin arb_valid=1'b1; arb_core=3'd2; end
-        else if (ireq_valid[2]) begin arb_valid=1'b1; arb_core=3'd6; end
-        else if (dreq_valid[3]) begin arb_valid=1'b1; arb_core=3'd3; end
-        else if (ireq_valid[3]) begin arb_valid=1'b1; arb_core=3'd7; end
+        arb_requests = {ireq_valid[3], ireq_valid[2], ireq_valid[1], ireq_valid[0],
+                        dreq_valid[3], dreq_valid[2], dreq_valid[1], dreq_valid[0]};
+        arb_valid     = 1'b0;
+        arb_core      = rr_next;
+        arb_candidate = rr_next;
+        for (arb_offset = 0; arb_offset < 8; arb_offset = arb_offset + 1) begin
+            arb_candidate = rr_next + arb_offset[2:0];
+            if (!arb_valid && arb_requests[arb_candidate]) begin
+                arb_valid = 1'b1;
+                arb_core  = arb_candidate;
+            end
+        end
     end
+
+    // Event codes: 0=request accepted, 1=L2 hit, 2=L2 miss,
+    // 3=snoop issued, 4=response returned.
+    reg [31:0] trace_cycle;
+    reg        trace_event_valid;
+    reg [95:0] trace_event_data;
+    reg [31:0] trace_event_addr;
+    reg [1:0]  trace_event_type;
+    always @(*) begin
+        trace_event_valid = 1'b0;
+        trace_event_addr  = req_addr;
+        trace_event_type  = req_type;
+        trace_event_data  = 96'b0;
+
+        if ((state == S_IDLE) && arb_valid) begin
+            trace_event_valid = 1'b1;
+            trace_event_addr  = arb_core[2] ? ireq_addr[arb_core[1:0]]
+                                             : dreq_addr[arb_core[1:0]];
+            trace_event_type  = arb_core[2] ? 2'b00 : dreq_type[arb_core[1:0]];
+            trace_event_data  = {trace_cycle, 4'd0, arb_core, ~arb_core[2],
+                                 trace_event_type, state, 1'b0, 1'b0, 4'b0,
+                                 12'b0, trace_event_addr};
+        end
+        else if ((state == S_L2_LOOKUP_WAIT) && l2_resp_valid) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, l2_resp_hit ? 4'd1 : 4'd2,
+                                 req_core, req_is_d, req_type, state,
+                                 l2_resp_hit, l2_resp_victim_dirty,
+                                 l2_resp_sharers, 12'b0, req_addr};
+        end
+        else if (((state == S_EVICT_SNOOP_ISSUE) ||
+                  (state == S_SHARER_SNOOP_ISSUE)) && (snoop_todo != 4'b0)) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, 4'd3, req_core, req_is_d,
+                                 req_type, state, 1'b0, line_dirty,
+                                 line_sharers, 12'b0, snoop_addr_send};
+        end
+        else if (state == S_RESPOND) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, 4'd4, req_core, req_is_d,
+                                 req_type, state, 1'b0, line_dirty,
+                                 line_sharers, 12'b0, req_addr};
+        end
+    end
+
+    assign debug_controller_state = state;
+
+    generate
+        if (DEBUG_TRACE_ENABLE) begin : GEN_CACHE_TRACE
+            cache_debug_buffer #(
+                .DEPTH(16), .ADDR_WIDTH(4), .DATA_WIDTH(96)
+            ) u_cache_debug_buffer (
+                .clk(clk), .rst(rst),
+                .event_valid(trace_event_valid), .event_data(trace_event_data),
+                .read_index(debug_trace_rd_index), .read_data(debug_trace_rd_data),
+                .record_count(debug_trace_count), .write_index(debug_trace_write_index)
+            );
+        end
+        else begin : GEN_NO_CACHE_TRACE
+            assign debug_trace_rd_data     = 96'b0;
+            assign debug_trace_count       = 5'b0;
+            assign debug_trace_write_index = 4'b0;
+        end
+    endgenerate
 
     assign l2_cmd_valid = (state == S_L2_LOOKUP) || (state == S_L2_FILL) ||
                            (state == S_GRANT_WRITE_L2) || (state == S_WB_UPDATE_L2);
@@ -298,6 +396,45 @@ module coherence_manager #(
                 dsnoop_valid_r[i] <= 1'b0;
             end
             mem_req_valid <= 1'b0;
+            mem_we        <= 1'b0;
+            mem_addr      <= 32'b0;
+            mem_wdata     <= 32'b0;
+            mem_word_idx  <= 3'd0;
+            mem_line_addr <= 32'b0;
+            mem_line_buf  <= {LINE_BITS{1'b0}};
+            mem_waiting   <= 1'b0;
+            req_core      <= 3'd0;
+            req_is_d      <= 1'b0;
+            req_type      <= 2'b00;
+            req_addr      <= 32'b0;
+            req_wr_line   <= {LINE_BITS{1'b0}};
+            line_way      <= 2'b0;
+            line_data     <= {LINE_BITS{1'b0}};
+            line_sharers  <= 4'b0;
+            line_dirty    <= 1'b0;
+            snoop_todo    <= 4'b0;
+            snoop_type_send <= 1'b0;
+            snoop_addr_send <= 32'b0;
+            snoop_after   <= S_IDLE;
+            any_snoop_dirty <= 1'b0;
+            snoop_dirty_data <= {LINE_BITS{1'b0}};
+            rr_next          <= 3'd0;
+            perf_total_requests <= 32'b0;
+            perf_d_bus_reads    <= 32'b0;
+            perf_d_rfos         <= 32'b0;
+            perf_d_writebacks   <= 32'b0;
+            perf_i_reads        <= 32'b0;
+            perf_l2_hits        <= 32'b0;
+            perf_l2_misses      <= 32'b0;
+            perf_snoop_requests <= 32'b0;
+            perf_mem_read_words <= 32'b0;
+            perf_mem_write_words<= 32'b0;
+            perf_busy_cycles    <= 32'b0;
+            protocol_error      <= 1'b0;
+            timeout_error       <= 1'b0;
+            watchdog_state      <= S_IDLE;
+            watchdog_cycles     <= 32'b0;
+            trace_cycle         <= 32'b0;
         end
         else begin
             // Default: all pulses low unless explicitly set below.
@@ -307,12 +444,57 @@ module coherence_manager #(
                 dsnoop_valid_r[i] <= 1'b0;
             end
             mem_req_valid <= 1'b0;
+            trace_cycle <= trace_cycle + 32'd1;
+
+            if (PERF_COUNTER_ENABLE && (state != S_IDLE))
+                perf_busy_cycles <= perf_busy_cycles + 32'd1;
+
+            // Detect a bus/snoop/requester handshake that leaves one
+            // FSM state without progress for too long.  The flag is
+            // sticky for ILA/software diagnosis; the transaction is
+            // deliberately not abandoned because doing so could break
+            // MSI atomicity or discard dirty data.
+            if (state != watchdog_state) begin
+                watchdog_state  <= state;
+                watchdog_cycles <= 32'b0;
+            end
+            else if (state == S_IDLE) begin
+                watchdog_cycles <= 32'b0;
+            end
+            else if (!timeout_error) begin
+                if (watchdog_cycles >= (WATCHDOG_LIMIT - 1)) begin
+                    timeout_error  <= 1'b1;
+                    protocol_error <= 1'b1;
+                end
+                else begin
+                    watchdog_cycles <= watchdog_cycles + 32'd1;
+                end
+            end
 
             case (state)
                 // ==================================================
                 S_IDLE: begin
                     if (arb_valid) begin
                         req_core <= arb_core;
+                        rr_next  <= arb_core + 3'd1;
+                        if (!arb_core[2] && (dreq_type[arb_core[1:0]] == 2'b11))
+                            protocol_error <= 1'b1;
+                        if (PERF_COUNTER_ENABLE) begin
+                            perf_total_requests <= perf_total_requests + 32'd1;
+                            if (arb_core[2])
+                                perf_i_reads <= perf_i_reads + 32'd1;
+                            else begin
+                                case (dreq_type[arb_core[1:0]])
+                                    2'b00: perf_d_bus_reads  <= perf_d_bus_reads + 32'd1;
+                                    2'b01: perf_d_rfos       <= perf_d_rfos + 32'd1;
+                                    2'b10: perf_d_writebacks <= perf_d_writebacks + 32'd1;
+                                    default: ;
+                                endcase
+                            end
+                        end
+                        if ((arb_core[2] && (ireq_addr[arb_core[1:0]][4:0] != 5'b0)) ||
+                            (!arb_core[2] && (dreq_addr[arb_core[1:0]][4:0] != 5'b0)))
+                            protocol_error <= 1'b1;
                         req_is_d <= ~arb_core[2];
                         if (~arb_core[2]) begin
                             req_type    <= dreq_type[arb_core[1:0]];
@@ -332,6 +514,12 @@ module coherence_manager #(
 
                 S_L2_LOOKUP_WAIT: begin
                     if (l2_resp_valid) begin
+                        if (PERF_COUNTER_ENABLE) begin
+                            if (l2_resp_hit)
+                                perf_l2_hits <= perf_l2_hits + 32'd1;
+                            else
+                                perf_l2_misses <= perf_l2_misses + 32'd1;
+                        end
                         line_way <= l2_resp_way;
 
                         if (req_is_d && (req_type == 2'b10)) begin
@@ -339,12 +527,18 @@ module coherence_manager #(
                             // always hits (see header). Just update L2.
                             line_data    <= req_wr_line;
                             line_sharers <= l2_resp_sharers & ~(4'b0001 << req_core[1:0]);
+                            if (!l2_resp_hit)
+                                protocol_error <= 1'b1;
                             state        <= S_WB_UPDATE_L2;
                         end
                         else if (l2_resp_hit) begin
                             line_data    <= l2_resp_line;
                             line_sharers <= l2_resp_sharers;
-                            line_dirty   <= 1'b0; // clean w.r.t. DRAM unless a snoop below dirties it
+                            // resp_victim_dirty describes the selected
+                            // way on both hit and miss. Preserve it: L2
+                            // may already be newer than DRAM after an
+                            // earlier M->S downgrade/writeback.
+                            line_dirty   <= l2_resp_victim_dirty;
                             any_snoop_dirty  <= 1'b0;
                             snoop_dirty_data <= {LINE_BITS{1'b0}};
 
@@ -355,6 +549,7 @@ module coherence_manager #(
                             else begin
                                 snoop_todo <= (l2_resp_sharers & ~(4'b0001 << req_core[1:0]));
                                 snoop_type_send <= (req_type == 2'b00) ? 1'b1 : 1'b0; // READ->DOWNGRADE, RFO->INVALIDATE
+                                snoop_addr_send <= req_addr;
                                 snoop_after <= S_GRANT_WRITE_L2;
                                 state <= S_SHARER_SNOOP_ISSUE;
                             end
@@ -366,6 +561,13 @@ module coherence_manager #(
                             line_dirty   <= l2_resp_victim_dirty;
                             any_snoop_dirty  <= 1'b0;
                             snoop_dirty_data <= {LINE_BITS{1'b0}};
+                            // L2 is inclusive: evicting a directory
+                            // entry must snoop the VICTIM address, not
+                            // the newly requested address.
+                            snoop_addr_send <= {l2_resp_victim_tag, req_addr[16:5], 5'b0};
+                            mem_line_addr   <= {l2_resp_victim_tag, req_addr[16:5], 5'b0};
+                            mem_word_idx    <= 3'd0;
+                            mem_waiting     <= 1'b0;
 
                             if (l2_resp_victim_valid && (l2_resp_victim_sharers != 4'b0)) begin
                                 snoop_todo      <= l2_resp_victim_sharers;
@@ -377,6 +579,8 @@ module coherence_manager #(
                                 state <= S_EVICT_WB_MEM;
                             end
                             else begin
+                                mem_word_idx <= 3'd0;
+                                mem_waiting  <= 1'b0;
                                 state <= S_FETCH_MEM;
                             end
                         end
@@ -391,16 +595,17 @@ module coherence_manager #(
                 // resumes at snoop_after.
                 // ==================================================
                 S_EVICT_SNOOP_ISSUE, S_SHARER_SNOOP_ISSUE: begin
-                    snoop_addr_send <= req_addr;
                     if (snoop_todo == 4'b0) begin
                         state <= snoop_after;
                     end
                     else begin
+                        if (PERF_COUNTER_ENABLE)
+                            perf_snoop_requests <= perf_snoop_requests + 32'd1;
                         // issue to the lowest set bit
-                        if (snoop_todo[0]) begin dsnoop_valid_r[0] <= 1'b1; dsnoop_type_r[0] <= snoop_type_send; dsnoop_addr_r[0] <= req_addr; end
-                        else if (snoop_todo[1]) begin dsnoop_valid_r[1] <= 1'b1; dsnoop_type_r[1] <= snoop_type_send; dsnoop_addr_r[1] <= req_addr; end
-                        else if (snoop_todo[2]) begin dsnoop_valid_r[2] <= 1'b1; dsnoop_type_r[2] <= snoop_type_send; dsnoop_addr_r[2] <= req_addr; end
-                        else if (snoop_todo[3]) begin dsnoop_valid_r[3] <= 1'b1; dsnoop_type_r[3] <= snoop_type_send; dsnoop_addr_r[3] <= req_addr; end
+                        if (snoop_todo[0]) begin dsnoop_valid_r[0] <= 1'b1; dsnoop_type_r[0] <= snoop_type_send; dsnoop_addr_r[0] <= snoop_addr_send; end
+                        else if (snoop_todo[1]) begin dsnoop_valid_r[1] <= 1'b1; dsnoop_type_r[1] <= snoop_type_send; dsnoop_addr_r[1] <= snoop_addr_send; end
+                        else if (snoop_todo[2]) begin dsnoop_valid_r[2] <= 1'b1; dsnoop_type_r[2] <= snoop_type_send; dsnoop_addr_r[2] <= snoop_addr_send; end
+                        else if (snoop_todo[3]) begin dsnoop_valid_r[3] <= 1'b1; dsnoop_type_r[3] <= snoop_type_send; dsnoop_addr_r[3] <= snoop_addr_send; end
                         state <= (state == S_EVICT_SNOOP_ISSUE) ? S_EVICT_SNOOP_WAIT : S_SHARER_SNOOP_WAIT;
                     end
                 end
@@ -417,6 +622,14 @@ module coherence_manager #(
                 // regardless of hit, or on any type when it missed.
                 S_EVICT_SNOOP_WAIT, S_SHARER_SNOOP_WAIT: begin
                     if (dsnoop_ack_valid[0] || dsnoop_ack_valid[1] || dsnoop_ack_valid[2] || dsnoop_ack_valid[3]) begin
+                        if ((dsnoop_ack_valid_vec & (dsnoop_ack_valid_vec - 4'b0001)) != 4'b0)
+                            protocol_error <= 1'b1;
+                        if (any_snoop_dirty &&
+                            ((dsnoop_ack_valid[0] && dsnoop_ack_dirty[0]) ||
+                             (dsnoop_ack_valid[1] && dsnoop_ack_dirty[1]) ||
+                             (dsnoop_ack_valid[2] && dsnoop_ack_dirty[2]) ||
+                             (dsnoop_ack_valid[3] && dsnoop_ack_dirty[3])))
+                            protocol_error <= 1'b1;
                         // Exactly one core acks per issued snoop (we only
                         // ever pulse one dsnoop_valid_r bit at a time).
                         if (dsnoop_ack_valid[0]) begin
@@ -450,51 +663,51 @@ module coherence_manager #(
                 // ==================================================
                 S_EVICT_WB_MEM: begin
                     if (!(line_dirty | any_snoop_dirty)) begin
+                        mem_word_idx <= 3'd0;
+                        mem_waiting  <= 1'b0;
                         state <= S_FETCH_MEM;
                     end
-                    else if (mem_word_idx == 3'd0 && !mem_req_valid) begin
-                        mem_line_addr <= {l2_resp_victim_tag, req_addr[15:5], 5'b0}; // NOTE: index bits come from req_addr (same set), tag from the victim
-                        mem_line_buf  <= line_data;
+                    else if (!mem_waiting) begin
                         mem_req_valid <= 1'b1;
                         mem_we        <= 1'b1;
-                        mem_addr      <= {l2_resp_victim_tag, req_addr[15:5], 5'b0};
-                        mem_wdata     <= line_data[31:0];
+                        mem_addr      <= mem_line_addr + (mem_word_idx << 2);
+                        mem_wdata     <= line_data[mem_word_idx*32 +: 32];
+                        mem_waiting   <= 1'b1;
+                        if (PERF_COUNTER_ENABLE)
+                            perf_mem_write_words <= perf_mem_write_words + 32'd1;
                     end
                     else if (mem_valid) begin
+                        mem_waiting <= 1'b0;
                         if (mem_word_idx == 3'd7) begin
                             mem_word_idx  <= 3'd0;
-                            mem_req_valid <= 1'b0;
                             state         <= S_FETCH_MEM;
                         end
                         else begin
                             mem_word_idx  <= mem_word_idx + 3'd1;
-                            mem_req_valid <= 1'b1;
-                            mem_we        <= 1'b1;
-                            mem_addr      <= mem_line_addr + ((mem_word_idx + 3'd1) << 2);
-                            mem_wdata     <= mem_line_buf[(mem_word_idx + 3'd1)*32 +: 32];
                         end
                     end
                 end
 
                 S_FETCH_MEM: begin
-                    if (mem_word_idx == 3'd0 && !mem_req_valid && !mem_line_fetch_started) begin
+                    if (!mem_waiting) begin
                         mem_req_valid <= 1'b1;
                         mem_we        <= 1'b0;
-                        mem_addr      <= req_addr;
+                        mem_addr      <= req_addr + (mem_word_idx << 2);
+                        mem_waiting   <= 1'b1;
+                        if (PERF_COUNTER_ENABLE)
+                            perf_mem_read_words <= perf_mem_read_words + 32'd1;
                     end
                     else if (mem_valid) begin
+                        mem_waiting <= 1'b0;
                         mem_line_buf[mem_word_idx*32 +: 32] <= mem_rdata;
                         if (mem_word_idx == 3'd7) begin
                             mem_word_idx  <= 3'd0;
-                            mem_req_valid <= 1'b0;
                             line_data     <= { mem_rdata, mem_line_buf[223:0] }; // fold in the final word
+                            line_dirty    <= 1'b0;
                             state         <= S_L2_FILL;
                         end
                         else begin
                             mem_word_idx  <= mem_word_idx + 3'd1;
-                            mem_req_valid <= 1'b1;
-                            mem_we        <= 1'b0;
-                            mem_addr      <= req_addr + ((mem_word_idx + 3'd1) << 2);
                         end
                     end
                 end
@@ -503,6 +716,7 @@ module coherence_manager #(
                     // line_data/line_way already set; sharers start
                     // empty, dirty=0 (clean copy straight from DRAM).
                     line_sharers <= 4'b0;
+                    line_dirty   <= 1'b0;
                     if (!req_is_d) begin
                         state <= S_RESPOND;
                     end
@@ -536,29 +750,31 @@ module coherence_manager #(
                         dresp_state_r[req_core[1:0]] <=
                             (req_type == 2'b10) ? 2'b00 :          // WRITEBACK ack, state field unused
                             (req_type == 2'b01) ? 2'b11 :          // RFO -> M
-                            ((line_sharers == req_bit) ? 2'b10 : 2'b01); // sole sharer -> E, else S (line_sharers already includes the requester by now, written in S_GRANT_WRITE_L2 last cycle)
+                                                  2'b01;           // every MSI read fill -> S
                     end
                     else begin
                         iresp_valid_r[req_core[1:0]] <= 1'b1;
                         iresp_line_r[req_core[1:0]]  <= line_data;
                     end
-                    state <= S_IDLE;
+                    // Requesters hold valid until they observe this
+                    // response. Waiting for deassertion prevents the
+                    // just-completed level request being accepted again
+                    // on the following edge.
+                    state <= S_WAIT_REQ_DROP;
+                end
+
+                S_WAIT_REQ_DROP: begin
+                    if (req_is_d) begin
+                        if (!dreq_valid[req_core[1:0]]) state <= S_IDLE;
+                    end
+                    else begin
+                        if (!ireq_valid[req_core[1:0]]) state <= S_IDLE;
+                    end
                 end
 
                 default: state <= S_IDLE;
             endcase
         end
-    end
-
-    // Small helper flag: distinguishes "about to issue the very
-    // first fetch word" from "waiting on mem_valid for it" without
-    // an extra state (kept as a wire computed from mem_req_valid's
-    // own timing would be circular, so a tiny reg is simplest/safest).
-    reg mem_line_fetch_started;
-    always @(posedge clk) begin
-        if (rst) mem_line_fetch_started <= 1'b0;
-        else if (state != S_FETCH_MEM) mem_line_fetch_started <= 1'b0;
-        else if (mem_req_valid) mem_line_fetch_started <= 1'b1;
     end
 
 endmodule

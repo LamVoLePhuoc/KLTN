@@ -25,8 +25,8 @@
 //      also transparently handles the PTW's own page-table reads,
 //      since mmu_core_wrapper always presents MemOpM=3'b010 (word)
 //      while walking, and load_unit's LW case is a pure passthrough
-//      of raw_data (see load_unit.v) -- no separate PTW data path
-//      needed here.
+//      of raw_data (see load_unit.v). PTW A/D updates reuse the same
+//      word-store channel, so no separate PTW data path is needed.
 //
 // AXI4 protocol notes (single outstanding transaction per channel,
 // no bursting/pipelining -- matches how the core issues one access
@@ -171,6 +171,9 @@ module mmu_ip_wrapper #(
         .Mem_WriteEnM       (Mem_WriteEnM),
         .Mem_ReadEnM        (Mem_ReadEnM),
         .MemOpM             (MemOpM),
+        .Mem_AmoRmwM        (),
+        .Mem_AmoOpM         (),
+        .Mem_AmoOperandM    (),
         .Mem_ReadDataM      (Mem_ReadDataM),
         .Mem_ReadDataValidM (Mem_ReadDataValidM),
         .Mem_WriteDoneM     (Mem_WriteDoneM),
@@ -181,7 +184,12 @@ module mmu_ip_wrapper #(
         .Fetch_PageFault       (Fetch_PageFault),
         .Data_PageFault        (Data_PageFault),
         .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
-        .Data_PageFault_Cause  (Data_PageFault_Cause)
+        .Data_PageFault_Cause  (Data_PageFault_Cause),
+        .CurrentPriv           (),
+        .Mmu_Enable_Csr        (),
+        .Satp_PPN_Csr          (),
+        .Mmu_Flush_Csr         (),
+        .FenceI_M              ()
     );
 
     // =========================================================
@@ -243,8 +251,8 @@ module mmu_ip_wrapper #(
     );
 
     // =========================================================
-    // DMEM write channel (core stores only -- the PTW never
-    // writes). Single-outstanding: latch address/data/strobe the
+    // DMEM write channel (core stores plus PTW A/D updates).
+    // Single-outstanding: latch address/data/strobe the
     // cycle Mem_WriteEnM first appears, hold AWVALID/WVALID until
     // BVALID retires it.
     // =========================================================

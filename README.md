@@ -58,27 +58,27 @@ Lõi xử lý trước khi bắt đầu phiên này có tên **RV32IMFA** (I + M
 
 **Bối cảnh:** dựa theo `Risc_V_new/address_mapping` (đặc tả VA/PA/TLB do nhóm viết) và tham khảo kiến trúc MMU Sv39 mã nguồn mở của BSC (`mmu_reference/`). Vị trí đặt MMU theo đúng sơ đồ nhóm cung cấp: **VA (từ pipeline) → MMU/TLB (riêng theo từng lõi) → PA → phía bộ nhớ/cache**.
 
-**4 file RTL mới trong `rtl/`** (đã đăng ký vào `Risc_V.xpr`):
+**Các file RTL chính trong `rtl/`**:
 
 | File | Vai trò |
 |---|---|
-| `mmu_tlb.v` | TLB 16-entry fully-associative, tra cứu tổ hợp (0 chu kỳ khi hit), nạp lại đồng bộ, thay thế round-robin. |
+| `mmu_tlb.v` | TLB 16 entry, 4 set x 4 way, tra cứu tổ hợp (0 chu kỳ khi hit), tag/control/PPN tách bank memory, thay thế tree-PLRU theo set. Xem cập nhật mới nhất tại `Risc_V_new/README.md` mục -1.5. |
+| `mmu_super_tlb.v` | TLB fully-associative 4 entry dành cho leaf 4 MiB; match VPN[19:10] mà không phá cấu trúc set-indexed của TLB 4 KiB. |
 | `mmu_ptw.v` | Bộ dò trang (page table walker) kiểu Sv32 2 cấp: VPN[1]→bảng cấp 1→VPN[0]→bảng cấp 0→PTE lá. |
 | `mmu_top.v` | Ghép iTLB + dTLB + PTW dùng chung, trọng tài ưu tiên bên dữ liệu (D) khi cả hai bên cùng miss, **kiểm tra lại quyền truy cập ở mọi lần hit** (không chỉ lúc nạp TLB). |
 | `mmu_core_wrapper.v` | Bọc lõi `RV32IMA` gốc (không sửa file lõi), dịch VA→PA cho cả nhánh lệnh và dữ liệu, dùng lại cơ chế `Stall_Core_External` sẵn có để đóng băng pipeline khi PTW đang walk. |
 
 **Định dạng PTE tự định nghĩa** (lệch có chủ đích so với Sv32 chuẩn — vì `address_mapping` yêu cầu PA 32-bit/PPN 20-bit, không phải PA 34-bit/PPN 22-bit như Sv32 gốc): giữ nguyên vị trí bit cờ `V,R,W,X,U,G,A,D` (bit 0–7) như Sv32 thật, nhưng trường PPN đặt ở `[31:12]` (20 bit).
 
-**Các giới hạn cố ý, cần nắm rõ khi trình bày:**
-1. Không hỗ trợ superpage 4MB (PTE lá ở cấp 1) — vì định dạng entry TLB theo `address_mapping` chỉ có "VPN(20b)→PPN(20b)", không có trường cấp trang.
-2. PTW **chỉ đọc**, không ghi lại bit A/D vào page table (không có hardware update-on-first-access).
-3. Không có phân quyền S/U (bit U được lưu nhưng không enforce) vì lõi hiện chưa có CSR mode.
-4. **Chưa có cơ chế trap/exception thật** — lõi hiện tại không có đơn vị xử lý ngoại lệ. Khi fault: lệnh fetch bị ép thành NOP, store bị chặn, load trả về 0; có 2 tín hiệu `Fetch_PageFault`/`Data_PageFault` (+ mã lỗi 2-bit) nháy 1 chu kỳ để sau này nối vào một trap unit thật.
-5. LR/SC giữa nhiều lõi **chưa an toàn tuyệt đối** dưới MMU: `memory_stage` so khớp địa chỉ reservation bằng VA trong khi tín hiệu snoop từ lõi khác là PA — chỉ đúng nếu mọi lõi map cùng một VA→PA cho vùng nhớ atomic dùng chung.
-6. **Chưa nối `mmu_core_wrapper` vào `RV32IMA_DualCore_Wrapper`/`BoardTop`/testbench hiện có** — cố ý để MMU là khối cộng thêm, độc lập, không đụng vào bản dual-core đang chạy được, do không có simulator để xác nhận không có regression.
-7. `Mmu_Enable=0` → bypass hoàn toàn trong suốt (VA=PA), hành vi giống hệt gắn thẳng `RV32IMA` — mặc định an toàn.
+**Cập nhật hiện tại:** các giới hạn superpage, A/D và U/S ở bản đầu đã được đóng.
+MMU hỗ trợ leaf 4 KiB + superpage 4 MiB, hardware update A/D, quyền U/S với SUM/MXR,
+trap page-fault thật và LR/SC so khớp theo PA. `satp` CSR điều khiển MMU trong đường
+SoC 4 lõi; `Mmu_Enable=0` vẫn bypass VA=PA. FSM và kết quả test chi tiết nằm tại
+`Risc_V_new/MMU_FSM.md` và `Risc_V_new/README.md` mục -1.6.
 
-**Kiểm tra đã thực hiện:** script đối chiếu port (36/36 chỗ instantiate khớp chính xác, gồm cả 4 file mới) + cân bằng khối — sạch. **Chưa mô phỏng hành vi FSM/refill/fault thật** — cần Vivado/XSIM để xác nhận.
+QuestaSim hiện PASS `MMU_ADVANCED_TB`, `MMU_UPGRADE_TB`, `MMU_POLICY_TB`, `MMU_TB`,
+`CSR_MMU_BITS_TB` và `CSR_TRAP_TB`. Vivado synthesis/implementation trên board vẫn
+chưa chạy; lỗi `medeleg` trong `tb_csr_priv.v` được theo dõi riêng, không thuộc PTW/TLB.
 
 ---
 

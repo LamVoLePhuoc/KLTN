@@ -3,6 +3,7 @@
 module memory_stage(
     input  wire        clk,
     input  wire        rst,
+    input  wire        Stall_Core_External,
 
     // --- Control Signals ---
     input  wire        MemWriteM,
@@ -106,15 +107,23 @@ module memory_stage(
             reservation_addr  <= 32'h00000000;
         end
         else begin
-            // LR.W tạo reservation (địa chỉ VẬT LÝ, không phải ảo)
-            if (is_LR) begin
-                reservation_valid <= 1'b1;
-                reservation_addr  <= Mem_PhysAddrM;
-            end
+            // Change architectural reservation state only when the
+            // M-stage instruction actually retires.  With a multi-cycle
+            // cache, clearing an SC reservation as soon as it first enters
+            // M would deassert sc_success while its RFO is still pending,
+            // prematurely release the pipeline, and report failure for a
+            // store that the D$ was already completing.
+            if (!Stall_Core_External) begin
+                // LR.W creates a reservation (physical, not virtual).
+                if (is_LR) begin
+                    reservation_valid <= 1'b1;
+                    reservation_addr  <= Mem_PhysAddrM;
+                end
 
-            // SC.W luôn xóa reservation sau khi thực hiện
-            else if (is_SC) begin
-                reservation_valid <= 1'b0;
+                // SC.W consumes the reservation only on retirement.
+                else if (is_SC) begin
+                    reservation_valid <= 1'b0;
+                end
             end
 
             // Nếu core khác ghi vào đúng địa chỉ đang reserve,

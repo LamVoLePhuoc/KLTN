@@ -302,7 +302,10 @@ module Main_Decoder(
 
             // ====================================================
             // Fence
-            // fence/fence.i nếu bạn chưa xử lý thật thì chỉ set Fence.
+            // Fence travels to M. RV32IMA exposes the funct3=001
+            // FENCE.I subtype to core_l1_wrapper for ordered D$ clean
+            // then I$ invalidate; plain FENCE needs no cache flush in
+            // this blocking, in-order coherent implementation.
             // ====================================================
             OP_MISC_MEM: begin
                 RegWrite  = 1'b0;

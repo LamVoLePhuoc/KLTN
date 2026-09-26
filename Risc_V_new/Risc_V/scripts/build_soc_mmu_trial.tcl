@@ -92,26 +92,32 @@ if {[llength [get_projects -quiet]] == 0} {
 set BD_NAME "soc_mmu_trial"
 
 #---------------------------------------------------------------
-# 0. Make sure mmu_ip_wrapper.v is a design source
+# 0. Make sure the MMU wrapper and its upgrade support modules are
+#    design sources
 #---------------------------------------------------------------
-puts "--> [0] Registering mmu_ip_wrapper.v as a design source"
+puts "--> [0] Registering MMU support RTL as design sources"
 
-set wrapper_file [glob -nocomplain -directory [file dirname [get_property DIRECTORY [current_project]]]/../rtl mmu_ip_wrapper.v]
-if {$wrapper_file eq ""} {
-    # Fall back: search relative to this script's own location
-    set script_dir [file dirname [file normalize [info script]]]
-    set wrapper_file [file normalize [file join $script_dir .. rtl mmu_ip_wrapper.v]]
+set script_dir [file dirname [file normalize [info script]]]
+set rtl_dir [file normalize [file join $script_dir .. rtl]]
+set mmu_sources {
+    mmu_region_decode.v
+    mmu_debug_buffer.v
+    mmu_super_tlb.v
+    mmu_super_tlb.v
+    mmu_ip_wrapper.v
 }
 
-if {![file exists $wrapper_file]} {
-    error "Could not find mmu_ip_wrapper.v (looked at: $wrapper_file). Adjust the path at the top of this script if your checkout layout differs."
-}
-
-if {[llength [get_files -quiet [file tail $wrapper_file]]] == 0} {
-    add_files -norecurse $wrapper_file
-    puts "    added $wrapper_file to the project"
-} else {
-    puts "    already in project: $wrapper_file"
+foreach source_name $mmu_sources {
+    set source_file [file join $rtl_dir $source_name]
+    if {![file exists $source_file]} {
+        error "Could not find $source_file. Adjust rtl_dir if your checkout layout differs."
+    }
+    if {[llength [get_files -quiet $source_name]] == 0} {
+        add_files -norecurse $source_file
+        puts "    added $source_name"
+    } else {
+        puts "    already in project: $source_name"
+    }
 }
 update_compile_order -fileset sources_1
 

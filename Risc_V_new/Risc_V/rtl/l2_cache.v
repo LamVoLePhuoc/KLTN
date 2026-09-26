@@ -27,13 +27,10 @@
 // commands to a plain single-port RAM with a directory bolted on.
 //
 // Directory encoding: ONLY a sharers[3:0] bitmap, no separate
-// "dirty owner" field. This is intentional, not a missing feature
-// -- see coherence_manager.v's header for the invariant that makes
-// it sufficient (a line can only ever go from 0 or 1 sharers to 2+
-// by way of a mandatory snoop of the sole existing sharer, which is
-// exactly the step that would catch a silent E->M upgrade; once a
-// line has 2+ sharers, none of them can possibly be Modified, by
-// construction).
+// "dirty owner" field. Under MSI every S->M transition is a visible
+// RFO, so an M line has exactly one sharer bit. The coherence manager
+// snoops listed holders on BusRd/BusRdX and obtains dirty data from
+// the unique M holder before changing the directory.
 // ============================================================
 module l2_cache #(
     parameter INDEX_BITS    = 12,   // 4096 sets (512KB, 4-way, 32B line)
@@ -56,7 +53,7 @@ module l2_cache #(
     output reg           resp_valid,      // 1 cycle after cmd_valid
     output reg           resp_hit,        // tag matched an already-valid way
     output reg  [1:0]    resp_way,        // matching way (hit) or LRU victim way (miss)
-    output reg  [15:0]   resp_victim_tag, // tag currently held by resp_way (meaningful when !resp_hit)
+    output reg  [32-INDEX_BITS-5-1:0] resp_victim_tag, // tag currently held by resp_way (meaningful when !resp_hit)
     output reg           resp_victim_valid,
     output reg           resp_victim_dirty,
     output reg  [3:0]    resp_victim_sharers,

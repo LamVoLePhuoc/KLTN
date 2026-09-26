@@ -1,0 +1,19 @@
+# vsim -do {run -all; quit -f} -l output/msi_cache_upgrade_final/watchdog_final.log -lib output/msi_cache_upgrade_final/work -c tb_coherence_watchdog 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# Loading sv_std.std
+# Loading work.tb_coherence_watchdog(fast)
+# run -all 
+# CACHE_WATCHDOG_TB: PASS
+# ** Note: $finish    : Risc_V_new/Risc_V/sim/tb_coherence_watchdog.v(78)
+#    Time: 165 ns  Iteration: 1  Instance: /tb_coherence_watchdog

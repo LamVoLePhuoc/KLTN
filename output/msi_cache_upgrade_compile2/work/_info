@@ -1,0 +1,1188 @@
+m255
+K4
+z2
+13
+cModel Technology
+Z0 dC:/Users/ADMIN/Documents/GitHub/KLTN
+!s112 0.1
+!i10d 8192
+!i10e 25
+!i10f 100
+T_opt
+VZ8A7h>8Zh2mOGZCT4B<;P2
+04 12 4 work tb_coherence fast 0
+=1-8cf8c581fdee-6ab7adc4-e1-41e8
+Z1 o-quiet -auto_acc_if_foreign -work output/msi_cache_upgrade_compile2/work
+n@_opt
+Z2 OL;O;10.2c;57
+Z3 dC:/Users/ADMIN/Documents/GitHub/KLTN
+!s110 1790422468
+T_opt1
+!s110 1790422483
+VGi74A6@KzmaPdYj=`SIXm2
+04 16 4 work tb_coherence_ahb fast 0
+=1-8cf8c581fdee-6ab7add3-15-4ed0
+R1
+n@_opt1
+R2
+vahb_lite_l1_adapter
+Z4 DXx6 sv_std 3 std 0 22 `a<MJET1=lN@jzbA7kHm;1
+Z5 !s110 1790422460
+IiB23@abbbIZ_F^U7z7APV3
+Z6 V`JN@9S9cnhjKRR_L]QIcM3
+S1
+R3
+w1790416232
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_adapter.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_adapter.v
+L0 57
+Z7 OL;L;10.2c;57
+r1
+31
+Z8 !s108 1790422460.193000
+Z9 !s107 C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\writeback_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\sys_decoder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\store_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Sign_Extend.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\RV32IMA.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Register_File.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc_ahb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_bootable.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb_bootable.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_module.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_Adder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mux.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Mux_3_by_1.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_top.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_tlb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_super_tlb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_region_decode.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ptw.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ip_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_debug_buffer.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_core_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\memory_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mem_wb_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Main_Decoder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\load_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l2_cache.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_icache.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_dcache.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\if_id_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\id_ex_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\hazard_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\fetch_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\execute_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ex_mem_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\decode_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\csr_trap_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Control_Unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\coherence_manager.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\boot_ctrl.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU_Decoder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_slave_adapter.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_adapter.v|
+Z10 !s90 -sv|-lint|-work|output/msi_cache_upgrade_compile2/work|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_adapter.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_slave_adapter.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU_Decoder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\boot_ctrl.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\coherence_manager.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Control_Unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\csr_trap_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\decode_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ex_mem_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\execute_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\fetch_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\hazard_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\id_ex_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\if_id_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_dcache.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_icache.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l2_cache.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\load_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Main_Decoder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mem_wb_registers.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\memory_stage.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_core_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_debug_buffer.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ip_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ptw.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_region_decode.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_super_tlb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_tlb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_top.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Mux_3_by_1.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mux.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_Adder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_module.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb_bootable.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_bootable.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc_ahb.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Register_File.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\RV32IMA.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Sign_Extend.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\store_unit.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\sys_decoder.v|C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\writeback_stage.v|
+Z11 o-sv -lint -work output/msi_cache_upgrade_compile2/work -L mtiAvm -L mtiOvm -L mtiUvm -L mtiUPF
+!i10b 1
+!s100 @Je6hFVT733IhUKmWo;n]0
+!s105 ahb_lite_l1_adapter_v_unit
+!s85 0
+!i111 0
+vahb_lite_l1_slave_adapter
+R4
+R5
+IITW>lA`Y32`kYm^:o@``k1
+R6
+S1
+R3
+w1790416234
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_slave_adapter.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ahb_lite_l1_slave_adapter.v
+L0 49
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 DfYlTKMgR2]F434g:]0X@3
+!s105 ahb_lite_l1_slave_adapter_v_unit
+!s85 0
+!i111 0
+vALU
+R4
+R5
+I;d4_0[WE9@UlO7K<nfO_G3
+R6
+S1
+R3
+Z12 w1785479878
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@a@l@u
+!i10b 1
+!s100 X]N6=i2JTcLgNHO2><6hZ0
+!s105 ALU_v_unit
+!s85 0
+!i111 0
+vALU_Decoder
+R4
+R5
+I2C_IWOM5`Wa083kXOJOI:2
+R6
+S1
+R3
+R12
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU_Decoder.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ALU_Decoder.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@a@l@u_@decoder
+!i10b 1
+!s100 Y]bCnXQUafe7J_Me97Jao3
+!s105 ALU_Decoder_v_unit
+!s85 0
+!i111 0
+vboot_ctrl
+R4
+R5
+IB2UazfQb]012Eb^HT_>DQ3
+R6
+S1
+R3
+w1789200455
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\boot_ctrl.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\boot_ctrl.v
+L0 74
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 BdT?JB982PmNR2kjl6S2I2
+!s105 boot_ctrl_v_unit
+!s85 0
+!i111 0
+vcoherence_manager
+R4
+R5
+ILOhP<Q_C[fXC:XPSMh_0k0
+R6
+S1
+R3
+w1790422450
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\coherence_manager.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\coherence_manager.v
+L0 64
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 I?lA62K;0;00ePl`4WX8S1
+!s105 coherence_manager_v_unit
+!s85 0
+!i111 0
+vControl_Unit
+R4
+R5
+I?e]Tb;W5D>MOk=2=hQ]@;1
+R6
+S1
+R3
+w1789126268
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Control_Unit.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Control_Unit.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@control_@unit
+!i10b 1
+!s100 GHE_8ALQEU1aDm3]DA];l0
+!s105 Control_Unit_v_unit
+!s85 0
+!i111 0
+vcore_l1_wrapper
+R4
+R5
+IT^NcGSJo@jWM[`9SN4QL70
+R6
+S1
+R3
+w1790420742
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\core_l1_wrapper.v
+L0 51
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 DDF9VZKFemIYRH3_:i6:C0
+!s105 core_l1_wrapper_v_unit
+!s85 0
+!i111 0
+vcsr_trap_unit
+R4
+R5
+IeP^=B`BVlQFajZ^a0G_fW2
+R6
+S1
+R3
+w1790306107
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\csr_trap_unit.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\csr_trap_unit.v
+L0 62
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 >KP2C7=Ig`nFHFdAnZ?1b1
+!s105 csr_trap_unit_v_unit
+!s85 0
+!i111 0
+vdecode_stage
+R4
+R5
+Ij;cYjog73GVil7_e8@X973
+R6
+S1
+R3
+w1789126282
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\decode_stage.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\decode_stage.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 ^USogzKLo@mR<UYG?LKiR2
+!s105 decode_stage_v_unit
+!s85 0
+!i111 0
+vex_mem_registers
+R4
+R5
+I@mcX;^@^h;:d@n[aXcVHj1
+R6
+S1
+R3
+w1789126350
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ex_mem_registers.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\ex_mem_registers.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 `RSWlZkSR1G]`^;FGaCh52
+!s105 ex_mem_registers_v_unit
+!s85 0
+!i111 0
+vexecute_stage
+R4
+R5
+IeRF7nKMhP8^`;002;`Md<3
+R6
+Z13 !s105 execute_stage_v_unit
+S1
+R3
+Z14 w1789126371
+Z15 8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\execute_stage.v
+Z16 FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\execute_stage.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 8n?BRA3dS277GAoOR83W_1
+!s85 0
+!i111 0
+vfetch_stage
+R4
+R5
+Idl6WAXlYzoM`90o5ioSWD2
+R6
+S1
+R3
+R12
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\fetch_stage.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\fetch_stage.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 _agh;K6DYe4ZW5cO5YBXA1
+!s105 fetch_stage_v_unit
+!s85 0
+!i111 0
+vhazard_unit
+R4
+R5
+IjOOcJe8P?EBQPIRULjHM_0
+R6
+S1
+R3
+w1788797642
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\hazard_unit.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\hazard_unit.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 K;agF?MlYh8S@VU]REf1n2
+!s105 hazard_unit_v_unit
+!s85 0
+!i111 0
+vid_ex_registers
+R4
+R5
+I`hKBm@eeAGaKaIN0B49a<1
+R6
+S1
+R3
+w1789126326
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\id_ex_registers.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\id_ex_registers.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 MA8I5fAaUAOYO270h7db>1
+!s105 id_ex_registers_v_unit
+!s85 0
+!i111 0
+vif_id_registers
+R4
+R5
+IEXzicT^KBY0Ja:BakdLLD3
+R6
+S1
+R3
+w1789126294
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\if_id_registers.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\if_id_registers.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 =BFI8b:APm4N^<=E0ALKU1
+!s105 if_id_registers_v_unit
+!s85 0
+!i111 0
+vl1_dcache
+R4
+R5
+IDmd`LPiU:eX2eBSaQQfVQ1
+R6
+S1
+R3
+w1790420624
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_dcache.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_dcache.v
+L0 61
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 bdUam;MWQbII>TW<O6l>k3
+!s105 l1_dcache_v_unit
+!s85 0
+!i111 0
+vl1_icache
+R4
+R5
+I3@jLX7@CGRc2X;2M>Nb8S0
+R6
+S1
+R3
+w1790416016
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_icache.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l1_icache.v
+L0 34
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 1ToD>e:n;Dkf9_P3Kl?f@1
+!s105 l1_icache_v_unit
+!s85 0
+!i111 0
+vl2_cache
+R4
+R5
+I0[Ig3VY[lOh1UWGE`S2]U2
+R6
+S1
+R3
+w1790415409
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l2_cache.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\l2_cache.v
+L0 35
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 b><IfmB@HYP>>R1UPPcM23
+!s105 l2_cache_v_unit
+!s85 0
+!i111 0
+vload_unit
+R4
+R5
+IMLPacafaL5@4R[cU2kD`:1
+R6
+S1
+R3
+Z17 w1785479879
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\load_unit.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\load_unit.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 XIO[fg]G?kReSFiXEWhO]1
+!s105 load_unit_v_unit
+!s85 0
+!i111 0
+vMain_Decoder
+R4
+R5
+I?0BWNV1DG9;i;_hB91C_L2
+R6
+S1
+R3
+w1789126262
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Main_Decoder.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Main_Decoder.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@main_@decoder
+!i10b 1
+!s100 4TVT]7n0oYY<C9oKFWjmZ3
+!s105 Main_Decoder_v_unit
+!s85 0
+!i111 0
+vMDU
+R4
+R5
+InUBSF@cEBD7S;OdADaEZ_0
+R6
+R13
+S1
+R3
+R14
+R15
+R16
+L0 263
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@m@d@u
+!i10b 1
+!s100 CozA1RHPeE[3nV9MoC^L71
+!s85 0
+!i111 0
+vmem_wb_registers
+R4
+R5
+IgK5Z[bk[MbK]=GXco`@K00
+R6
+S1
+R3
+w1789126387
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mem_wb_registers.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mem_wb_registers.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 <EihD9T;3U;M4mUnHd`?J2
+!s105 mem_wb_registers_v_unit
+!s85 0
+!i111 0
+vmemory_stage
+R4
+R5
+IbilI18eiZPmNo04L2Hi1?3
+R6
+S1
+R3
+w1789225676
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\memory_stage.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\memory_stage.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 :hJ6G>VN1h4I`AVgalB=?0
+!s105 memory_stage_v_unit
+!s85 0
+!i111 0
+vmmu_core_wrapper
+R4
+R5
+IPE0e;=7RGK=ljbHkP2DSh2
+R6
+S1
+R3
+w1790420686
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_core_wrapper.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_core_wrapper.v
+L0 68
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 Q3LYL2:F^nT::Me6K]=?80
+!s105 mmu_core_wrapper_v_unit
+!s85 0
+!i111 0
+vmmu_debug_buffer
+R4
+R5
+IfU2e9YU1_4FzSBOe_W6[=3
+R6
+S1
+R3
+w1790303747
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_debug_buffer.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_debug_buffer.v
+L0 16
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 ?ce:_<^_0fa7b3:Sa:dPD2
+!s105 mmu_debug_buffer_v_unit
+!s85 0
+!i111 0
+vmmu_ip_wrapper
+R4
+R5
+IM6z6;jUFLW^CN^`0HK:4K0
+R6
+S1
+R3
+w1790306730
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ip_wrapper.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ip_wrapper.v
+L0 53
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 C19ZQioP^3fG_RlE]UYF=0
+!s105 mmu_ip_wrapper_v_unit
+!s85 0
+!i111 0
+vmmu_ptw
+R4
+R5
+IVX5:BD7@@8>;:oVho87]i3
+R6
+S1
+R3
+w1790305979
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ptw.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_ptw.v
+L0 6
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 S3A:6SYzI@>L2ReieB1iz0
+!s105 mmu_ptw_v_unit
+!s85 0
+!i111 0
+vmmu_region_decode
+R4
+R5
+IgE3zJD4Hc88[h6B`0=^kA0
+R6
+S1
+R3
+w1790303742
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_region_decode.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_region_decode.v
+L0 21
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 ZAY;gKP^^43ga_BbLbLSb2
+!s105 mmu_region_decode_v_unit
+!s85 0
+!i111 0
+vmmu_super_tlb
+R4
+R5
+Ie@m@aQSz20bSM`Dh@W]o@1
+R6
+S1
+R3
+w1790305914
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_super_tlb.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_super_tlb.v
+L0 7
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 X6b^;kcC0;Dol;f`MHVZH2
+!s105 mmu_super_tlb_v_unit
+!s85 0
+!i111 0
+vmmu_tlb
+R4
+R5
+IbI:d347V7UG4c]SoPeIXW0
+R6
+S1
+R3
+w1790304418
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_tlb.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_tlb.v
+L0 34
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 JDjB`>ND6jjg0`bMg2LG20
+!s105 mmu_tlb_v_unit
+!s85 0
+!i111 0
+vmmu_top
+R4
+R5
+IQWOkI8z9`YFOeIT5LU6F70
+R6
+S1
+R3
+w1790306723
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_top.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mmu_top.v
+L0 43
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 [hPSL@RT<d3;o1R7RTje:3
+!s105 mmu_top_v_unit
+!s85 0
+!i111 0
+vmux
+R4
+R5
+I2>;6KfXAEcz^T@RbINMS32
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mux.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\mux.v
+L0 1
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 =8HS=_i7Mk@ARnXcn]?[Q2
+!s105 mux_v_unit
+!s85 0
+!i111 0
+vMux_3_by_1
+R4
+R5
+I2_h94k_IBgMc0__96gO600
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Mux_3_by_1.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Mux_3_by_1.v
+L0 1
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@mux_3_by_1
+!i10b 1
+!s100 iedCCdl<aOz1]2Mbl;8]W0
+!s105 Mux_3_by_1_v_unit
+!s85 0
+!i111 0
+vPC_Adder
+R4
+R5
+I`b5c]Kd?zPkhb4;8l`[[^1
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_Adder.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_Adder.v
+L0 1
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@p@c_@adder
+!i10b 1
+!s100 YI9aXT]EgI`MPQi__<QAY1
+!s105 PC_Adder_v_unit
+!s85 0
+!i111 0
+vPC_module
+R4
+R5
+IIFY7HKFS24Fob;WK4dT<G3
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_module.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\PC_module.v
+L0 1
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@p@c_module
+!i10b 1
+!s100 ^[WSb0RDjdASH]6gUzi7h3
+!s105 PC_module_v_unit
+!s85 0
+!i111 0
+vquad_core_axi_wrapper
+R4
+R5
+IZ1<fP:HWe6]9g]M1eD2MF3
+R6
+S1
+R3
+w1789131036
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper.v
+L0 32
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 g0z=IL;`>N;IUa^^aTZMk2
+!s105 quad_core_axi_wrapper_v_unit
+!s85 0
+!i111 0
+vquad_core_axi_wrapper_ahb
+R4
+R5
+I^B[CD4SSm_^ma7Z<IC:Bl0
+R6
+S1
+R3
+w1789225266
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb.v
+L0 30
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 aaSl95_nSGdMOAJMNhmNe2
+!s105 quad_core_axi_wrapper_ahb_v_unit
+!s85 0
+!i111 0
+vquad_core_axi_wrapper_ahb_bootable
+R4
+R5
+IEf]Pf[2JPW8g`72E>Q:`>0
+R6
+S1
+R3
+w1789225302
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb_bootable.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_ahb_bootable.v
+L0 25
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 j:NNH8iigG3>]W^kiDH222
+!s105 quad_core_axi_wrapper_ahb_bootable_v_unit
+!s85 0
+!i111 0
+vquad_core_axi_wrapper_bootable
+R4
+R5
+I8@SmaaHo0PacBICHAhQkz2
+R6
+S1
+R3
+w1789200066
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_bootable.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_axi_wrapper_bootable.v
+L0 35
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 Cf0k=VbbH?oGIWbE1a;G01
+!s105 quad_core_axi_wrapper_bootable_v_unit
+!s85 0
+!i111 0
+vquad_core_soc
+R4
+R5
+IG:3GbSG60nm^<;3Ezb^8?2
+R6
+S1
+R3
+w1790422415
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc.v
+L0 30
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 Kk7MUjOB;XI93Xd64k_:N1
+!s105 quad_core_soc_v_unit
+!s85 0
+!i111 0
+vquad_core_soc_ahb
+R4
+R5
+IOb[lkQE]D3fAA2W=HFgLI3
+R6
+S1
+R3
+w1790422439
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc_ahb.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\quad_core_soc_ahb.v
+L0 66
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 iRhoFBaVkD?5QU9Qb5DiQ0
+!s105 quad_core_soc_ahb_v_unit
+!s85 0
+!i111 0
+vRegister_File
+R4
+R5
+Ih8n^EKRNX1lYPzfLhbX5c2
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Register_File.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Register_File.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@register_@file
+!i10b 1
+!s100 9NBPEzEM[Q`1_P[]IP7hh3
+!s105 Register_File_v_unit
+!s85 0
+!i111 0
+vRV32IMA
+R4
+R5
+IzU_efn3Xgj^YZR1f<CBWV2
+R6
+S1
+R3
+w1790420662
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\RV32IMA.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\RV32IMA.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@r@v32@i@m@a
+!i10b 1
+!s100 jXTboAob9aVAU>Q]h3HNj3
+!s105 RV32IMA_v_unit
+!s85 0
+!i111 0
+vSign_Extend
+R4
+R5
+IL[9^M@QZ@njelAdfFQ6cU1
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Sign_Extend.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\Sign_Extend.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+n@sign_@extend
+!i10b 1
+!s100 n;7M;0DD7W4Gj5DO[feXR0
+!s105 Sign_Extend_v_unit
+!s85 0
+!i111 0
+vstore_unit
+R4
+R5
+I^>V0ASHiafiXUAmCg_Az`1
+R6
+S1
+R3
+R17
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\store_unit.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\store_unit.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 ;=_iWg<Lz]4392l02ebJ@0
+!s105 store_unit_v_unit
+!s85 0
+!i111 0
+vsys_decoder
+R4
+R5
+I<E8CBYMRk1mG<_zJBlOZ_0
+R6
+S1
+R3
+w1789125759
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\sys_decoder.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\sys_decoder.v
+L0 29
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 f<C9n:R5ES<H1JMFBlNUB1
+!s105 sys_decoder_v_unit
+!s85 0
+!i111 0
+vtb_coherence
+R4
+R5
+IAzXoI>V30g?h46Z`FoM6@0
+R6
+S1
+R3
+w1790422379
+8Risc_V_new/Risc_V/sim/tb_coherence.v
+FRisc_V_new/Risc_V/sim/tb_coherence.v
+L0 34
+R7
+r1
+31
+Z18 !s108 1790422460.444000
+Z19 !s107 Risc_V_new/Risc_V/sim/tb_coherence_ahb.v|Risc_V_new/Risc_V/sim/tb_coherence.v|
+Z20 !s90 -sv|-lint|-work|output/msi_cache_upgrade_compile2/work|Risc_V_new/Risc_V/sim/tb_coherence.v|Risc_V_new/Risc_V/sim/tb_coherence_ahb.v|
+R11
+!i10b 1
+!s100 X?lMXicIV50k;FVd`Mjik0
+!s105 tb_coherence_v_unit
+!s85 0
+!i111 0
+vtb_coherence_ahb
+R4
+R5
+IQd_IjCbYYR@`Y_gY7zGnO2
+R6
+S1
+R3
+w1790422389
+8Risc_V_new/Risc_V/sim/tb_coherence_ahb.v
+FRisc_V_new/Risc_V/sim/tb_coherence_ahb.v
+L0 48
+R7
+r1
+31
+R18
+R19
+R20
+R11
+!i10b 1
+!s100 V92dPlN=k[R<KBJFJWoPe0
+!s105 tb_coherence_ahb_v_unit
+!s85 0
+!i111 0
+vwriteback_stage
+R4
+R5
+IkLQWL^RhnFR;Za[9hEeSk3
+R6
+S1
+R3
+w1789126396
+8C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\writeback_stage.v
+FC:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\rtl\writeback_stage.v
+L0 3
+R7
+r1
+31
+R8
+R9
+R10
+R11
+!i10b 1
+!s100 >>jP_1<Cn@f41;RbX8Cg[2
+!s105 writeback_stage_v_unit
+!s85 0
+!i111 0

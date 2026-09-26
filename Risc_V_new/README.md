@@ -9,11 +9,221 @@ với kiến trúc 4 lõi mục tiêu (sơ đồ `4-CORE CPU WRAPPER` + `address
 > đầu tiên (xóa phần F, dựng `mmu_tlb.v`/`mmu_ptw.v`/`mmu_top.v`/`mmu_core_wrapper.v`).
 > File này không lặp lại nội dung đó, chỉ tiếp nối và mở rộng thành bức tranh đầy đủ.
 
-**Máy soạn tài liệu này không có Vivado/iverilog cài sẵn** → mọi RTL mới đều mới
-chỉ được kiểm tra bằng cách đọc/suy luận thủ công cẩn thận (trace tay từng cycle,
-nhiều vòng review lại chính mình), **chưa chạy mô phỏng thật**. Việc còn lại là bạn
-chạy trong Vivado và báo kết quả — đúng quy trình đã dùng ở
-`cache_reference/README_PHASE1.md`/`PHASE2.md`.
+**Máy hiện không có Vivado/iverilog nhưng có QuestaSim 10.2c.** Các ghi chú lịch sử
+bên dưới nói “chưa mô phỏng” vẫn mô tả đúng trạng thái tại thời điểm từng mục được
+viết. Riêng nâng cấp MMU mới nhất (mục -1.5) đã compile và chạy thật bằng Questa;
+kết quả cụ thể ghi ngay trong mục đó. Vivado synthesis/implementation trên board vẫn
+chưa chạy.
+
+---
+
+## -1.7. Chuyển cache coherence từ MESI sang MSI và kiểm chứng bằng Questa
+
+Quyết định kiến trúc mới là **MSI (Modified/Shared/Invalid)**. Các mục MESI cũ bên
+dưới được giữ như lịch sử phát triển, nhưng không còn mô tả RTL hiện hành. MSI phù
+hợp với phạm vi KLTN vì loại trạng thái Exclusive và buộc mọi lần `S -> M` phát RFO
+trên bus: dễ quan sát, dễ kiểm chứng và khớp AHB hơn; đổi lại có thêm một giao dịch
+upgrade khi một lõi đọc line rồi mới ghi.
+
+### -1.7.1. Behavior đã hiện thực
+
+- Read miss `I -> S`: mọi read fill đều trả `S`, encoding `2'b10` (E cũ) không dùng.
+- Write hit `S -> M`: phát RFO, đợi invalidate các sharer khác rồi mới ghi cục bộ.
+- Write miss `I -> M`: read-for-ownership, write-allocate và merge SB/SH/SW vào line.
+- Snoop BusRd trên `M`: owner trả line mới nhất, hạ `M -> S`; CM cập nhật/forward từ
+  L1 vào L2 và requester, không đọc DRAM lại.
+- Snoop BusRdX trên `S/M`: invalidate; nếu là `M` thì trả dirty line trước khi về I.
+- Evict `M`: writeback full line về L2; dirty L2 victim được snoop đúng địa chỉ,
+  writeback 8 word ra DRAM rồi mới refill line mới.
+- Giao dịch coherence vẫn atomic/tuần tự toàn hệ thống để ưu tiên correctness; arbiter
+  8 nguồn D$/I$ dùng round-robin và chỉ tiến con trỏ khi thật sự nhận request, nên
+  không còn nguy cơ starvation do fixed-priority.
+- `Cache_Flush` không còn xoá mù dirty line: D$ quét 2 way × 512 set, writeback từng
+  line M qua CM rồi mới invalidate; `busy/done` giữ core đứng trong suốt maintenance.
+- `FENCE.I` đã đi từ decode/M-stage tới `core_l1_wrapper`: clean D$ hoàn tất trước,
+  sau đó invalidate I$ rồi mới thả pipeline. DMA ghi code dùng cùng hook
+  `Cache_Flush`; I$ vẫn không chiếm entry trong directory MSI.
+- Chín lệnh AMO RMW (`ADD/SWAP/XOR/OR/AND/MIN/MAX/MINU/MAXU`) được thực hiện ngay
+  trong D$ sau khi đã có ownership: cold miss và `S -> M` dùng word cũ từ line trả
+  về, hit M dùng word tại chỗ, `rd` luôn nhận giá trị cũ đúng kiến trúc RV32A.
+- LR/SC giữ reservation theo địa chỉ vật lý; LR chỉ lập reservation và SC chỉ xoá nó
+  khi lệnh thật sự retire. Invalidate snoop xoá reservation, làm SC thất bại mà không
+  phát RFO/ghi dữ liệu.
+
+### -1.7.2. Các lỗi nền đã sửa trong lúc chuyển giao thức
+
+- Reset/handshake đường DRAM: `mem_word_idx` không còn X; mỗi word phát đúng một
+  request rồi chờ `mem_valid`.
+- L2 giữ đúng dirty-vs-DRAM qua các lần chia sẻ; line vừa fetch không kế thừa nhầm
+  dirty của victim.
+- Inclusive L2 eviction snoop **victim address**, không nhầm sang requested address;
+  ghép lại đủ 12 index bit của L2.
+- CM và AHB master có trạng thái chờ requester hạ `valid`, tránh nhận trùng giao dịch
+  vừa trả response. Chuỗi L1 writeback -> refill có một chu kỳ tách request rõ ràng.
+- D$ không diễn giải lại request miss vừa hoàn tất thành một hit mới; wrapper cũng
+  nhớ data response khi pipeline còn bị giữ bởi I$ miss/maintenance. Nhờ đó store/AMO
+  level-held chỉ commit một lần (trước đây AMO cold miss có thể RMW hai lần).
+- SC không còn xoá reservation ngay lúc vừa vào M-stage: reservation được giữ xuyên
+  suốt BusRd/RFO nhiều chu kỳ, tránh vừa phát store thành công vừa trả status thất bại.
+- Cầu AHB bảo toàn RFO bằng `HMASTLOCK`; slave giữ backend valid khi CM bận và tách
+  address/data phase để writeback không lệch/mất word.
+- CM có counter 32-bit cho request BusRd/RFO/writeback/I$, L2 hit/miss, snoop,
+  word DRAM read/write và busy cycle; các net được `mark_debug` ở hai top SoC.
+- `protocol_error` sticky bắt request type/alignment sai, nhiều snoop ack cùng lúc,
+  nhiều dirty owner hoặc writeback làm miss inclusive L2. Trace vòng 16 entry × 96-bit
+  generate-off mặc định (`CACHE_DEBUG_TRACE_ENABLE=0`) để bật khi mô phỏng/ILA.
+
+### -1.7.3. Kết quả test
+
+- `MSI_COHERENCE_TB: PASS`: I/S/M transition, producer-consumer, 4 sharer rồi một
+  writer, M bị BusRd/BusRdX, false sharing hai word cùng line, dirty L1 eviction,
+  dirty inclusive L2 eviction, safe flush, round-robin 4 core, SB/SH và
+  LB/LBU/LH/LHU, đủ 9 AMO ở cold miss/M hit/S upgrade, counter/trace/error checker,
+  cùng kiểm tra cache-to-cache/L2 hit không xuống DRAM.
+- `MSI_COHERENCE_AHB_TB: PASS`: RFO qua `HMASTLOCK`, backend nhận đúng RFO,
+  `HREADY` back-pressure, invalidate/forward, full-line WRITEBACK và hai lõi đồng thời
+  giữ request khi CM đang bận (request ưu tiên thấp không bị mất).
+- Toàn bộ `rtl/*.v` compile sạch bằng QuestaSim 10.2c; `quad_core_soc` và
+  `quad_core_soc_ahb` đều elaborate sạch.
+- `CACHE_FENCE_I_TB: PASS`: lệnh FENCE.I thật đi qua pipeline, stall core, hoàn tất
+  D$ walker, invalidate I$ và buộc fetch lại line lệnh.
+- `CACHE_WATCHDOG_TB: PASS`: fault injection giữ `mem_valid=0`, CM phát hiện state
+  treo và set sticky timeout/protocol error mà không phá atomic transaction.
+- `CACHE_AMO_TB: PASS`: lệnh AMOADD.W thật đi xuyên RV32IMA/MMU wrapper/D$, trả old=10,
+  commit new=15 đúng một lần và lần LW sau thấy 15.
+- `CACHE_LRSC_TB: PASS`: LR cold BusRd, SC giữ reservation xuyên `S -> M` RFO, trả 0
+  và lần LW sau thấy dữ liệu SC.
+- `CACHE_LRSC_SNOOP_TB: PASS`: invalidate giữa LR và SC xoá reservation; SC trả 1,
+  không phát RFO và không đổi dữ liệu.
+
+Chưa tuyên bố hoàn tất board: vẫn cần Vivado synthesis/implementation, timing và
+workload RV32IMA bốn lõi chạy end-to-end. Các khoảng trống còn lại đã xác định:
+
+- Cổng memory chưa có byte strobe và đường uncached/MMIO; hiện mọi data access đều đi
+  qua D$ theo line. Không được gắn peripheral có side effect hoặc dùng SB/SH MMIO cho
+  tới khi có bypass word/byte thật.
+- Lỗi `HRESP` từ cầu AHB/AXI chưa đi ngược thành access-fault kiến trúc.
+- DMA chưa là coherence master; software/hardware phải dùng hook `Cache_Flush` theo
+  thứ tự trước/sau DMA, và chưa có handshake tự động chứng minh việc này.
+- CM vẫn blocking/tuần tự một transaction toàn hệ thống. Đây là lựa chọn correctness
+  hợp lý cho KLTN, nhưng chưa phải cache non-blocking/tối ưu throughput.
+
+---
+
+## -1.6. Hoàn thiện MMU: FSM, U/S + SUM/MXR, A/D và superpage 4 MiB
+
+Phần còn thiếu của mục -1.5 đã được triển khai và kiểm chứng bằng QuestaSim. Sơ đồ
+state, bảng transition, quyền truy cập và các invariant debug được xuất riêng tại
+[`MMU_FSM.md`](MMU_FSM.md).
+
+### -1.6.1. Hai FSM tách trách nhiệm
+
+- `rtl/mmu_top.v`: `IDLE -> WALK -> GATE` phân xử iTLB/dTLB, ưu tiên D-side, tạo
+  stall và pulse fault đúng một chu kỳ.
+- `rtl/mmu_ptw.v`: `IDLE -> L1_READ -> L0_READ/AD_WRITE`; leaf L1 là superpage
+  4 MiB, leaf L0 là page 4 KiB.
+- PTW có thêm `ptw_mem_we/ptw_mem_wdata`. Read hoàn tất bằng
+  `Mem_ReadDataValidM`; write A/D hoàn tất bằng `Mem_WriteDoneM`. TLB chỉ refill sau
+  khi write PTE hoàn tất.
+
+### -1.6.2. Quyền U/S và `mstatus.SUM/MXR`
+
+`csr_trap_unit.v` giờ lưu/đọc/ghi SUM[18] và MXR[19], đưa chúng cùng `CurrentPriv`
+qua `RV32IMA.v`/`mmu_core_wrapper.v` vào MMU. U-mode chỉ dùng PTE `U=1`; S-mode
+không được fetch trang U và chỉ load/store trang U khi SUM=1; MXR chỉ mở load từ
+trang X-only. M-mode vẫn bypass vì `Mmu_Enable_Csr = satp.MODE && priv != M`.
+
+### -1.6.3. Hardware update Accessed/Dirty
+
+Leaf hợp lệ có `A=0` được ghi lại với `A=1` trước khi trả success; store có `D=0`
+được ghi thêm `D=1`. TLB hit thiếu A/D quay lại PTW để sửa PTE, không báo nhầm
+permission fault. Đường AXI/D-cache hiện có được dùng lại cho word write này.
+
+### -1.6.4. Superpage 4 MiB
+
+L1 leaf hợp lệ khi `PTE.PPN[9:0]==0`; PA là `{PTE.PPN[19:10], VA[21:0]}`. Vì TLB
+4 KiB đánh set bằng `VPN[1:0]`, file mới `rtl/mmu_super_tlb.v` cung cấp 4 entry
+fully-associative riêng cho mỗi i-side/d-side; TLB 4 KiB 4-set × 4-way giữ nguyên.
+
+### -1.6.5. Region policy, debug và kết quả test
+
+`mmu_top.REGION_POLICY_ENABLE` vẫn mặc định 0 cho module/test độc lập; đường SoC thật
+`core_l1_wrapper` mặc định bật policy. Trace buffer vẫn generate-off mặc định.
+
+- `MMU_ADVANCED_TB: PASS`: U/S, SUM, MXR, A/D, superpage và super-TLB.
+- `CSR_MMU_BITS_TB: PASS`: reset và CSR write của SUM/MXR.
+- Regression: `MMU_UPGRADE_TB: PASS`, `MMU_POLICY_TB: PASS`, `MMU_TB: PASS`,
+  `CSR_TRAP_TB: PASS`; toàn bộ `rtl/*.v` compile sạch bằng QuestaSim 10.2c.
+- `tb_csr_priv.v` vẫn FAIL 3 check ở đường `medeleg`/cause (U ECALL đi M thay vì S).
+  Đây là lỗi privilege/trap cũ, được ghi riêng thay vì nới lỏng MMU để che lỗi.
+
+---
+
+## -1.5. Nâng cấp MMU theo góp ý mới: vùng VA, TLB 4-set, buffer debug tháo được
+
+Phần này là thay đổi mới nhất. Trọng tâm vẫn là MMU trước; chưa thay đổi giao thức
+MESI/CMU. Expected behavior CMU “core A ghi N0, core B đọc dữ liệu mới từ L2 mà không
+đi DRAM” được giữ làm tiêu chí cho lượt nâng cấp coherence kế tiếp.
+
+### -1.5.1. Địa chỉ logic/ảo không còn để mơ hồ
+
+`address_mapping` và `rtl/mmu_region_decode.v` thống nhất 5 vùng VA:
+
+| Vùng VA | Mục đích | Coarse permission |
+|---|---|---|
+| `0x0000_0000..0x000F_FFFF` | Boot/init, dành trọn 1 MiB đầu | RX |
+| `0x0010_0000..0x3FFF_FFFF` | System/OS | RWX |
+| `0x4000_0000..0x7FFF_FFFF` | User program/text | RX |
+| `0x8000_0000..0xBFFF_FFFF` | User data/heap/stack | RW |
+| `0xC000_0000..0xFFFF_FFFF` | MMIO/reserved | RW, không fetch |
+
+Như vậy user program không còn được quy ước bắt đầu tại địa chỉ 0; 1 MiB đầu dành
+cho boot. Quyền PTE vẫn luôn được kiểm tra. `mmu_top.REGION_POLICY_ENABLE` mặc định
+`0` để module/test độc lập tương thích; đường SoC thật `core_l1_wrapper` hiện mặc
+định bật `1`. Khi vi phạm vùng, FSM trả `FAULT_PERM` ngay, không tốn một lần PTW.
+
+### -1.5.2. TLB từ fully-associative sang 4 set x 4 way
+
+`rtl/mmu_tlb.v` vẫn có tổng 16 entry nhưng giờ dùng `VPN[1:0]` làm set index,
+`VPN[19:2]` làm tag và chỉ so sánh 4 way của đúng set. Thay thế là tree-PLRU 3 bit
+theo từng set; refill ưu tiên update entry trùng VPN, sau đó way invalid, cuối cùng
+mới chọn PLRU victim. `lookup_valid` mới ngăn địa chỉ D-side khi không có load/store
+làm thay đổi PLRU.
+
+Để thuận lợi ánh xạ SRAM/LUTRAM, valid bit được tách riêng (reset/flush nhanh), còn
+tag, flags và PPN là ba mảng memory riêng có `ram_style="distributed"`; data array
+không bị reset. Đây là cấu trúc synthesis-friendly hơn bản CAM 16 comparator cũ,
+không tuyên bố sai rằng 16 entry nhỏ chắc chắn sẽ thành BRAM trên mọi FPGA.
+
+### -1.5.3. FSM quan sát được + buffer debug không vào board mặc định
+
+FSM `IDLE -> WALK -> GATE` trong `mmu_top.v` được giữ vì đúng yêu cầu điều khiển
+theo state, đồng thời có output trạng thái/vùng và trace record 80 bit. Khi
+`DEBUG_TRACE_ENABLE=1`, `rtl/mmu_debug_buffer.v` ghi vòng 16 sự kiện start/PTW
+response/gate-resume để xem trong testbench hoặc nối ILA. Mặc định parameter bằng
+`0`; generate block loại cả buffer khỏi netlist board, không cần xoá RTL bằng tay.
+
+Hai testbench mới:
+
+- `sim/tb_mmu_upgrade.v`: hit/miss, 4-way fill, PLRU eviction, update trùng VPN,
+  độc lập giữa set, flush, toàn bộ biên region và wrap của debug buffer. Kỳ vọng
+  `MMU_UPGRADE_TB: PASS`.
+- `sim/tb_mmu_policy.v`: bật region guard + trace trong `mmu_top`; kiểm tra fetch ở
+  user-data và store vào boot đều fault ngay, không phát PTW request. Kỳ vọng
+  `MMU_POLICY_TB: PASS`.
+
+Kết quả QuestaSim 10.2c: `MMU_UPGRADE_TB: PASS`, `MMU_POLICY_TB: PASS`, và regression
+`MMU_TB: PASS` (toàn bộ 17 check hiện có, gồm 3 check PTE A/D). Toàn bộ `rtl/*.v` compile sạch; cả
+`quad_core_soc` lẫn `quad_core_soc_ahb` elaborate sạch. Các script build
+1-core/4-core/boot đã thêm hai support module mới vào source list.
+
+Khi dùng lượt compile toàn hệ thống để regression, phát hiện một lỗi Verilog-2001 có
+sẵn trong `coherence_manager.v`: `mem_line_fetch_started` được khai báo sau khi đã
+dùng, khiến tool hiểu nhầm thành implicit wire. Đã chỉ di chuyển declaration lên
+nhóm transaction register, không đổi logic. Chạy `tb_coherence.v` sau đó vẫn timeout
+ngay bước A; quan sát state cho thấy CMU kẹt ở `S_FETCH_MEM` vì `mem_word_idx` chưa
+được reset (giá trị X). Đây là lỗi CMU cũ, không thuộc thay đổi MMU và được giữ lại
+cho lượt nâng cấp coherence kế tiếp theo đúng thứ tự “MMU trước”.
 
 ---
 
@@ -827,19 +1037,19 @@ L2, rồi phần còn thiếu trong wrapper. Tất cả là **file mới**, khô
 
 | File | Vai trò |
 |---|---|
-| `rtl/l1_icache.v` | L1 instruction cache riêng từng lõi. PIPT (đặt sau MMU — đúng vị trí `mmu_core_wrapper.v` đã ghi chú sẵn). 16KB, 2-way, line 32B theo `address_mapping`. Read-only, **không tham gia coherence** (quyết định có chủ đích — xem mục 2.2). Blocking, 1 outstanding miss (khớp với core hiện tại vốn không hỗ trợ nhiều request cùng lúc). |
-| `rtl/l1_dcache.v` | L1 data cache riêng từng lõi. PIPT, MESI đầy đủ (I/S/E/M), write-back, write-allocate. 16KB, 2-way, line 32B. Đây là file phức tạp và rủi ro nhất trong nhóm L1 — xem mục 2.2 cho race điều kiện đã phát hiện và sửa. |
+| `rtl/l1_icache.v` | L1 instruction cache riêng từng lõi. PIPT, 32KB, 2-way, line 32B. Read-only, blocking, không chiếm directory MSI; FENCE.I/Cache_Flush clean D$ rồi invalidate I$ để đồng bộ code. |
+| `rtl/l1_dcache.v` | L1 data cache riêng từng lõi. PIPT, MSI (I/S/M), write-back, write-allocate. 32KB, 2-way, line 32B; có safe flush walker. Đây là file phức tạp và rủi ro nhất trong nhóm L1 — xem mục -1.7 và 2.2. |
 | `rtl/core_l1_wrapper.v` | Gộp `mmu_core_wrapper` (đã có) + `l1_icache` + `l1_dcache` thành đúng 1 khối "CORE N" trong sơ đồ. Cũng là nơi nối lại tín hiệu snoop-invalidate của L1 D$ vào `Snoop_Addr`/`Snoop_WE` cho LR/SC — xem mục 2.3. |
-| `rtl/l2_cache.v` | Kho lưu trữ L2 dùng chung: tag + valid + dirty + data + **directory (sharer bitmap 4-bit/line, không có field "dirty owner" riêng — xem mục 2.2 vì sao đủ)**. 256KB, 4-way, line 32B (mặc định theo `address_mapping`; sơ đồ ghi 512KB — xem mục 4, vẫn treo). "Ngu" có chủ đích: không tự sequencing, chỉ nhận lệnh lookup/write 1-chu-kỳ-độ-trễ từ `coherence_manager.v`. |
-| `rtl/coherence_manager.v` | "COHERENCE MANAGEMENT UNIT" + "HIGH-SPEED BUS (AHB)" trong sơ đồ, gộp thành 1 module (lý do: Vivado không có IP AHB nào để gọi, nên tách riêng bus AHB thành 1 module không mang lại lợi ích gì — xem chi tiết trong header file). Trọng tài 8 nguồn (4×D$ + 4×I$) ưu tiên cố định (không phải round-robin — xem mục 2.2), engine giao dịch **atomic/tuần tự** điều khiển L2 + gửi snoop tới các L1 D$ + đường ra bộ nhớ ngoài ("CPU MEMORY PORT"). **File phức tạp nhất, rủi ro cao nhất trong toàn repo.** |
+| `rtl/l2_cache.v` | Kho lưu trữ L2 dùng chung: tag + valid + dirty + data + directory sharer bitmap 4-bit/line. 512KB, 4-way, line 32B; sequencing do `coherence_manager.v` điều khiển. |
+| `rtl/coherence_manager.v` | CMU MSI atomic/tuần tự, round-robin 8 nguồn (4×D$ + 4×I$), điều khiển L2/snoop/CPU Memory Port; có performance counters, protocol/timeout error sticky và trace tùy chọn. |
 | `rtl/quad_core_soc.v` | Khối "4-CORE CPU WRAPPER" đầy đủ: 4× `core_l1_wrapper` + `coherence_manager` (bên trong có `l2_cache`). Cổng bộ nhớ vật lý đơn ra ngoài. |
 | `rtl/quad_core_axi_wrapper.v` | Bọc AXI4 thật (1 master gộp đọc/ghi) quanh cổng bộ nhớ của `quad_core_soc.v`, để cắm vào IP Vivado — giống vai trò `mmu_ip_wrapper.v` nhưng cho toàn hệ 4 lõi. |
 | `scripts/build_soc_4core_trial.tcl` | Script mới (không đụng `build_soc_mmu_trial.tcl`), dựng Block Design 4 lõi: `quad_core_axi_wrapper` + AXI Interconnect + DMA (`axi_cdma`) + 1 Memory Controller (BRAM giả lập). **Đã bỏ Interrupt Controller và SRAM Controller theo đúng yêu cầu của bạn.** |
 | `rtl/ahb_lite_l1_slave_adapter.v` | **Mới (mục -0.25.2).** Nửa slave của cặp AHB-Lite, đối tác của `ahb_lite_l1_adapter.v` — nhận 8 transfer word tuần tự, nói giao thức `dreq_*`/`dresp_*` của `coherence_manager.v` ở phía kia. Dùng chung được cho cả I$ lẫn D$. |
 | `rtl/quad_core_soc_ahb.v` | **Mới (mục -0.25.2).** Biến thể top-level song song với `quad_core_soc.v`: cùng 4× `core_l1_wrapper` + `coherence_manager`, nhưng cổng I$/D$ mỗi core đi qua 1 cặp adapter AHB-Lite (8 liên kết điểm-nối-điểm, không phải 1 bus dùng chung). |
-| `sim/tb_coherence.v` | **Mới, quan trọng nhất.** Testbench tự-kiểm riêng cho `coherence_manager.v`+`l2_cache.v`+`l1_dcache.v` — lái trực tiếp 4 instance `l1_dcache` thật (không qua core/pipeline, để kiểm soát chính xác thứ tự truy cập giữa các lõi), có mô hình bộ nhớ ngoài 1-chu-kỳ-độ-trễ riêng. 5 bước (A→E): core0 đọc lần đầu (miss, được cấp E) → core0 ghi cục bộ (E→M âm thầm, kiểm tra **không** có traffic ra bus) → core1 đọc cùng line (phải bắt đúng dữ liệu M "ngầm" của core0 qua snoop bắt buộc — đây là phép thử quan trọng nhất, kiểm chứng trực tiếp bất biến "1 sharer → phải snoop" ở mục 2.2) → core2 ghi (RFO) buộc invalidate cả core0 lẫn core1 → core0 đọc lại, phải thấy đúng giá trị mới nhất của core2 (qua vòng snoop bắt buộc lần 2). **Chưa test**: eviction/writeback L1 hoặc L2 (cần địa chỉ xung đột cụ thể để ép ra, chưa dựng trong bản này), lưu lượng I$. Xem header file để biết cách chạy trong Vivado XSIM. |
+| `sim/tb_coherence.v` | Testbench MSI tự-kiểm 4 D$ thật: transition, owner forwarding, 4 sharer, false sharing, L1/L2 dirty eviction, safe flush, round-robin, subword, counter/trace/error. |
 
-### 2.2. Thiết kế giao thức MESI — các quyết định cốt lõi (đọc trước khi sửa bất cứ gì)
+### 2.2. Thiết kế giao thức MESI — lịch sử cũ (RTL hiện tại là MSI, xem -1.7)
 
 **Atomic/tuần tự, không pipeline.** Tại một thời điểm, toàn hệ thống chỉ xử lý đúng
 1 giao dịch (miss/upgrade/writeback của 1 lõi) cho tới khi hoàn tất hoàn toàn — kể cả
@@ -942,7 +1152,7 @@ dòng #14).
 `address_mapping` (file text do bạn viết) bổ sung chi tiết định lượng ban đầu (256KB
 L2/16KB L1 — số nháp đầu tiên, đã được thay bằng quyết định chính thức bên dưới):
 - VA 32-bit, 2 cấp trang, page 4KB.
-- TLB: 16-entry fully-associative / lõi.
+- TLB: 16 entry = 4 set x 4 way, tree-PLRU / iTLB và dTLB mỗi lõi (mục -1.5).
 - Bản đồ địa chỉ vật lý 4GB: Boot ROM 64KB @ 0x0000_0000, Main RAM (cacheable) @
   0x8000_0000–0xBFFF_FFFF, còn lại reserved.
 - Coherence: **MESI**, theo dõi theo physical line 32B, directory dạng bitmap 4-bit
@@ -975,7 +1185,7 @@ ngoài tầm tôi tự quyết vì phụ thuộc thông tin vật lý board bạ
    song song không xoá. Lưu ý vẫn còn đúng như trước: trọng tài 8-nguồn BÊN TRONG
    `coherence_manager.v` vẫn là giao thức tự đặt, không phải tín hiệu AHB chuẩn — nếu
    cần AHB chuẩn sâu hơn (trong chính trọng tài), đó vẫn là việc chưa làm (mục -0.5.4).
-2. **Coherence: MESI đầy đủ hay đơn giản hơn? → ĐÃ CHỐT (lại lần nữa): MESI đầy đủ.**
+2. **Coherence → ĐÃ CHỐT LẠI: MSI.** Xem mục -1.7; các quyết định MESI bên dưới là lịch sử trước khi đổi phạm vi.
    Giữ nguyên `coherence_manager.v`/`l1_dcache.v`/`l2_cache.v` như đã viết.
 3. **MMU/virtual memory: có trong phạm vi báo cáo chính thức không? → ĐÃ CHỐT: CÓ.**
    Toàn bộ MMU/TLB/PTW (mục 1), CSR/Trap/Privilege (mục -0.5), `satp`→MMU thật
@@ -999,11 +1209,11 @@ ngoài tầm tôi tự quyết vì phụ thuộc thông tin vật lý board bạ
 | # | Khối (theo sơ đồ) | Trạng thái | Ghi chú |
 |---|---|---|---|
 | 1 | CPU core ×4 | **Có** — `quad_core_soc.v` instantiate đúng 4× `core_l1_wrapper`. `RV32IMA_DualCore_Wrapper.v` (2 lõi cũ, đã tổng hợp trên FPGA) **không bị đụng**, vẫn còn nguyên như một nhánh riêng. | Boot address mỗi lõi tham số hoá độc lập (`RESET_ADDR0..3`), không còn giới hạn "cả 2 lõi cùng boot 1 địa chỉ" như `RV32IMA_DualCore_Wrapper.v`. |
-| 2 | MMU + TLB (per-core) | RTL xong + **giờ an toàn sau bus có độ trễ thật** (mục 1) + có wrapper AXI4 (`mmu_ip_wrapper.v`, `quad_core_axi_wrapper.v` qua `core_l1_wrapper`) + **`satp`/`Mmu_Enable` CSR giờ thật sự điều khiển MMU** (mục -0.25.1, `MMU_CTRL_FROM_CSR=1`). | Vẫn cần bạn chạy `tb_mmu_core.v` xác nhận (test MMU cô lập, không qua CSR — vẫn hợp lệ, xem mục -0.25.1). |
-| 3 | L1 I-Cache / D-Cache | **Có** (`l1_icache.v`, `l1_dcache.v`) — **32KB mỗi cái, ĐÃ CHỐT** (mục -0.02.1, trước đây 16KB). **Chưa mô phỏng.** | Không dùng RTL tham khảo trực tiếp (viết mới, khớp giao diện `mmu_core_wrapper`) — tránh nguyên bug alias địa chỉ đã biết ở `cache_reference`. |
+| 2 | MMU + TLB (per-core) | RTL xong + **giờ an toàn sau bus có độ trễ thật** (mục 1) + có wrapper AXI4 (`mmu_ip_wrapper.v`, `quad_core_axi_wrapper.v` qua `core_l1_wrapper`) + **`satp`/`Mmu_Enable` CSR giờ thật sự điều khiển MMU** (mục -0.25.1, `MMU_CTRL_FROM_CSR=1`) + TLB 4-set x 4-way/PLRU, region map và debug trace tháo được (mục -1.5). | Cần chạy `tb_mmu_upgrade.v`, `tb_mmu_policy.v`, rồi regression `tb_mmu_core.v` trong Vivado. |
+| 3 | L1 I-Cache / D-Cache | **Có** (`l1_icache.v`, `l1_dcache.v`) — **32KB mỗi cái, ĐÃ CHỐT**; D-cache write-back/write-allocate, MSI; safe flush và FENCE.I đã PASS. **Đã mô phỏng coherence trực tiếp và qua AHB.** | I-cache không tham gia directory; đồng bộ bằng FENCE.I/Cache_Flush, xem mục -1.7. |
 | 4 | AHB shared bus | **ĐÃ CHỐT: AHB-Lite** (`quad_core_soc_ahb.v`, mục 4 điểm 1) — tín hiệu AHB-Lite thật ở biên CORE↔BUS, qua `ahb_lite_l1_adapter.v`+`ahb_lite_l1_slave_adapter.v`, 8 liên kết điểm-nối-điểm. **Giờ có testbench riêng** (`tb_coherence_ahb.v`, mục -0.02.3, chưa chạy qua Vivado). `quad_core_soc.v` (dây nối trực tiếp) vẫn còn, không xoá, coi là tham khảo. Trọng tài bên trong `coherence_manager.v` vẫn là giao thức tự đặt, không phải tín hiệu AHB chuẩn. | `round_robin_arbiter_2core.v` (2 lõi cũ) không bị đụng, vẫn dùng cho nhánh `RV32IMA_DualCore_Wrapper.v`. |
-| 5 | Shared L2 Cache | **Có** (`l2_cache.v`) — **512KB/4-way, ĐÃ CHỐT** (mục -0.02.1, trước đây 256KB). **Chưa mô phỏng.** | — |
-| 6 | Coherence Management Unit | **Có, mới viết** (`coherence_manager.v`) — MESI đầy đủ, atomic/tuần tự. **Rủi ro cao nhất, chưa mô phỏng** — xem mục 2.2, mục 9. | — |
+| 5 | Shared L2 Cache | **Có** (`l2_cache.v`) — **512KB/4-way, ĐÃ CHỐT**. Dirty L1/L2 eviction đã PASS trong test MSI. | Inclusive với 4 D-cache; directory sharer bitmap 4 bit. |
+| 6 | Coherence Management Unit | **Có** (`coherence_manager.v`) — MSI, atomic/tuần tự, round-robin 8 nguồn, performance counters, sticky error checker và trace buffer tuỳ chọn. `tb_coherence.v`/`tb_coherence_ahb.v` đều PASS bằng Questa. | Vẫn cần synthesis/timing và workload 4 lõi end-to-end. |
 | 7 | CPU Memory Port / System Bus AXI4 | **Có** — `quad_core_axi_wrapper_ahb.v` (mới, bọc bản AHB-Lite chính thức) bọc AXI4 thật quanh cổng bộ nhớ đơn của `quad_core_soc_ahb.v`; `scripts/build_soc_4core_trial.tcl`/`build_soc_zu5ev_boot.tcl` gắn vào `axi_interconnect` (IP Vivado). | `quad_core_axi_wrapper.v` (bọc bản dây nối trực tiếp) vẫn còn, không xoá. |
 | 8 | DMA Controller | **Dùng IP Vivado** (`axi_cdma`) trong cả 2 script — theo đúng yêu cầu "gọi IP có sẵn". | `axi_cdma` (memory-mapped↔memory-mapped) hợp hơn `axi_dma` (cần thiết bị AXI-Stream) cho vai trò trong sơ đồ. |
 | 9 | SRAM Controller + SRAM | **Bỏ khỏi phạm vi** theo yêu cầu mới nhất của bạn. `build_soc_mmu_trial.tcl` (bản cũ, 1 lõi) vẫn còn 1 BRAM đóng vai SRAM — không sửa lại (đã có sẵn từ trước yêu cầu bỏ); `build_soc_4core_trial.tcl` (bản mới) không có. | — |
@@ -1040,17 +1250,14 @@ ngoài tầm tôi tự quyết vì phụ thuộc thông tin vật lý board bạ
 - [ ] **Phase 1b** — Chốt các quyết định kiến trúc ở mục 4. *(Không thể làm thay —
       vẫn treo, và giờ cấp bách hơn vì RTL cache/coherence đã viết theo 1 lựa chọn
       cụ thể (MESI, 256KB L2, 16+16KB L1) mà bạn có thể muốn đổi.)*
-- [x] **Phase 2** — L1 I$/D$ riêng từng lõi. *(Xong RTL, chưa mô phỏng.)*
+- [x] **Phase 2** — L1 I$/D$ riêng từng lõi. *(RTL xong; D-cache đã được phủ bởi regression MSI.)*
 - [x] **Phase 3** — Nhân bản lên 4 core + bus/arbiter tương ứng. *(Xong RTL —
       `quad_core_soc.v` — chưa mô phỏng.)*
-- [x] **Phase 4** — Shared L2 + Coherence Management Unit (MESI). *(Xong RTL —
-      `l2_cache.v` + `coherence_manager.v` — CHƯA MÔ PHỎNG, rủi ro cao nhất, xem
-      mục 9.)*
+- [x] **Phase 4** — Shared L2 + Coherence Management Unit (MSI). *(`l2_cache.v` +
+      `coherence_manager.v`; direct/AHB regression PASS bằng Questa, xem mục -1.7.)*
 - [x] **Phase 4b (quan trọng nhất kế tiếp)** — Testbench cho
       `coherence_manager.v`/`l2_cache.v`/`l1_dcache.v` (`sim/tb_coherence.v`,
-      5 bước, nhắm đúng vào bất biến "1 sharer → phải snoop"). *(Đã viết, CHƯA
-      CHẠY — bạn cần chạy trong Vivado và báo PASS/FAIL. Chưa phủ eviction/
-      writeback — xem mục 2.1.)*
+      nay phủ I/S/M, bốn sharer, false sharing, dirty L1/L2 eviction). *(Đã chạy PASS.)*
 - [x] **Phase 5 (một phần)** — AXI4 system bus + Memory Controller + DMA Controller
       dùng IP Vivado. *(Xong script — `build_soc_4core_trial.tcl` — SRAM Controller
       và Interrupt Controller đã bỏ theo yêu cầu, không làm nữa trừ khi bạn đổi ý.)*
@@ -1151,27 +1358,47 @@ nhận wiring, không chạy testbench đầy đủ): add toàn bộ `rtl/*.v` l
 `quad_core_soc_ahb.v`) vào 1 project/sim fileset rồi để Vivado elaborate — việc này chỉ
 xác nhận *dây nối tồn tại và đúng tên*, không thay thế được việc chạy testbench thật.
 
-### `sim/tb_coherence.v` (MESI coherence, mô phỏng thuần — CHẠY CÁI NÀY TRƯỚC TIÊN)
-Add làm sim sources: `rtl/l1_dcache.v`, `rtl/l2_cache.v`, `rtl/coherence_manager.v`,
-`rtl/load_unit.v`, `rtl/store_unit.v`, cộng `sim/tb_coherence.v`. Set `tb_coherence`
-làm simulation top, `run -all`. Kỳ vọng 5 dòng `[PASS] A/B/C/D/E ...` (dòng B là
-`[PASS] B: core0's E->M write stayed local` chứ không phải `check_eq32`, xem code)
-và cuối cùng `COHERENCE_TB: PASS`. Nếu FAIL — đặc biệt là bước C hoặc E — đó gần như
+### `sim/tb_coherence.v` (MSI coherence, mô phỏng thuần — CHẠY CÁI NÀY TRƯỚC TIÊN)
+Add làm sim sources: `rtl/l1_dcache.v`, `rtl/l2_cache.v`, `rtl/cache_debug_buffer.v`, `rtl/coherence_manager.v`,
+`rtl/load_unit.v`, cộng `sim/tb_coherence.v`. Set `tb_coherence` làm simulation top,
+`run -all`. Kỳ vọng các nhóm A–L PASS và cuối cùng `MSI_COHERENCE_TB: PASS`. Nếu FAIL
+— đặc biệt ở owner-forwarding hoặc eviction — đó gần như
 chắc chắn là bug thật trong logic snoop/directory, không phải lỗi testbench; gửi lại
 log đầy đủ (đặc biệt giá trị `got=`/`expected=`) để định vị đúng chỗ trong
 `coherence_manager.v`.
 
-### `sim/tb_coherence_ahb.v` (MESI qua cầu AHB-Lite, mô phỏng thuần — MỚI, CHẠY SAU `tb_coherence.v`)
+### `sim/tb_coherence_ahb.v` (MSI qua cầu AHB-Lite — CHẠY SAU `tb_coherence.v`)
 Add làm sim sources: mọi thứ `tb_coherence.v` cần, cộng `rtl/ahb_lite_l1_adapter.v` +
 `rtl/ahb_lite_l1_slave_adapter.v`, thay `sim/tb_coherence.v` bằng
 `sim/tb_coherence_ahb.v`. Set `tb_coherence_ahb` làm simulation top, `run -all`. Kỳ
-vọng đúng 5 dòng `[PASS] A/B/C/D/E` giống hệt `tb_coherence.v` và cuối cùng
-`COHERENCE_AHB_TB: PASS`. **Chỉ nên chạy sau khi `tb_coherence.v` (bản gốc) đã PASS** —
+vọng RFO/HMASTLOCK, HREADY back-pressure, invalidate/forward và writeback đều PASS,
+cuối cùng `MSI_COHERENCE_AHB_TB: PASS`. **Chỉ nên chạy sau khi `tb_coherence.v` đã PASS** —
 nếu bản gốc PASS mà bản AHB-Lite này FAIL đúng ở 1 bước cụ thể, lỗi gần như chắc chắn
 nằm ở `ahb_lite_l1_adapter.v`/`ahb_lite_l1_slave_adapter.v`, không phải ở
 `coherence_manager.v`/`l1_dcache.v` (không đổi gì ở 2 file đó trong test này). Thời gian
 chạy lâu hơn hẳn bản gốc (mỗi giao dịch giờ tốn 8 lần truyền word qua AHB-Lite) — đây là
 kỳ vọng đúng, không phải dấu hiệu treo, trừ khi vượt hẳn ngân sách 40000 chu kỳ.
+
+### `sim/tb_cache_fence_i.v` (FENCE.I end-to-end)
+Compile toàn bộ `rtl/*.v` cùng testbench này. Kỳ vọng pipeline nhận FENCE.I,
+wrapper stall core, D$ walker kết thúc, I$ invalidate/fetch lại và dòng cuối
+`CACHE_FENCE_I_TB: PASS`.
+
+### `sim/tb_coherence_watchdog.v` (fault injection timeout)
+Compile `cache_debug_buffer.v`, `l2_cache.v`, `coherence_manager.v` cùng testbench.
+Mô hình cố ý không trả `mem_valid`; CM giữ nguyên transaction atomic nhưng
+phải set cả `timeout_error` và `protocol_error`, kết thúc `CACHE_WATCHDOG_TB: PASS`.
+
+### `sim/tb_cache_amo.v` (AMO qua pipeline/cache end-to-end)
+Compile toàn bộ `rtl/*.v` cùng testbench. Chương trình RV32A thật thực hiện AMOADD.W
+trên cold miss; kỳ vọng `rd=10`, line mới bằng 15, đúng một RFO và kết thúc
+`CACHE_AMO_TB: PASS`.
+
+### `sim/tb_cache_lrsc.v` và `sim/tb_cache_lrsc_snoop.v` (LR/SC end-to-end)
+Compile toàn bộ `rtl/*.v` cùng từng testbench. Test thứ nhất kiểm tra LR cold BusRd và
+SC thành công qua S->M RFO; test thứ hai chèn invalidate snoop giữa LR/SC và kiểm tra
+SC thất bại không ghi. Kỳ vọng lần lượt `CACHE_LRSC_TB: PASS` và
+`CACHE_LRSC_SNOOP_TB: PASS`.
 
 ### `sim/tb_csr_trap.v` (CSR/Trap/Privilege, mô phỏng thuần — CHẠY CÁI NÀY THỨ HAI)
 Add làm sim sources: **toàn bộ `rtl/*.v`** liên quan tới core (không cần MMU/cache/
@@ -1261,9 +1488,9 @@ chạy 1 testbench trong Vivado (xem Phase 4b ở mục 7).
 6. Kích thước L2/L1 **ĐÃ CHỐT chính thức** (mục 4, mục -0.02.1) — **512KB/4-way L2,
    32KB I$ + 32KB D$ mỗi lõi**. Mục này trước đây ghi "256KB/16+16KB, lựa chọn tạm" —
    đã lỗi thời, giữ số thứ tự để không nhầm khi đọc lại lịch sử.
-7. **Trọng tài trong `coherence_manager.v` là ưu tiên cố định, không round-robin** —
-   đừng nhầm là round-robin khi đọc code; đây là giới hạn công bằng đã biết, ghi rõ
-   trong header file, không phải để tự ý "tối ưu" mà chưa hiểu lý do.
+7. **Trọng tài `coherence_manager.v` đã là round-robin 8 nguồn**; test đồng
+   thời 4 D$ kiểm tra thứ tự xoay và không starvation. Engine vẫn atomic/tuần tự,
+   nên throughput chưa phải thiết kế non-blocking/pipelined.
 8. `l1_icache.v` hard-code `WAYS=2` thật sự (không phải tham số tổng quát dù có khai
    `parameter` khác) — đừng đổi `WAYS` mà không sửa lại phần chọn way/LRU 1-bit bên
    trong.

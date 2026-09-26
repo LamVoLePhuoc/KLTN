@@ -1,0 +1,118 @@
+m255
+K4
+z2
+13
+cModel Technology
+Z0 dC:/Users/ADMIN/Documents/GitHub/KLTN/output/msi_dev
+!s112 0.1
+!i10d 8192
+!i10e 25
+!i10f 100
+T_opt
+!s110 1790415695
+VKC^1HGzV0nDz]4klBel7_3
+04 12 4 work tb_coherence fast 0
+=1-8cf8c581fdee-6ab7934f-6e-33f8
+o-quiet -auto_acc_if_foreign -work work
+n@_opt
+OL;O;10.2c;57
+vcoherence_manager
+Z1 !s110 1790415660
+IaJ:L0YfbMb61>fB`HI_;:0
+Z2 V`JN@9S9cnhjKRR_L]QIcM3
+Z3 dC:/Users/ADMIN/Documents/GitHub/KLTN/output/msi_dev
+w1790415397
+8..\..\Risc_V_new\Risc_V\rtl\coherence_manager.v
+F..\..\Risc_V_new\Risc_V\rtl\coherence_manager.v
+L0 64
+Z4 OL;L;10.2c;57
+r1
+31
+Z5 !s108 1790415660.489000
+Z6 !s107 ..\..\Risc_V_new\Risc_V\sim\tb_coherence.v|..\..\Risc_V_new\Risc_V\rtl\coherence_manager.v|..\..\Risc_V_new\Risc_V\rtl\l2_cache.v|..\..\Risc_V_new\Risc_V\rtl\l1_dcache.v|..\..\Risc_V_new\Risc_V\rtl\load_unit.v|
+Z7 !s90 -work|work|..\..\Risc_V_new\Risc_V\rtl\load_unit.v|..\..\Risc_V_new\Risc_V\rtl\l1_dcache.v|..\..\Risc_V_new\Risc_V\rtl\l2_cache.v|..\..\Risc_V_new\Risc_V\rtl\coherence_manager.v|..\..\Risc_V_new\Risc_V\sim\tb_coherence.v|
+Z8 o-work work -L mtiAvm -L mtiOvm -L mtiUvm -L mtiUPF
+!s100 ^BmjYWJgPCQ7DMT`[aQEb2
+!i10b 1
+!s85 0
+!i111 0
+vl1_dcache
+IHXII=^A[8JUi>o_26QGYH1
+R2
+R3
+w1790415686
+8..\..\Risc_V_new\Risc_V\rtl\l1_dcache.v
+F..\..\Risc_V_new\Risc_V\rtl\l1_dcache.v
+L0 61
+R4
+r1
+31
+R8
+!s110 1790415693
+!i10b 1
+!s100 HG9fVaXaQ]FZ4DD;_T@d41
+!s85 0
+!s108 1790415693.740000
+!s107 ..\..\Risc_V_new\Risc_V\rtl\l1_dcache.v|
+!s90 -work|work|..\..\Risc_V_new\Risc_V\rtl\l1_dcache.v|
+!i111 0
+vl2_cache
+R1
+IY0GU1Wi;5A0J6P2NnTSzC2
+R2
+R3
+w1790415409
+8..\..\Risc_V_new\Risc_V\rtl\l2_cache.v
+F..\..\Risc_V_new\Risc_V\rtl\l2_cache.v
+L0 35
+R4
+r1
+31
+R5
+R6
+R7
+R8
+!s100 <eRX9g0m@J_:;Pg`LOR7M0
+!i10b 1
+!s85 0
+!i111 0
+vload_unit
+R1
+IE0A`nfOI<<jYTUm_A7e[C3
+R2
+R3
+w1785479879
+8..\..\Risc_V_new\Risc_V\rtl\load_unit.v
+F..\..\Risc_V_new\Risc_V\rtl\load_unit.v
+L0 3
+R4
+r1
+31
+R5
+R6
+R7
+R8
+!s100 z^@;zL?MkMSl9WeY`S5UB0
+!i10b 1
+!s85 0
+!i111 0
+vtb_coherence
+R1
+IoBMiZBALP5^e5oV[LfDG71
+R2
+R3
+w1790415649
+8..\..\Risc_V_new\Risc_V\sim\tb_coherence.v
+F..\..\Risc_V_new\Risc_V\sim\tb_coherence.v
+L0 34
+R4
+r1
+31
+R5
+R6
+R7
+R8
+!s100 GZ=ab1fi9UUeb?:aWmd9Z2
+!i10b 1
+!s85 0
+!i111 0

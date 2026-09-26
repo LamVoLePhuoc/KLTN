@@ -191,6 +191,9 @@ module tb_mmu_core;
         .Mem_WriteEnM       (Mem_WriteEnM),
         .Mem_ReadEnM        (Mem_ReadEnM),
         .MemOpM             (MemOpM),
+        .Mem_AmoRmwM        (),
+        .Mem_AmoOpM         (),
+        .Mem_AmoOperandM    (),
         .Mem_ReadDataM      (Mem_ReadDataM),
         .Mem_ReadDataValidM (Mem_ReadDataValidM),
         .Mem_WriteDoneM     (Mem_WriteDoneM),
@@ -201,7 +204,17 @@ module tb_mmu_core;
         .Fetch_PageFault       (Fetch_PageFault),
         .Data_PageFault        (Data_PageFault),
         .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
-        .Data_PageFault_Cause  (Data_PageFault_Cause)
+        .Data_PageFault_Cause  (Data_PageFault_Cause),
+
+        // CSR-owned MMU observability is not part of this standalone
+        // external-control test (MMU_CTRL_FROM_CSR keeps its default
+        // value 0), but connect the output ports explicitly so lint/
+        // elaboration remains warning-clean as the wrapper evolves.
+        .CurrentPriv           (),
+        .Mmu_Enable_Csr        (),
+        .Satp_PPN_Csr          (),
+        .Mmu_Flush_Csr         (),
+        .FenceI_M              ()
     );
 
     // ------------------------------------------------------
@@ -340,6 +353,9 @@ module tb_mmu_core;
         check_eq32("x11 (mcause after not-present load trap)", dut.core.decode_unit.rf.Register[11], 32'd13);
 
         check_eq32("PA 0x4000 unchanged by blocked RO store", ram[32'h0000_4000 >> 2], 32'hDEAD_BEEF);
+        check_eq32("Code PTE has A set", ram[32'h0000_1004 >> 2], 32'h0000_204B);
+        check_eq32("RW data PTE has A+D set", ram[32'h0000_1008 >> 2], 32'h0000_30C7);
+        check_eq32("RO data PTE has A set", ram[32'h0000_1010 >> 2], 32'h0000_4043);
 
         if (data_fault_count < 2) begin
             $display("[FAIL] Data_PageFault pulse count: got=%0d expected>=2 (RO store + not-present load)", data_fault_count);

@@ -119,7 +119,9 @@ module tb_csr_trap;
 
         .Mem_AddrM(Mem_AddrM), .Mem_WriteDataM(Mem_WriteDataM),
         .Mem_WriteEnM(Mem_WriteEnM), .Mem_ReadEnM(Mem_ReadEnM),
-        .MemOpM(MemOpM), .Mem_ReadDataM(Mem_ReadDataM),
+        .MemOpM(MemOpM),
+        .Mem_AmoRmwM(), .Mem_AmoOpM(), .Mem_AmoOperandM(),
+        .Mem_ReadDataM(Mem_ReadDataM),
 
         // No MMU in this testbench (VA=PA transparently, see header) --
         // loop Mem_AddrM (this core's own output) back into the new
@@ -135,7 +137,9 @@ module tb_csr_trap;
         .CurrentPriv(CurrentPriv),
         .Mmu_Enable_Csr(Mmu_Enable_Csr),
         .Satp_PPN_Csr(Satp_PPN_Csr),
-        .Mmu_Flush_Csr(Mmu_Flush_Csr)
+        .Mstatus_Sum(), .Mstatus_Mxr(),
+        .Mmu_Flush_Csr(Mmu_Flush_Csr),
+        .FenceI_M()
     );
 
     // ------------------------------------------------------

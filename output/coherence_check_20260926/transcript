@@ -1,0 +1,20 @@
+# vsim -do {run -all; quit -f} -lib work -c tb_coherence 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# Loading work.tb_coherence(fast)
+# run -all 
+# ---------------------------------------------
+# tb_coherence: step A -- core0 cold read (expect 0, grant E)
+# COHERENCE_TB: FAIL (global timeout -- likely a hang in coherence_manager's FSM; dump waves)
+# ** Note: $finish    : ../../Risc_V_new/Risc_V/sim/tb_coherence.v(301)
+#    Time: 200 us  Iteration: 0  Instance: /tb_coherence

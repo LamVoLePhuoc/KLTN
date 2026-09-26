@@ -17,16 +17,15 @@
 // which has no mechanism for more than one in-flight memory access
 // at a time anyway, see Stall_Core_External throughout this repo).
 //
-// Deliberately NOT coherence-participating: no MESI state, no snoop
-// port. This repo's core has no privilege modes/self-modifying-code
-// support and no FENCE.I, so instruction memory is treated as
-// effectively read-only for the lifetime of a program -- if a data
-// store ever does write a text page, this cache can go stale with
-// no mechanism to notice. That is a real, deliberate simplification
-// (see Risc_V_new/README.md), not an oversight: keeping the I-side
-// out of the coherence protocol removes a large class of interlock
-// cases (snoop hits an I$ line mid-fetch) that a from-scratch,
-// unsimulated coherence implementation is safer without.
+// Deliberately NOT coherence-participating: no MSI state and no
+// snoop port.  Instruction/data synchronization is instead explicit:
+// core_l1_wrapper turns architectural FENCE.I into an ordered D$
+// clean followed by this cache's whole-cache invalidation while the
+// core is stalled.  External agents such as DMA must use the same
+// Cache_Flush hook after modifying executable memory.  Keeping I$
+// outside the directory avoids treating read-only instruction copies
+// as D$ sharers while still providing the required synchronization
+// point for self-modifying/generated code.
 // ============================================================
 // NOTE: hardcoded to WAYS=2 (matches address_mapping exactly) -- the
 // way index / LRU bit below are single bits, not a generic log2(WAYS)

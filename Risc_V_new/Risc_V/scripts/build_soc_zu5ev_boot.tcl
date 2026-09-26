@@ -95,7 +95,7 @@
 # real SD boot -- only actually booting the board is that proof.
 #
 # CORRECTNESS CAVEAT: same as build_soc_4core_trial.tcl -- this proves
-# wiring, not the MESI protocol (still unsimulated) or the boot
+# wiring, not board-level MSI behavior or the boot
 # handshake's real timing on hardware.
 #
 # HOW TO RUN
@@ -139,10 +139,14 @@ set script_dir [file dirname [file normalize [info script]]]
 set rtl_dir     [file normalize [file join $script_dir .. rtl]]
 
 set new_sources {
+    mmu_region_decode.v
+    mmu_debug_buffer.v
+    mmu_super_tlb.v
     l1_icache.v
     l1_dcache.v
     core_l1_wrapper.v
     l2_cache.v
+    cache_debug_buffer.v
     coherence_manager.v
     ahb_lite_l1_adapter.v
     ahb_lite_l1_slave_adapter.v
@@ -377,4 +381,4 @@ puts "     documented follow-up (swap mem_ctrl for a PS HP-port-backed DDR path)
 puts "  4. The PS-side SD loader (FSBL hook or bare-metal app) is described in README, not generated"
 puts "     by this script -- it is ARM software (Vitis/PetaLinux toolchain), out of scope for this"
 puts "     RTL/Tcl repo."
-puts "  5. Re-read the CORRECTNESS CAVEAT at the top of this file -- MESI is still unsimulated."
+puts "  5. MSI unit/AHB tests pass in Questa; board-level validation is still required."

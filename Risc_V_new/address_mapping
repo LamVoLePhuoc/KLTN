@@ -2,10 +2,16 @@ Virtual Address (VA) 32-bit — chia theo page
 VA (32-bit) = | VPN[1]: 10 bit | VPN[0]: 10 bit | Page Offset: 12 bit | 
 Page size = 4KB 
 2-level page table, mỗi bảng 1024 PTE x 4 byte = 4KB (vừa 1 page) 
+Leaf level 0 = page 4KB. Leaf level 1 = superpage 4MB và yêu cầu PTE.PPN[9:0]=0.
 
-TLB (mỗi core có 1 TLB riêng)
-16-entry, fully-associative 
-Mỗi entry: VPN(20 bit) → PPN(20 bit) + flags (V, R, W, X, U, G, A, D) 
+TLB (mỗi core có iTLB + dTLB riêng)
+16 entry = 4 set x 4 way, tree-PLRU theo từng set
+Set index = VPN[1:0], tag = VPN[19:2]
+Mỗi entry: VPN tag(18 bit) → PPN(20 bit) + flags (V, R, W, X, U, G, A, D)
+Valid bit tách khỏi tag/flags/PPN; tag-control và PPN data là các mảng memory
+riêng để thuận lợi ánh xạ LUTRAM/SRAM, không reset toàn bộ data array.
+Mỗi iTLB/dTLB có thêm 4 entry fully-associative cho superpage 4MB;
+match VPN[19:10], PPN hiệu dụng = {PTE.PPN[19:10], VPN[9:0]}.
 
 Physical Address (PA) sau khi dịch 
 PA = | PPN: 20 bit | Page Offset: 12 bit |
@@ -21,9 +27,22 @@ Offset = 5 bit
 Sets = 256KB/(32B×4) = 2048 → Index = 11 bit
 Tag = 32-5-11 = 16 bit
 
-Physical Address Map (4GB space) 
-0x0000_0000 – 0x0000_FFFF Boot ROM / Init code (64KB, BRAM) 
-0x0001_0000 – 0x7FFF_FFFF Reserved / unused 
+Virtual Address Map (4GB space)
+0x0000_0000 – 0x000F_FFFF Boot ROM / Init code (1MB, RX)
+0x0010_0000 – 0x3FFF_FFFF System / OS (RWX)
+0x4000_0000 – 0x7FFF_FFFF User program / text (RX)
+0x8000_0000 – 0xBFFF_FFFF User data / heap / stack (RW)
+0xC000_0000 – 0xFFFF_FFFF MMIO / reserved (RW, no instruction fetch)
+
+Ghi chú: chương trình user không bắt đầu tại 0x0000_0000; 1MB đầu được dành
+riêng cho boot/init. mmu_region_decode.v định nghĩa đúng các biên này.
+mmu_top.REGION_POLICY_ENABLE=1 mới bật coarse guard; module độc lập mặc định 0,
+nhưng core_l1_wrapper (đường SoC thật) mặc định bật 1. Quyền PTE R/W/X/U,
+SUM/MXR và A/D luôn được kiểm tra khi paging bật.
+
+Physical Address Map (4GB space)
+0x0000_0000 – 0x000F_FFFF Boot ROM / Init code (1MB, BRAM/boot memory)
+0x0010_0000 – 0x7FFF_FFFF Reserved / page tables / platform memory
 0x8000_0000 – 0xBFFF_FFFF Main RAM (cacheable) 
 0xC000_0000 – 0xFFFF_FFFF Reserved / unused 
 
