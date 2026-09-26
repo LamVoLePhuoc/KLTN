@@ -99,6 +99,17 @@ puts "--> [0] Registering MMU support RTL as design sources"
 
 set script_dir [file dirname [file normalize [info script]]]
 set rtl_dir [file normalize [file join $script_dir .. rtl]]
+
+proc find_rtl_source {rtl_root filename} {
+    set matches [concat \
+        [glob -nocomplain -types f [file join $rtl_root $filename]] \
+        [glob -nocomplain -types f [file join $rtl_root * $filename]] \
+        [glob -nocomplain -types f [file join $rtl_root * * $filename]]]
+    if {[llength $matches] != 1} {
+        error "Expected exactly one RTL source named $filename under $rtl_root, found [llength $matches]."
+    }
+    return [lindex $matches 0]
+}
 set mmu_sources {
     mmu_region_decode.v
     mmu_debug_buffer.v
@@ -108,10 +119,7 @@ set mmu_sources {
 }
 
 foreach source_name $mmu_sources {
-    set source_file [file join $rtl_dir $source_name]
-    if {![file exists $source_file]} {
-        error "Could not find $source_file. Adjust rtl_dir if your checkout layout differs."
-    }
+    set source_file [find_rtl_source $rtl_dir $source_name]
     if {[llength [get_files -quiet $source_name]] == 0} {
         add_files -norecurse $source_file
         puts "    added $source_name"

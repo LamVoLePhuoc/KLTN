@@ -116,6 +116,17 @@ puts "--> [0] Registering new RTL sources"
 set script_dir [file dirname [file normalize [info script]]]
 set rtl_dir     [file normalize [file join $script_dir .. rtl]]
 
+proc find_rtl_source {rtl_root filename} {
+    set matches [concat \
+        [glob -nocomplain -types f [file join $rtl_root $filename]] \
+        [glob -nocomplain -types f [file join $rtl_root * $filename]] \
+        [glob -nocomplain -types f [file join $rtl_root * * $filename]]]
+    if {[llength $matches] != 1} {
+        error "Expected exactly one RTL source named $filename under $rtl_root, found [llength $matches]."
+    }
+    return [lindex $matches 0]
+}
+
 set new_sources {
     mmu_region_decode.v
     mmu_debug_buffer.v
@@ -136,10 +147,7 @@ set new_sources {
 }
 
 foreach f $new_sources {
-    set full_path [file join $rtl_dir $f]
-    if {![file exists $full_path]} {
-        error "Could not find $full_path -- adjust $rtl_dir at the top of this script if your checkout layout differs."
-    }
+    set full_path [find_rtl_source $rtl_dir $f]
     if {[llength [get_files -quiet $f]] == 0} {
         add_files -norecurse $full_path
         puts "    added $f"

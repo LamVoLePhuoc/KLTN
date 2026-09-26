@@ -20,7 +20,7 @@
 #   a small PS-side loader reads the RISC-V program from the SD
 #   card's FAT32 filesystem into DRAM -> PS writes boot_ctrl.v's GO
 #   bit -> RISC-V cores (held in reset until then) start fetching.
-# See rtl/boot_ctrl.v and rtl/quad_core_axi_wrapper_ahb_bootable.v's
+# See rtl/boot/boot_ctrl.v and rtl/soc/quad_core_axi_wrapper_ahb_bootable.v's
 # headers for the PL-side half of this; see README for the PS-side
 # loader software (a completely different toolchain -- ARM bare-metal
 # / FSBL, not something this repo hand-assembles).
@@ -41,7 +41,7 @@
 #                                                          from BOTH cpu0
 #                                                          AND ps0)
 #
-# boot_ctrl (inside cpu0, see rtl/quad_core_axi_wrapper_ahb_bootable.v)
+# boot_ctrl (inside cpu0, see rtl/soc/quad_core_axi_wrapper_ahb_bootable.v)
 # is reachable from BOTH cpu0's own M_AXI (RISC-V writes its PASS/FAIL
 # result there) and ps0's GP master (PS writes GO, reads the result
 # back) -- see boot_ctrl.v's header for why the result is routed
@@ -65,7 +65,7 @@
 #     this board exposes a PL-reachable UART-capable connector (see
 #     boot_ctrl.v's header). NOT the automated PASS/FAIL path.
 #   - New slave reachable from BOTH cpu0 and ps0: boot_ctrl's
-#     S_AXI_BOOT port -- see rtl/boot_ctrl.v.
+#     S_AXI_BOOT port -- see rtl/boot/boot_ctrl.v.
 #   - Still BRAM for mem_ctrl, NOT the PS's real DDR via an HP port --
 #     same reasoning as the 1-core/4-core scripts (prove the wiring
 #     elaborates first, swap in real DDR once that's confirmed). This
@@ -138,6 +138,17 @@ puts "--> [0] Registering RTL sources"
 set script_dir [file dirname [file normalize [info script]]]
 set rtl_dir     [file normalize [file join $script_dir .. rtl]]
 
+proc find_rtl_source {rtl_root filename} {
+    set matches [concat \
+        [glob -nocomplain -types f [file join $rtl_root $filename]] \
+        [glob -nocomplain -types f [file join $rtl_root * $filename]] \
+        [glob -nocomplain -types f [file join $rtl_root * * $filename]]]
+    if {[llength $matches] != 1} {
+        error "Expected exactly one RTL source named $filename under $rtl_root, found [llength $matches]."
+    }
+    return [lindex $matches 0]
+}
+
 set new_sources {
     mmu_region_decode.v
     mmu_debug_buffer.v
@@ -160,10 +171,7 @@ set new_sources {
 }
 
 foreach f $new_sources {
-    set full_path [file join $rtl_dir $f]
-    if {![file exists $full_path]} {
-        error "Could not find $full_path -- adjust $rtl_dir at the top of this script if your checkout layout differs."
-    }
+    set full_path [find_rtl_source $rtl_dir $f]
     if {[llength [get_files -quiet $f]] == 0} {
         add_files -norecurse $full_path
         puts "    added $f"
