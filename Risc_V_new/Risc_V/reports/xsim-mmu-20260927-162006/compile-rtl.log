@@ -1,0 +1,105 @@
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/ALU.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module ALU
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/ALU_Decoder.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module ALU_Decoder
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/Control_Unit.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module Control_Unit
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/Main_Decoder.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module Main_Decoder
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/Mux_3_by_1.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module Mux_3_by_1
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/PC_Adder.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module PC_Adder
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/PC_module.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module PC_module
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/Register_File.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module Register_File
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/Sign_Extend.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module Sign_Extend
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/csr_trap_unit.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module csr_trap_unit
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/decode_stage.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module decode_stage
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/ex_mem_registers.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module ex_mem_registers
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/execute_stage.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module execute_stage
+INFO: [VRFC 10-311] analyzing module MDU
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/fetch_stage.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module fetch_stage
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/hazard_unit.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module hazard_unit
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/id_ex_registers.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module id_ex_registers
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/if_id_registers.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module if_id_registers
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/load_unit.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module load_unit
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/mem_wb_registers.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mem_wb_registers
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/memory_stage.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module memory_stage
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/mux.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mux
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/RV32IMA.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module RV32IMA
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/store_unit.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module store_unit
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/sys_decoder.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module sys_decoder
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/core/writeback_stage.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module writeback_stage
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/debug/mmu_debug_buffer.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_debug_buffer
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_region_decode.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_region_decode
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_tlb.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_tlb
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_super_tlb.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_super_tlb
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_ptw.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_ptw
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_top.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_top
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_core_wrapper.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_core_wrapper
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/mmu/mmu_ip_wrapper.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module mmu_ip_wrapper
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/debug/cache_debug_buffer.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module cache_debug_buffer
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/cache/l1_icache.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module l1_icache
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/cache/l1_dcache.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module l1_dcache
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/cache/l2_cache.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module l2_cache
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/cache/core_l1_wrapper.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module core_l1_wrapper
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/coherence/coherence_manager.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module coherence_manager
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/interconnect/ahb/ahb_lite_l1_adapter.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module ahb_lite_l1_adapter
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/interconnect/ahb/ahb_lite_l1_slave_adapter.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module ahb_lite_l1_slave_adapter
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/boot/boot_ctrl.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module boot_ctrl
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/soc/quad_core_soc.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module quad_core_soc
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/soc/quad_core_soc_ahb.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module quad_core_soc_ahb
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/soc/quad_core_axi_wrapper.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module quad_core_axi_wrapper
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/soc/quad_core_axi_wrapper_ahb.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module quad_core_axi_wrapper_ahb
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/soc/quad_core_axi_wrapper_bootable.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module quad_core_axi_wrapper_bootable
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/soc/quad_core_axi_wrapper_ahb_bootable.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module quad_core_axi_wrapper_ahb_bootable
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/legacy_2core/round_robin_arbiter_2core.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module round_robin_arbiter_2core
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/legacy_2core/RV32_IP_Wrapper.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module RV32IMA_IP_Wrapper
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/legacy_2core/RV32IMA_DualCore_Wrapper.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module RV32IMA_DualCore_Wrapper
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/legacy_2core/RV32IMA_DualCore_BoardTop.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module RV32IMA_DualCore_BoardTop

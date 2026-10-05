@@ -7,8 +7,8 @@
 // Risc_V_new/README.md's boot-flow section for the full picture and
 // WHY this exists in this shape). Deliberately tiny and simple --
 // this is exactly the kind of "provably correct by inspection" block
-// this session favors when no simulator is available: 2 registers, 1
-// one-shot output, no FSM beyond the AXI4-Lite handshake itself.
+// this session favors: a small register bank, one-shot outputs and no
+// FSM beyond the AXI4-Lite handshake itself.
 //
 // THE PROBLEM THIS SOLVES: on Genesys ZU-5EV, the microSD card is
 // wired to the Zynq UltraScale+ PS's own hardened SD controller (MIO
@@ -70,6 +70,12 @@
 // the RISC-V cores are actually released and running -- i.e. after
 // GO is already 1. There is no ordering hazard to reason about beyond
 // that.
+//
+// A fourth register at offset 0xC closes the control loop for
+// non-coherent DMA after boot: PS software can request a global cache
+// clean/invalidate and poll BUSY/DONE/ERROR/REJECTED without relying on
+// board-level GPIO. See docs/BOOT_DMA_PROTOCOL.md for the required
+// quiesce-before-DMA and post-DMA invalidate sequence.
 // ============================================================
 module boot_ctrl (
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 S_AXI_ACLK CLK" *)
@@ -82,7 +88,7 @@ module boot_ctrl (
     // ---- AXI4-Lite slave (32-bit data/addr, single-beat only -- no
     // bursts, nothing here needs them) ----
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWADDR" *)
-    input  wire [3:0]  S_AXI_AWADDR,   // only bits[3:2] used (2 registers)
+    input  wire [3:0]  S_AXI_AWADDR,   // bits[3:2] select four word registers
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWVALID" *)
     input  wire        S_AXI_AWVALID,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWREADY" *)
@@ -91,7 +97,7 @@ module boot_ctrl (
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WDATA" *)
     input  wire [31:0] S_AXI_WDATA,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WSTRB" *)
-    input  wire [3:0]  S_AXI_WSTRB,    // ignored: both registers are whole-word, byte lanes don't matter here
+    input  wire [3:0]  S_AXI_WSTRB,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WVALID" *)
     input  wire        S_AXI_WVALID,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WREADY" *)
@@ -127,18 +133,29 @@ module boot_ctrl (
     // quad_core_axi_wrapper_bootable.v) is what actually combines this
     // with the system ARESETN, so the polarity used here is a purely
     // internal, local choice.
-    output wire        core_go
+    output wire        core_go,
+
+    // ---- cache-maintenance bridge for PS-controlled DMA ----
+    // Write bit0=1 to REG_CACHE (0xC) to emit one request pulse. The
+    // command is accepted only after GO and while the hierarchy is idle.
+    input  wire        cache_flush_busy,
+    input  wire        cache_flush_done,
+    input  wire        cache_flush_error,
+    output reg         cache_flush_request
 );
 
     localparam [1:0] REG_CTRL   = 2'b00, // offset 0x0: bit0 = GO (write-1, sticky, see header)
                       REG_STATUS = 2'b01, // offset 0x4: read-only mirror of GO, for PS-side polling/debug
-                      REG_RESULT = 2'b10; // offset 0x8: RISC-V writes its PASS/FAIL code here, PS reads it (see header)
+                      REG_RESULT = 2'b10, // offset 0x8: RISC-V writes its PASS/FAIL code here, PS reads it (see header)
+                      REG_CACHE  = 2'b11; // offset 0xC: bit0 busy, bit1 done, bit2 error, bit3 rejected
 
     assign S_AXI_BRESP = 2'b00; // OKAY, always -- no invalid-address/permission concept worth reporting here
     assign S_AXI_RRESP = 2'b00;
 
     reg        go_reg;
     reg [31:0] result_reg;
+    reg        cache_done_latched;
+    reg        cache_reject_latched;
     assign core_go = go_reg;
 
     // ------------------------------------------------------
@@ -153,12 +170,21 @@ module boot_ctrl (
             S_AXI_BVALID  <= 1'b0;
             go_reg        <= 1'b0;
             result_reg    <= 32'b0;
+            cache_flush_request <= 1'b0;
+            cache_done_latched  <= 1'b0;
+            cache_reject_latched<= 1'b0;
         end
         else begin
             // Default: only assert *READY for exactly the one cycle
             // the transfer is accepted (below), never held high.
             S_AXI_AWREADY <= 1'b0;
             S_AXI_WREADY  <= 1'b0;
+            cache_flush_request <= 1'b0;
+
+            // Done is a pulse at the hierarchy boundary; retain it until
+            // software submits the next accepted maintenance command.
+            if (cache_flush_done)
+                cache_done_latched <= 1'b1;
 
             if (S_AXI_AWVALID && S_AXI_WVALID && !S_AXI_BVALID) begin
                 S_AXI_AWREADY <= 1'b1;
@@ -170,7 +196,8 @@ module boot_ctrl (
                         // later write of 0 must NOT clear it (see header:
                         // one-shot release, no software-visible way back
                         // into reset through this register).
-                        go_reg <= go_reg | S_AXI_WDATA[0];
+                        if (S_AXI_WSTRB[0])
+                            go_reg <= go_reg | S_AXI_WDATA[0];
                     end
                     REG_RESULT: begin
                         // Plain overwrite -- the RISC-V program can write
@@ -179,7 +206,22 @@ module boot_ctrl (
                         // code); only the LAST value before the PS reads
                         // it is what matters, no stickiness needed here
                         // unlike REG_CTRL.
-                        result_reg <= S_AXI_WDATA;
+                        if (S_AXI_WSTRB[0]) result_reg[7:0]   <= S_AXI_WDATA[7:0];
+                        if (S_AXI_WSTRB[1]) result_reg[15:8]  <= S_AXI_WDATA[15:8];
+                        if (S_AXI_WSTRB[2]) result_reg[23:16] <= S_AXI_WDATA[23:16];
+                        if (S_AXI_WSTRB[3]) result_reg[31:24] <= S_AXI_WDATA[31:24];
+                    end
+                    REG_CACHE: begin
+                        if (S_AXI_WSTRB[0] && S_AXI_WDATA[0]) begin
+                            if (go_reg && !cache_flush_busy) begin
+                                cache_flush_request  <= 1'b1;
+                                cache_done_latched   <= 1'b0;
+                                cache_reject_latched <= 1'b0;
+                            end
+                            else begin
+                                cache_reject_latched <= 1'b1;
+                            end
+                        end
                     end
                     default: ; // REG_STATUS is read-only, writes to it are silently ignored
                 endcase
@@ -209,6 +251,10 @@ module boot_ctrl (
                     REG_CTRL:   S_AXI_RDATA <= {31'b0, go_reg};
                     REG_STATUS: S_AXI_RDATA <= {31'b0, go_reg};
                     REG_RESULT: S_AXI_RDATA <= result_reg;
+                    REG_CACHE:  S_AXI_RDATA <= {28'b0, cache_reject_latched,
+                                                cache_flush_error,
+                                                cache_done_latched,
+                                                cache_flush_busy};
                     default:    S_AXI_RDATA <= 32'b0;
                 endcase
             end

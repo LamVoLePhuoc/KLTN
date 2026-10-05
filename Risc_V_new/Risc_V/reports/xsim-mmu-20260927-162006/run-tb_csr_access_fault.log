@@ -1,0 +1,23 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_csr_access_fault_behav/xsim_script.tcl
+# xsim {tb_csr_access_fault_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] instruction access fault cause=1
+[PASS] mepc captures faulting instruction
+[PASS] mtval captures fault address
+[PASS] load access fault cause=5
+[PASS] mepc captures faulting instruction
+[PASS] mtval captures fault address
+[PASS] store access fault cause=7
+[PASS] mepc captures faulting instruction
+[PASS] mtval captures fault address
+CSR_ACCESS_FAULT_TB: PASS
+$finish called at time : 103 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_csr_access_fault.v" Line 104
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Sep 27 16:21:16 2026...

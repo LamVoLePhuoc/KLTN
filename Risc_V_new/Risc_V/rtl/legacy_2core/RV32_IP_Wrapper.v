@@ -87,6 +87,8 @@ module RV32IMA_IP_Wrapper #(
         // keep this file's behaviour exactly as it was.
         .Fetch_PageFault_In (1'b0),
         .Data_PageFault_In  (1'b0),
+        .Fetch_AccessFault_In(1'b0),
+        .Data_AccessFault_In (1'b0),
 
         // NEW (another session, same sanctioned exception -- see
         // RV32IMA_DualCore_Wrapper.v's identical comment): RV32IMA.v

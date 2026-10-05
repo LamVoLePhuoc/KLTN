@@ -17,17 +17,15 @@
 // instruction and data misses/writebacks are already serialized
 // onto the one mem_* port coherence_manager.v exposes.
 //
-// WSTRB is always 4'b1111 (full word): every write that reaches this
-// port is a whole cache line's worth of 32-bit beats (line fill /
-// victim writeback), never a byte/half store -- L1 D$ already does
-// byte-granular merging locally (see l1_dcache.v's merge_line),
-// long before a request ever reaches this port.
+// Cached writebacks use WSTRB=4'b1111.  Uncached/MMIO SB/SH/SW
+// requests bypass L1/L2 and carry their architectural byte strobes
+// through coherence_manager's mem_wstrb sideband.
 //
 // Same protocol-compliance rationale as mmu_ip_wrapper.v: hold
 // *VALID until the matching *READY, single outstanding transaction,
-// RRESP/BRESP not inspected (see that file's header for why -- no
-// trap/exception unit anywhere in this design yet to report a real
-// bus error into).
+// RRESP/BRESP[1] are sampled with the matching completion and carried
+// through L2/coherence/L1 to the originating core. A failed line fill
+// is never installed; it becomes an instruction/load/store access fault.
 // ============================================================
 module quad_core_axi_wrapper #(
     parameter [31:0] RESET_ADDR0 = 32'h0000_1000,
@@ -49,6 +47,9 @@ module quad_core_axi_wrapper #(
     // real external hook, OR'd with each core's own sfence.vma flush.
     input  wire         Mmu_Flush,
     input  wire         Cache_Flush,
+    output wire         Cache_Flush_Busy,
+    output wire         Cache_Flush_Done,
+    output wire         Cache_Flush_Error,
 
     // ---------------- Debug ----------------
     output wire [31:0] ResultW0, output wire [31:0] ResultW1, output wire [31:0] ResultW2, output wire [31:0] ResultW3,
@@ -102,8 +103,10 @@ module quad_core_axi_wrapper #(
     wire        mem_we;
     wire [31:0] mem_addr;
     wire [31:0] mem_wdata;
+    wire [3:0]  mem_wstrb;
     wire [31:0] mem_rdata;
     wire        mem_valid;
+    wire        mem_error;
 
     quad_core_soc #(
         .RESET_ADDR0(RESET_ADDR0), .RESET_ADDR1(RESET_ADDR1),
@@ -112,13 +115,14 @@ module quad_core_axi_wrapper #(
         .clk(ACLK), .rst(core_rst),
         .Mmu_Flush(Mmu_Flush),
         .Cache_Flush(Cache_Flush),
+        .Cache_Flush_Busy(Cache_Flush_Busy), .Cache_Flush_Done(Cache_Flush_Done), .Cache_Flush_Error(Cache_Flush_Error),
         .ResultW0(ResultW0), .ResultW1(ResultW1), .ResultW2(ResultW2), .ResultW3(ResultW3),
         .Fetch_PageFault0(Fetch_PageFault0), .Fetch_PageFault1(Fetch_PageFault1),
         .Fetch_PageFault2(Fetch_PageFault2), .Fetch_PageFault3(Fetch_PageFault3),
         .Data_PageFault0(Data_PageFault0), .Data_PageFault1(Data_PageFault1),
         .Data_PageFault2(Data_PageFault2), .Data_PageFault3(Data_PageFault3),
-        .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid)
+        .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),
+        .mem_rdata(mem_rdata), .mem_valid(mem_valid), .mem_error(mem_error)
     );
 
     // ------------------------------------------------------
@@ -126,18 +130,49 @@ module quad_core_axi_wrapper #(
     // ARREADY, then wait RVALID, RREADY always 1" pattern as
     // mmu_ip_wrapper.v.
     // ------------------------------------------------------
+    // coherence_manager emits a one-cycle request pulse, then waits for
+    // mem_valid.  Latch that pulse so AXI *VALID remains asserted until
+    // the corresponding *READY handshake, including under backpressure.
+    reg        req_pending;
+    reg        req_we;
+    reg [31:0] req_addr;
+    reg [31:0] req_wdata;
+    reg [3:0]  req_wstrb;
     reg ar_done;
     always @(posedge ACLK) begin
-        if (!ARESETN) ar_done <= 1'b0;
-        else if (M_AXI_RVALID && M_AXI_RREADY) ar_done <= 1'b0;
-        else if (M_AXI_ARVALID && M_AXI_ARREADY) ar_done <= 1'b1;
+        if (!ARESETN) begin
+            req_pending <= 1'b0;
+            req_we      <= 1'b0;
+            req_addr    <= 32'b0;
+            req_wdata   <= 32'b0;
+            req_wstrb   <= 4'b0;
+            ar_done     <= 1'b0;
+        end
+        else begin
+            if (mem_req_valid && !req_pending) begin
+                req_pending <= 1'b1;
+                req_we      <= mem_we;
+                req_addr    <= mem_addr;
+                req_wdata   <= mem_wdata;
+                req_wstrb   <= mem_wstrb;
+            end
+            if (M_AXI_RVALID && M_AXI_RREADY) begin
+                req_pending <= 1'b0;
+                ar_done     <= 1'b0;
+            end
+            else if (M_AXI_ARVALID && M_AXI_ARREADY) begin
+                ar_done <= 1'b1;
+            end
+            if (M_AXI_BVALID && M_AXI_BREADY)
+                req_pending <= 1'b0;
+        end
     end
 
-    assign M_AXI_ARADDR  = mem_addr;
-    assign M_AXI_ARVALID = mem_req_valid & ~mem_we & ~ar_done;
-    assign M_AXI_RREADY  = 1'b1;
+    assign M_AXI_ARADDR  = req_addr;
+    assign M_AXI_ARVALID = req_pending & ~req_we & ~ar_done;
+    assign M_AXI_RREADY  = req_pending & ~req_we;
     assign mem_rdata      = M_AXI_RDATA;
-    wire   read_done_pulse = M_AXI_RVALID;
+    wire   read_done_pulse = M_AXI_RVALID && M_AXI_RREADY;
 
     // ------------------------------------------------------
     // Write channel (mem_we == 1) -- AWREADY/WREADY tracked
@@ -160,14 +195,16 @@ module quad_core_axi_wrapper #(
         end
     end
 
-    assign M_AXI_AWADDR  = mem_addr;
-    assign M_AXI_AWVALID = mem_req_valid & mem_we & ~aw_done;
-    assign M_AXI_WDATA   = mem_wdata;
-    assign M_AXI_WSTRB   = 4'b1111; // always a full word -- see header
-    assign M_AXI_WVALID  = mem_req_valid & mem_we & ~w_done;
-    assign M_AXI_BREADY  = 1'b1;
-    wire   write_done_pulse = M_AXI_BVALID;
+    assign M_AXI_AWADDR  = req_addr;
+    assign M_AXI_AWVALID = req_pending & req_we & ~aw_done;
+    assign M_AXI_WDATA   = req_wdata;
+    assign M_AXI_WSTRB   = req_wstrb;
+    assign M_AXI_WVALID  = req_pending & req_we & ~w_done;
+    assign M_AXI_BREADY  = req_pending & req_we;
+    wire   write_done_pulse = M_AXI_BVALID && M_AXI_BREADY;
 
-    assign mem_valid = mem_we ? write_done_pulse : read_done_pulse;
+    assign mem_valid = req_we ? write_done_pulse : read_done_pulse;
+    assign mem_error = req_we ? (write_done_pulse & M_AXI_BRESP[1]) :
+                                (read_done_pulse  & M_AXI_RRESP[1]);
 
 endmodule

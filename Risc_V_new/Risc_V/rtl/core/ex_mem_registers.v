@@ -21,7 +21,7 @@ module ex_mem_registers(
     // these two reached E; CsrWDataE is different -- computed fresh
     // inside execute_stage.v (forwarded rs1 vs. zero-extended uimm,
     // see that file), not threaded from D at all ---
-    input  wire [7:0]  ExcFlagsE,
+    input  wire [8:0]  ExcFlagsE,
     input  wire [31:0] InstrE,
     input  wire [31:0] CsrWDataE,
 
@@ -42,7 +42,7 @@ module ex_mem_registers(
     output reg         CSR_M,
     output reg         Fence_M,
 
-    output reg  [7:0]  ExcFlagsM,
+    output reg  [8:0]  ExcFlagsM,
     output reg  [31:0] InstrM,
     output reg  [31:0] CsrWDataM,
 
@@ -63,7 +63,7 @@ module ex_mem_registers(
             MemOpM      <= 3'b000;
             CSR_M       <= 1'b0;
             Fence_M     <= 1'b0;
-            ExcFlagsM   <= 8'b0;
+            ExcFlagsM   <= 9'b0;
             InstrM      <= 32'h00000013;
             CsrWDataM   <= 32'b0;
 
@@ -83,7 +83,7 @@ module ex_mem_registers(
             MemOpM      <= 3'b000;
             CSR_M       <= 1'b0;
             Fence_M     <= 1'b0;
-            ExcFlagsM   <= 8'b0;
+            ExcFlagsM   <= 9'b0;
             InstrM      <= 32'h00000013;
             CsrWDataM   <= 32'b0;
 

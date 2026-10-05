@@ -45,11 +45,12 @@ module tb_mmu_policy;
         .va_mem(va_mem), .mem_req(mem_req),
         .mem_is_store(mem_is_store), .pa_mem(pa_mem),
         .fetch_fault(fetch_fault), .mem_fault(mem_fault),
+        .fetch_access_fault(), .mem_access_fault(),
         .fetch_fault_cause(fetch_fault_cause),
         .mem_fault_cause(mem_fault_cause),
         .ptw_mem_req(ptw_mem_req), .ptw_mem_we(),
         .ptw_mem_addr(ptw_mem_addr), .ptw_mem_wdata(),
-        .ptw_mem_rdata(32'b0), .ptw_mem_valid(1'b0),
+        .ptw_mem_rdata(32'b0), .ptw_mem_valid(1'b0), .ptw_mem_error(1'b0),
         .busy(busy),
         .debug_trace_rd_index(trace_read_index),
         .debug_trace_rd_data(trace_read_data),
@@ -57,7 +58,8 @@ module tb_mmu_policy;
         .debug_trace_write_index(trace_write_index),
         .debug_controller_state(controller_state),
         .debug_fetch_region(fetch_region),
-        .debug_mem_region(mem_region)
+        .debug_mem_region(mem_region),
+        .ptw_timeout_error()
     );
 
     initial clk = 1'b0;

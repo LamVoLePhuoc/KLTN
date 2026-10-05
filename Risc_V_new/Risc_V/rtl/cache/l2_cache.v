@@ -22,8 +22,9 @@
 // This module is deliberately "dumb": one synchronous command in,
 // one registered response out, one cycle of latency, no sequencing
 // of its own. All protocol decisions (snoop-before-share, eviction,
-// fetch-from-memory, directory updates) live in coherence_manager.v,
-// which issues LOOKUP/WRITE commands here the same way a CPU issues
+// fetch-from-memory, directory updates) live in cache_controller_mmu
+// (implemented by the coherence_manager policy engine), which issues
+// LOOKUP/WRITE commands here the same way a CPU issues
 // commands to a plain single-port RAM with a directory bolted on.
 //
 // Directory encoding: ONLY a sharers[3:0] bitmap, no separate

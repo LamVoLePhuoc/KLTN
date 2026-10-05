@@ -4,8 +4,8 @@
 // ahb_lite_l1_slave_adapter
 //
 // The other half of the pair with ahb_lite_l1_adapter.v: an AHB-
-// Lite SLAVE that receives the 8 sequential single-word transfers
-// ahb_lite_l1_adapter.v issues per line-fill/writeback, and speaks
+// Lite SLAVE that receives either the 8 sequential single-word transfers
+// issued per line-fill/writeback or one non-cacheable MMIO transfer, and speaks
 // coherence_manager.v's per-core D$ request shape
 // (dreq_valid/dreq_type/dreq_addr/dreq_line <-> dresp_valid/
 // dresp_line/dresp_state) on the other side. Also usable, as-is, for
@@ -28,6 +28,8 @@
 // old correctness bug where the bridge collapsed RFO into READ and
 // let an L1 enter M without invalidating sibling sharers. MSI read
 // fills are always S, so no response-state sideband is needed.
+// HPROT[3]==0 selects the UNCACHED native request; HSIZE and HADDR[1:0]
+// reconstruct byte strobes for device writes.
 //
 // Read path: on the FIRST word (word_idx==0) of a fresh line-read,
 // immediately issues dreq_valid (type=READ) and holds HREADYOUT low
@@ -45,6 +47,8 @@
 // "posted write" -- would let the requesting L1 believe the
 // writeback finished before it actually reached L2, a real race;
 // this adapter deliberately does not do that.)
+// Backend dresp_error is held as AHB ERROR until the master completes
+// the stalled data phase; it is not collapsed into an OKAY response.
 // ============================================================
 module ahb_lite_l1_slave_adapter (
     input  wire         HCLK,
@@ -56,9 +60,11 @@ module ahb_lite_l1_slave_adapter (
     input  wire [1:0]    HTRANS,
     input  wire [31:0]   HWDATA,
     input  wire          HMASTLOCK,
+    input  wire [2:0]    HSIZE,
+    input  wire [3:0]    HPROT,
     output reg            HREADYOUT,
     output reg  [31:0]    HRDATA,
-    output wire [1:0]     HRESP,      // tied OKAY -- see ahb_lite_l1_adapter.v's header
+    output wire [1:0]     HRESP,
 
     // ---- coherence_manager.v-shaped request/response (D$ shape;
     // for an I$ caller, just leave dreq_type/dresp_state unconnected) ----
@@ -67,14 +73,19 @@ module ahb_lite_l1_slave_adapter (
     output reg  [31:0]   dreq_addr,
     output reg  [255:0]  dreq_line,
     input  wire          dresp_valid,
+    input  wire          dresp_error,
     input  wire [255:0]  dresp_line,
     input  wire [1:0]    dresp_state
 );
 
     localparam [1:0] TRANS_NONSEQ = 2'b10;
-    localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01, REQ_WRITEBACK = 2'b10;
+    localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01,
+                     REQ_WRITEBACK = 2'b10, REQ_UNCACHED = 2'b11;
 
-    assign HRESP = 2'b00; // OKAY, always -- see ahb_lite_l1_adapter.v's header
+    // Hold ERROR through the completed AHB data phase. The backend pulse
+    // is consumed one edge before the master observes HREADYOUT high.
+    reg resp_error_hold;
+    assign HRESP = resp_error_hold ? 2'b01 : 2'b00;
 
     localparam [1:0] S_IDLE       = 2'd0,
                      S_WAIT_READ  = 2'd1,
@@ -85,8 +96,22 @@ module ahb_lite_l1_slave_adapter (
     reg [2:0]   word_idx;
     reg [31:0]  line_addr;
     reg         is_write;
+    reg         is_uncached;
+    reg [2:0]   transfer_size;
     reg [255:0] rd_buf;
     reg [255:0] wr_buf;
+
+    function [3:0] ahb_wstrb;
+        input [2:0] size;
+        input [1:0] byte_off;
+        begin
+            case (size)
+                3'b000: ahb_wstrb = 4'b0001 << byte_off;
+                3'b001: ahb_wstrb = byte_off[1] ? 4'b1100 : 4'b0011;
+                default: ahb_wstrb = 4'b1111;
+            endcase
+        end
+    endfunction
 
     always @(posedge HCLK or negedge HRESETn) begin
         if (!HRESETn) begin
@@ -94,25 +119,40 @@ module ahb_lite_l1_slave_adapter (
             word_idx   <= 3'd0;
             HREADYOUT  <= 1'b1;
             dreq_valid <= 1'b0;
+            resp_error_hold <= 1'b0;
+            is_uncached <= 1'b0;
+            transfer_size <= 3'b010;
         end
         else begin
             case (state)
                 // ------------------------------------------------
                 S_IDLE: begin
                     dreq_valid <= 1'b0;
+                    resp_error_hold <= 1'b0;
                     if (HTRANS == TRANS_NONSEQ) begin
+                        is_uncached <= ~HPROT[3];
+                        transfer_size <= HSIZE;
                         if (HWRITE) begin
                             // Address phase only. HWDATA belongs to the
                             // following data phase and is captured in
                             // S_WRITE_DATA, not here.
                             if (word_idx == 3'd0) line_addr <= HADDR;
                             is_write <= 1'b1;
-                            HREADYOUT <= (word_idx == 3'd7) ? 1'b0 : 1'b1;
+                            HREADYOUT <= (~HPROT[3] || (word_idx == 3'd7)) ? 1'b0 : 1'b1;
                             state <= S_WRITE_DATA;
                         end
                         else begin
                             is_write <= 1'b0;
-                            if (word_idx == 3'd0) begin
+                            if (~HPROT[3]) begin
+                                line_addr  <= HADDR;
+                                HREADYOUT  <= 1'b0;
+                                dreq_valid <= 1'b1;
+                                dreq_type  <= REQ_UNCACHED;
+                                dreq_addr  <= HADDR;
+                                dreq_line  <= 256'b0;
+                                state      <= S_WAIT_READ;
+                            end
+                            else if (word_idx == 3'd0) begin
                                 line_addr <= HADDR;
                                 // Word 0 of a read: wait for the whole
                                 // line from the coherence manager.
@@ -146,7 +186,17 @@ module ahb_lite_l1_slave_adapter (
                 // acknowledged by the coherence manager.
                 S_WRITE_DATA: begin
                     wr_buf[word_idx*32 +: 32] <= HWDATA;
-                    if (word_idx == 3'd7) begin
+                    if (is_uncached) begin
+                        HREADYOUT  <= 1'b0;
+                        dreq_valid <= 1'b1;
+                        dreq_type  <= REQ_UNCACHED;
+                        dreq_addr  <= line_addr;
+                        dreq_line  <= {{219{1'b0}}, 1'b1,
+                                       ahb_wstrb(transfer_size, line_addr[1:0]),
+                                       HWDATA};
+                        state      <= S_WAIT_WRITE;
+                    end
+                    else if (word_idx == 3'd7) begin
                         HREADYOUT  <= 1'b0;
                         dreq_valid <= 1'b1;
                         dreq_type  <= REQ_WRITEBACK;
@@ -169,10 +219,11 @@ module ahb_lite_l1_slave_adapter (
                     dreq_valid <= 1'b1;
                     if (dresp_valid) begin
                         dreq_valid <= 1'b0;
+                        resp_error_hold <= dresp_error;
                         rd_buf    <= dresp_line;
                         HRDATA    <= dresp_line[0 +: 32]; // word 0
                         HREADYOUT <= 1'b1;                // complete transfer 0 now
-                        word_idx  <= 3'd1;
+                        word_idx  <= is_uncached ? 3'd0 : 3'd1;
                         state     <= S_IDLE;
                     end
                     // else: still waiting, HREADYOUT stays low (held from before)
@@ -183,6 +234,7 @@ module ahb_lite_l1_slave_adapter (
                     dreq_valid <= 1'b1;
                     if (dresp_valid) begin
                         dreq_valid <= 1'b0;
+                        resp_error_hold <= dresp_error;
                         HREADYOUT <= 1'b1; // complete the final (8th) transfer now
                         word_idx  <= 3'd0;
                         state     <= S_IDLE;

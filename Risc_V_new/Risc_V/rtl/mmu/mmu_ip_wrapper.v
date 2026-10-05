@@ -37,13 +37,11 @@
 //   - RREADY/BREADY are held at 1 always (single-beat, unbuffered
 //     master -- always ready to accept the response the moment it
 //     arrives).
-//   - RRESP/BRESP are not inspected (SLVERR/DECERR are treated the
-//     same as OKAY, i.e. "the transaction completed"): this core has
-//     no trap/exception unit to report a real bus error into yet,
-//     matching mmu_core_wrapper's existing "no trap unit" limitation
-//     for page faults. Fine for a first architecture trial-fit; not
-//     fine to leave silently unfixed once bus errors need to mean
-//     something.
+//   - RRESP/BRESP are checked when the matching RVALID/BVALID completes.
+//     SLVERR/DECERR propagate through mmu_core_wrapper as architectural
+//     instruction/load/store access faults (mcause 1/5/7). For a PTW
+//     transaction the fault is attributed to the original virtual
+//     fetch/load/store and no TLB refill is allowed.
 //   - Mmu_Enable/Satp_PPN/Mmu_Flush and Snoop_Addr/Snoop_WE are not
 //     exposed as AXI-Lite registers here (out of scope for this
 //     trial) -- Mmu_Enable/Satp_PPN/Mmu_Flush are plain input ports
@@ -126,6 +124,8 @@ module mmu_ip_wrapper #(
     output wire [31:0] ALU_ResultE_Debug,
     output wire        Fetch_PageFault,
     output wire        Data_PageFault,
+    output wire        Fetch_AccessFault,
+    output wire        Data_AccessFault,
     output wire [1:0]  Fetch_PageFault_Cause,
     output wire [1:0]  Data_PageFault_Cause
 );
@@ -138,6 +138,7 @@ module mmu_ip_wrapper #(
     wire [31:0] PCF;
     wire [31:0] InstrF;
     wire        Instr_ValidF;
+    wire        Instr_ErrorF;
 
     wire [31:0] Mem_AddrM;
     wire [31:0] Mem_WriteDataM;
@@ -147,6 +148,8 @@ module mmu_ip_wrapper #(
     wire [31:0] Mem_ReadDataM;
     wire        Mem_ReadDataValidM;
     wire        Mem_WriteDoneM;
+    wire        Mem_ReadErrorM;
+    wire        Mem_WriteErrorM;
 
     mmu_core_wrapper #(
         .RESET_ADDR(RESET_ADDR)
@@ -165,6 +168,7 @@ module mmu_ip_wrapper #(
         .PCF                (PCF),
         .InstrF             (InstrF),
         .Instr_ValidF       (Instr_ValidF),
+        .Instr_ErrorF       (Instr_ErrorF),
 
         .Mem_AddrM          (Mem_AddrM),
         .Mem_WriteDataM     (Mem_WriteDataM),
@@ -177,12 +181,16 @@ module mmu_ip_wrapper #(
         .Mem_ReadDataM      (Mem_ReadDataM),
         .Mem_ReadDataValidM (Mem_ReadDataValidM),
         .Mem_WriteDoneM     (Mem_WriteDoneM),
+        .Mem_ReadErrorM     (Mem_ReadErrorM),
+        .Mem_WriteErrorM    (Mem_WriteErrorM),
 
         .ResultW            (ResultW),
         .ALU_ResultE_Debug  (ALU_ResultE_Debug),
 
         .Fetch_PageFault       (Fetch_PageFault),
         .Data_PageFault        (Data_PageFault),
+        .Fetch_AccessFault     (Fetch_AccessFault),
+        .Data_AccessFault      (Data_AccessFault),
         .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
         .Data_PageFault_Cause  (Data_PageFault_Cause),
         .CurrentPriv           (),
@@ -218,6 +226,7 @@ module mmu_ip_wrapper #(
     assign M_AXI_IMEM_ARVALID = ~imem_ar_done;
     assign M_AXI_IMEM_RREADY  = 1'b1;
     assign Instr_ValidF       = M_AXI_IMEM_RVALID;
+    assign Instr_ErrorF       = M_AXI_IMEM_RVALID & M_AXI_IMEM_RRESP[1];
     assign InstrF              = M_AXI_IMEM_RDATA;
 
     // =========================================================
@@ -242,6 +251,7 @@ module mmu_ip_wrapper #(
     assign M_AXI_DMEM_ARVALID = Mem_ReadEnM & ~dmem_ar_done;
     assign M_AXI_DMEM_RREADY  = 1'b1;
     assign Mem_ReadDataValidM = M_AXI_DMEM_RVALID;
+    assign Mem_ReadErrorM     = M_AXI_DMEM_RVALID & M_AXI_DMEM_RRESP[1];
 
     load_unit u_load_unit (
         .raw_data    (M_AXI_DMEM_RDATA),
@@ -279,6 +289,8 @@ module mmu_ip_wrapper #(
     assign M_AXI_DMEM_WVALID  = store_pending;
     assign M_AXI_DMEM_BREADY  = 1'b1;
     assign Mem_WriteDoneM     = store_pending & M_AXI_DMEM_BVALID;
+    assign Mem_WriteErrorM    = store_pending & M_AXI_DMEM_BVALID &
+                                M_AXI_DMEM_BRESP[1];
 
     always @(posedge ACLK) begin
         if (!ARESETN) begin

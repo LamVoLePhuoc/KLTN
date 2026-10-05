@@ -131,7 +131,6 @@ set new_sources {
     mmu_region_decode.v
     mmu_debug_buffer.v
     mmu_super_tlb.v
-    mmu_super_tlb.v
     l1_icache.v
     l1_dcache.v
     core_l1_wrapper.v
@@ -182,8 +181,11 @@ create_bd_design $BD_NAME
 #---------------------------------------------------------------
 puts "--> [2] Clock/reset network"
 
-create_bd_port -dir I sys_clk
+create_bd_port -dir I -type clk -freq_hz 100000000 sys_clk
 create_bd_port -dir I ext_reset_in
+
+# The explicit clock type and frequency are both required. A generic input
+# port does not propagate FREQ_HZ into AXI Interconnect's internal interfaces.
 
 set rst0 [create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0]
 connect_bd_net [get_bd_ports sys_clk]      [get_bd_pins $rst0/slowest_sync_clk]

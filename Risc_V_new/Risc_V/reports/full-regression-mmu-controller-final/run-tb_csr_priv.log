@@ -1,0 +1,38 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-mmu-controller-final\run-tb_csr_priv.log} -lib ../reports/.questa-work-95df10023e5c42508ff49ca1499ca7ca -c -quiet tb_csr_priv 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# ---------------------------------------------
+# tb_csr_priv checks
+# ---------------------------------------------
+# [PASS] x1 (M-mode ran): 0x00000111
+# [PASS] x2 (S-mode ran, first entry): 0x00000222
+# [PASS] x3 (U-mode ran, first entry): 0x00000333
+# [PASS] x4 (U resumed after delegated ECALL): 0x00000444
+# [PASS] x5 (scause after delegated ECALL): 0x00000008
+# [PASS] x6 (U resumed after non-deleg EBREAK): 0x00000555
+# [PASS] x7 (mcause after non-deleg EBREAK): 0x00000003
+# [PASS] x8 (final marker, full round trip): 0x00000666
+# [PASS] CurrentPriv ended in U: 0x00000000
+# [PASS] priv_hist_count: 6 transitions recorded
+# [PASS] priv_history[0] (M->S, first MRET): 0x00000001
+# [PASS] priv_history[1] (S->U, first SRET): 0x00000000
+# [PASS] priv_history[2] (U->S, delegated ECALL): 0x00000001
+# [PASS] priv_history[3] (S->U, second SRET): 0x00000000
+# [PASS] priv_history[4] (U->M, non-deleg EBREAK): 0x00000003
+# [PASS] priv_history[5] (M->U, second MRET): 0x00000000
+# ---------------------------------------------
+# CSR_PRIV_TB: PASS
+# ---------------------------------------------
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_csr_priv.v(320)
+#    Time: 8045 ns  Iteration: 1  Instance: /tb_csr_priv

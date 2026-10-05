@@ -32,7 +32,7 @@
 #                                             |--> M00 -> mem_ctrl (BRAM
 #   cpu0 (quad_core_axi_wrapper_ahb_bootable) |          stand-in for DDR)
 #     M_AXI -----------------------------S00--|--> M01 -> uart0 (axi_uartlite,
-#     S_AXI_BOOT (boot_ctrl's regs) <----------|          bonus/debug only)
+#     S_AXI_BOOT (GO/RESULT/CACHE regs) <-------|          bonus/debug only)
 #                                              |--> M02 -> dma0/S_AXI_LITE
 #   dma0 (axi_cdma)                           |
 #     M_AXI ------------------------------S01-/--> M03 -> cpu0/S_AXI_BOOT
@@ -43,8 +43,8 @@
 #
 # boot_ctrl (inside cpu0, see rtl/soc/quad_core_axi_wrapper_ahb_bootable.v)
 # is reachable from BOTH cpu0's own M_AXI (RISC-V writes its PASS/FAIL
-# result there) and ps0's GP master (PS writes GO, reads the result
-# back) -- see boot_ctrl.v's header for why the result is routed
+# result there) and ps0's GP master (PS writes GO, requests/polls cache
+# maintenance around DMA, and reads the result back) -- see boot_ctrl.v's header for why the result is routed
 # through here instead of through uart0's physical pins (their
 # existence on this board is unconfirmed -- see that header).
 #
@@ -283,7 +283,7 @@ if {[catch {set_property CONFIG.C_BAUDRATE {115200} [get_bd_cells $uart0]} uarte
 #    control port, boot_ctrl). boot_ctrl is reachable from BOTH cpu0
 #    and ps0 deliberately: the RISC-V program writes its PASS/FAIL
 #    result into boot_ctrl's REG_RESULT (via cpu0/M_AXI), and the PS
-#    both writes GO and reads RESULT back (via its own GP master) --
+#    writes GO, controls CACHE maintenance, and reads RESULT back (via its own GP master) --
 #    see boot_ctrl.v's header for why the result is routed through
 #    here rather than through uart0's physical pins.
 #---------------------------------------------------------------
@@ -347,10 +347,11 @@ foreach {space_pin} {cpu0/M_AXI dma0/M_AXI} {
 }
 
 puts "    NOTE: boot_ctrl's address as seen from cpu0/M_AXI (RISC-V side, writes REG_RESULT) and its"
-puts "    address as seen from ps0's GP master (PS side, writes REG_CTRL's GO bit + reads REG_RESULT)"
+puts "    address as seen from ps0's GP master (PS side, writes GO/CACHE + reads STATUS/RESULT)"
 puts "    can legitimately be DIFFERENT numbers -- each AXI master has its own address map, assigned"
 puts "    independently -- open the Address Editor tab and note BOTH down, you need both for the"
 puts "    RISC-V program's linker script / MMIO addresses and the PS-side loader's code (see README)."
+puts "    CACHE is offset 0xC; follow docs/BOOT_DMA_PROTOCOL.md before and after every DMA transfer."
 puts "    uart0's address (bonus/debug only, see step [4]) is whatever was auto-picked for cpu0/M_AXI."
 
 #---------------------------------------------------------------

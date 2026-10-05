@@ -1,6 +1,0 @@
-# vsim -do {run -all; quit -f} -lib {C:\Users\ADMIN\Documents\GitHub\KLTN\.codex-rtl-qa\work} -c tb_coherence 
-# ** Note: (vsim-3812) Design is being optimized...
-# 
-# ** Error: (vopt-2253) No module name found in command-line argument "C:\Users\ADMIN\Documents\GitHub\KLTN\.codex-rtl-qa\work.tb_coherence"
-# 
-# Error loading design

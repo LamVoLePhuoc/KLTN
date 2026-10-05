@@ -33,25 +33,25 @@ module RV32IMA #(
     output wire [31:0] Mem_AmoOperandM,
     input  wire [31:0] Mem_ReadDataM,
 
-    // NEW: trap/exception unit inputs -- page faults from whatever
+    // Trap/exception unit inputs -- page and physical-access faults from whatever
     // MMU sits between this core and Mem_*/PCF/InstrF (mmu_core_wrapper.v
     // today). Fetch_PageFault_In feeds if_id_registers.v so the fault
     // tags travel D->E->M in lockstep with the (already NOP-forced)
-    // instruction it belongs to; Data_PageFault_In is consumed
-    // directly at M-stage timing since mmu_core_wrapper.v already
-    // pulses it exactly when the faulting access resolves at the
-    // memory-stage boundary, no extra alignment needed.
+    // instruction they belong to; data faults are consumed directly
+    // at M-stage timing since mmu_core_wrapper.v pulses them exactly
+    // when the faulting access resolves at the memory-stage boundary.
     input  wire         Fetch_PageFault_In,
     input  wire         Data_PageFault_In,
+    input  wire         Fetch_AccessFault_In,
+    input  wire         Data_AccessFault_In,
 
     // Debug / WB
     output wire [31:0] ResultW,
     output wire [31:0] ALU_ResultE_Debug,
 
-    // NEW: csr_trap_unit.v observability + future MMU integration
-    // hooks -- see that file's header for why Satp_PPN_Csr/
-    // Mmu_Enable_Csr/Mmu_Flush_Csr are exposed but not yet actually
-    // wired to drive translation anywhere in this session's changes.
+    // csr_trap_unit.v observability and MMU integration hooks.
+    // mmu_core_wrapper can select these as the real translation
+    // controls with MMU_CTRL_FROM_CSR=1 (the integrated SoC does).
     output wire [1:0]  CurrentPriv,
     output wire        Mmu_Enable_Csr,
     output wire [19:0] Satp_PPN_Csr,
@@ -81,6 +81,7 @@ module RV32IMA #(
     wire [31:0] PCPlus4F;
     wire [31:0] InstrD, PCD, PCPlus4D;
     wire        FetchPageFaultD;               // NEW
+    wire        FetchAccessFaultD;
 
     // Decode outputs
     wire        RegWriteD;
@@ -96,7 +97,7 @@ module RV32IMA #(
 
     // NEW: privileged sub-decode (sys_decoder.v, via decode_stage.v)
     wire        IsEcallD, IsEbreakD, IsMretD, IsSretD, IsSfenceVmaD, IsPrivIllegalD, IsIllegalOpD;
-    wire [7:0]  ExcFlagsD; // {FetchPageFaultD, IsEcallD, IsEbreakD, IsMretD, IsSretD, IsSfenceVmaD, IsPrivIllegalD, IsIllegalOpD}
+    wire [8:0]  ExcFlagsD; // {FetchAccessFaultD, FetchPageFaultD, Ecall, Ebreak, Mret, Sret, Sfence, PrivIllegal, Illegal}
 
     wire [31:0] RD1_D, RD2_D;
     wire [31:0] Imm_Ext_D;
@@ -115,7 +116,7 @@ module RV32IMA #(
     wire        AtomicE, CSR_E, Fence_E;
     wire [4:0]  AmoOpE;        // NEW: RV32A funct5 in EX
     wire [6:0]  OpE;
-    wire [7:0]  ExcFlagsE;     // NEW
+    wire [8:0]  ExcFlagsE;     // NEW
     wire [31:0] InstrE;        // NEW
 
     wire [31:0] RD1_E, RD2_E, Imm_Ext_E, PCE, PCPlus4E;
@@ -135,7 +136,7 @@ module RV32IMA #(
     wire [1:0]  ResultSrcM;
     wire        AtomicM, CSR_M, Fence_M;
     wire [4:0]  AmoOpM;        // NEW: RV32A funct5 in MEM
-    wire [7:0]  ExcFlagsM;     // NEW
+    wire [8:0]  ExcFlagsM;     // NEW
     wire [31:0] InstrM;        // NEW
     wire [31:0] CsrWDataM;     // NEW
 
@@ -271,10 +272,12 @@ module RV32IMA #(
         .PCF            (PCF),
         .PCPlus4F       (PCPlus4F),
         .FetchPageFaultF(Fetch_PageFault_In),
+        .FetchAccessFaultF(Fetch_AccessFault_In),
         .InstrD         (InstrD),
         .PCD            (PCD),
         .PCPlus4D       (PCPlus4D),
-        .FetchPageFaultD(FetchPageFaultD)
+        .FetchPageFaultD(FetchPageFaultD),
+        .FetchAccessFaultD(FetchAccessFaultD)
     );
 
     // =========================================================
@@ -332,7 +335,8 @@ module RV32IMA #(
     // keep id_ex_registers.v's/ex_mem_registers.v's port count down
     // -- see id_ex_registers.v's port comment for the bit assignment
     // (unpacked back into named signals below, at csr_trap_unit.v).
-    assign ExcFlagsD = { FetchPageFaultD, IsEcallD, IsEbreakD, IsMretD,
+    assign ExcFlagsD = { FetchAccessFaultD, FetchPageFaultD,
+                          IsEcallD, IsEbreakD, IsMretD,
                           IsSretD, IsSfenceVmaD, IsPrivIllegalD, IsIllegalOpD };
 
     // =========================================================
@@ -543,9 +547,11 @@ module RV32IMA #(
     // =========================================================
     // 7b. CSR / TRAP / PRIVILEGE (NEW)
     // =========================================================
-    wire FetchPageFaultM, IsEcallM, IsEbreakM, IsMretM, IsSretM,
+    wire FetchAccessFaultM, FetchPageFaultM;
+    wire IsEcallM, IsEbreakM, IsMretM, IsSretM,
          IsSfenceVmaM, IsPrivIllegalM, IsIllegalOpM;
-    assign { FetchPageFaultM, IsEcallM, IsEbreakM, IsMretM,
+    assign { FetchAccessFaultM, FetchPageFaultM,
+             IsEcallM, IsEbreakM, IsMretM,
              IsSretM, IsSfenceVmaM, IsPrivIllegalM, IsIllegalOpM } = ExcFlagsM;
 
     assign PCM = PCPlus4M - 32'd4;
@@ -581,6 +587,8 @@ module RV32IMA #(
         .MemWriteM (MemWriteM),
         .FetchPageFaultM(FetchPageFaultM),
         .DataPageFaultM (Data_PageFault_In),
+        .FetchAccessFaultM(FetchAccessFaultM),
+        .DataAccessFaultM (Data_AccessFault_In),
         .PCM     (PCM),
         .InstrM  (InstrM),
         .MemAddrM(ALUResultM),

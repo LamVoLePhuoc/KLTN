@@ -5,7 +5,7 @@
 //
 // M/S/U privilege mode, the M- and S-level CSR file, and synchronous
 // exception (trap) handling -- ECALL/EBREAK/illegal-instruction/
-// page-fault detection, mcause/mepc/mtval capture, mstatus stacking,
+// page/access-fault detection, mcause/mepc/mtval capture, mstatus stacking,
 // MRET/SRET return, and PC redirect. Instantiated by RV32IMA.v (see
 // that file for exactly how its inputs are wired from the pipeline
 // and how TrapTakenM/TrapPCM override the normal PC-select/flush
@@ -87,6 +87,8 @@ module csr_trap_unit #(
     input  wire         MemWriteM,
     input  wire         FetchPageFaultM,
     input  wire         DataPageFaultM,
+    input  wire         FetchAccessFaultM,
+    input  wire         DataAccessFaultM,
     input  wire [31:0]  PCM,           // this instruction's own PC
     input  wire [31:0]  InstrM,
     input  wire [31:0]  MemAddrM,      // load/store VA (ALU_ResultM)
@@ -251,7 +253,10 @@ module csr_trap_unit #(
         exc_cause = 4'd0;
         exc_tval  = 32'd0;
 
-        if (FetchPageFaultM) begin
+        if (FetchAccessFaultM) begin
+            exc_cause = 4'd1;  exc_tval = PCM;
+        end
+        else if (FetchPageFaultM) begin
             exc_cause = 4'd12; exc_tval = PCM;
         end
         else if (IsIllegalOpM || IsPrivIllegalM || csr_access_bad) begin
@@ -262,6 +267,9 @@ module csr_trap_unit #(
         end
         else if (IsEcallM) begin
             exc_cause = (priv == PRIV_M) ? 4'd11 : (priv == PRIV_S) ? 4'd9 : 4'd8;
+        end
+        else if (DataAccessFaultM) begin
+            exc_cause = MemWriteM ? 4'd7 : 4'd5; exc_tval = MemAddrM;
         end
         else if (DataPageFaultM) begin
             exc_cause = MemWriteM ? 4'd15 : 4'd13; exc_tval = MemAddrM;
@@ -413,7 +421,7 @@ module csr_trap_unit #(
                 endcase
             end
 
-            // ---- SFENCE.VMA: flush pulse (see header: not yet wired to the real MMU) ----
+            // ---- SFENCE.VMA: one-cycle pulse consumed by mmu_core_wrapper ----
             if (do_sfence) begin
                 Mmu_Flush_Csr <= 1'b1;
             end

@@ -36,7 +36,9 @@ cache/l1_icache.v
 cache/l1_dcache.v
 cache/l2_cache.v
 cache/core_l1_wrapper.v
+cache/cache_maintenance_tracker.v
 coherence/coherence_manager.v
+mmu/cache_controller_mmu.v
 interconnect/ahb/ahb_lite_l1_adapter.v
 interconnect/ahb/ahb_lite_l1_slave_adapter.v
 boot/boot_ctrl.v

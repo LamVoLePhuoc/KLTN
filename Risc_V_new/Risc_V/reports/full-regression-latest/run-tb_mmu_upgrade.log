@@ -1,0 +1,47 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_mmu_upgrade.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_mmu_upgrade 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# [PASS] lookup_valid gates idle lookup
+# [PASS] TLB hit VPN=00101 -> PPN=10101
+# [PASS] TLB hit VPN=00105 -> PPN=10105
+# [PASS] TLB hit VPN=00109 -> PPN=10109
+# [PASS] TLB hit VPN=0010d -> PPN=1010d
+# [PASS] TLB hit VPN=00101 -> PPN=10101
+# [PASS] TLB hit VPN=00105 -> PPN=10105
+# [PASS] TLB miss VPN=00109
+# [PASS] TLB hit VPN=0010d -> PPN=1010d
+# [PASS] TLB hit VPN=00111 -> PPN=10111
+# [PASS] TLB hit VPN=00111 -> PPN=abcde
+# [PASS] TLB hit VPN=00202 -> PPN=20202
+# [PASS] TLB hit VPN=00111 -> PPN=abcde
+# [PASS] TLB miss VPN=00101
+# [PASS] TLB miss VPN=00111
+# [PASS] TLB miss VPN=00202
+# [PASS] Region VA=00000000 region=0 perm=110
+# [PASS] Region VA=000fffff region=0 perm=110
+# [PASS] Region VA=00100000 region=1 perm=111
+# [PASS] Region VA=3fffffff region=1 perm=111
+# [PASS] Region VA=40000000 region=2 perm=110
+# [PASS] Region VA=7fffffff region=2 perm=110
+# [PASS] Region VA=80000000 region=3 perm=011
+# [PASS] Region VA=bfffffff region=3 perm=011
+# [PASS] Region VA=c0000000 region=4 perm=011
+# [PASS] Region VA=ffffffff region=4 perm=011
+# [PASS] Debug buffer saturates and wraps
+# [PASS] Debug buffer circular overwrite data
+# ---------------------------------------------
+# MMU_UPGRADE_TB: PASS
+# ---------------------------------------------
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_mmu_upgrade.v(285)
+#    Time: 328 ns  Iteration: 0  Instance: /tb_mmu_upgrade

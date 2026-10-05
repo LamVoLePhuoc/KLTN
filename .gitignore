@@ -1,0 +1,28 @@
+# Local Codex/document build workspaces (regenerated on demand)
+/.codex-docx-work/
+/.codex-finalizer/
+/.codex-pptx-build/
+/.codex-rtl-qa/
+/.slide_work/
+
+# cache_reference was a byte-for-byte duplicate of MMU/
+/cache_reference/
+
+# Simulator scratch/output. Keep the presentation deliverable in output/.
+/output/*/
+!/output/*.pptx
+**/.questa-work-*/
+**/xsim.dir/
+*.wdb
+*.jou
+*.pb
+
+# Vivado-generated products. Keep .xpr, .srcs, constraints, mem and RTL.
+**/.Xil/
+**/*.cache/
+**/*.gen/
+**/*.hw/
+**/*.ip_user_files/
+**/*.runs/
+**/*.sim/
+

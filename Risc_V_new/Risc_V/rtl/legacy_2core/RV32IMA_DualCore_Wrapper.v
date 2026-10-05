@@ -114,6 +114,8 @@ module RV32IMA_DualCore_Wrapper(
         // and harmless for unused outputs, no risk there.
         .Fetch_PageFault_In (1'b0),
         .Data_PageFault_In  (1'b0),
+        .Fetch_AccessFault_In(1'b0),
+        .Data_AccessFault_In (1'b0),
 
         // NEW (same sanctioned exception as above, a later session):
         // RV32IMA.v gained a required Mem_PhysAddrM input for the
@@ -161,6 +163,8 @@ module RV32IMA_DualCore_Wrapper(
         // NEW: see core0's identical comment above.
         .Fetch_PageFault_In (1'b0),
         .Data_PageFault_In  (1'b0),
+        .Fetch_AccessFault_In(1'b0),
+        .Data_AccessFault_In (1'b0),
 
         // NEW: see core0's identical comment above (LR/SC VA-vs-PA fix).
         .Mem_PhysAddrM      (c1_mem_addr),

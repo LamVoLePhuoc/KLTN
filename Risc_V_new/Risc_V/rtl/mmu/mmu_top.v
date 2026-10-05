@@ -39,10 +39,21 @@
 // operation -- read data when ptw_mem_we=0, write response when
 // ptw_mem_we=1. The caller must not equate request assertion with
 // same-cycle completion on a delayed/arbitrated bus.
+// A flush or address-space configuration change received during T_WALK
+// is deferred to the response boundary; that old-context response is
+// discarded, all TLBs are invalidated, and an enabled held access is
+// walked again without releasing the core. Changes to privilege/SUM/MXR
+// also discard a response whose permission decision is no longer valid.
 // ============================================================
 module mmu_top #(
     parameter REGION_POLICY_ENABLE = 0,
-    parameter DEBUG_TRACE_ENABLE   = 0
+    parameter DEBUG_TRACE_ENABLE   = 0,
+    // Diagnostic only: after this many T_WALK cycles without a PTW
+    // memory completion, ptw_timeout_error latches high until reset.
+    // Zero removes the counter. It deliberately does not abort the
+    // request because the current memory interface has no cancel/drain
+    // handshake with which to reject a late cache/bus response safely.
+    parameter integer PTW_WATCHDOG_CYCLES = 0
 ) (
     input  wire        clk,
     input  wire        rst,
@@ -67,6 +78,8 @@ module mmu_top #(
     // Fault pulses (exactly 1 cycle, on the resume/gate cycle)
     output wire        fetch_fault,
     output wire        mem_fault,
+    output wire        fetch_access_fault,
+    output wire        mem_access_fault,
     output wire [1:0]  fetch_fault_cause,
     output wire [1:0]  mem_fault_cause,
 
@@ -77,6 +90,7 @@ module mmu_top #(
     output wire [31:0] ptw_mem_wdata,
     input  wire [31:0] ptw_mem_rdata,
     input  wire        ptw_mem_valid,  // 1 exactly when ptw_mem_rdata is valid for ptw_mem_addr
+    input  wire        ptw_mem_error,  // asserted with ptw_mem_valid on a failed PTE read/write
 
     // Combined stall contribution: OR this into Stall_Core_External
     output wire        busy,
@@ -84,7 +98,7 @@ module mmu_top #(
     // Optional debug trace readout.  Record layout:
     // {event[2:0], is_data, fault, cause[1:0], VA[31:0], PA[31:0],
     //  controller_state[1:0], 7'b0}.  event: 1=start/problem,
-    // 2=PTW response, 3=gate/resume.  All outputs are zero when the
+    // 2=PTW response, 3=gate/resume, 4=flush/discard/retry. All outputs are zero when the
     // buffer is disabled, and debug_trace_rd_index is then unused.
     input  wire [3:0]  debug_trace_rd_index,
     output wire [79:0] debug_trace_rd_data,
@@ -92,7 +106,8 @@ module mmu_top #(
     output wire [3:0]  debug_trace_write_index,
     output wire [1:0]  debug_controller_state,
     output wire [2:0]  debug_fetch_region,
-    output wire [2:0]  debug_mem_region
+    output wire [2:0]  debug_mem_region,
+    output wire        ptw_timeout_error
 );
 
     localparam [1:0]
@@ -125,14 +140,16 @@ module mmu_top #(
 
     wire        itlb_refill, itlb_super_refill;
     wire        dtlb_refill, dtlb_super_refill;
+    wire        tlb_flush;
+    wire        lookup_context_valid;
     wire [19:0] walk_vpn;
     wire [19:0] resp_ppn;
     wire        resp_superpage;
     wire        resp_r, resp_w, resp_x, resp_u, resp_g, resp_a, resp_d;
 
     mmu_tlb itlb (
-        .clk(clk), .rst(rst), .flush(flush),
-        .lookup_valid(mmu_enable),
+        .clk(clk), .rst(rst), .flush(tlb_flush),
+        .lookup_valid(lookup_context_valid),
         .lookup_vpn(f_vpn),
         .hit(itlb_4k_hit), .hit_ppn(itlb_4k_ppn),
         .hit_r(itlb_4k_r), .hit_w(itlb_4k_w), .hit_x(itlb_4k_x),
@@ -143,8 +160,8 @@ module mmu_top #(
     );
 
     mmu_tlb dtlb (
-        .clk(clk), .rst(rst), .flush(flush),
-        .lookup_valid(mmu_enable & mem_req),
+        .clk(clk), .rst(rst), .flush(tlb_flush),
+        .lookup_valid(lookup_context_valid & mem_req),
         .lookup_vpn(d_vpn),
         .hit(dtlb_4k_hit), .hit_ppn(dtlb_4k_ppn),
         .hit_r(dtlb_4k_r), .hit_w(dtlb_4k_w), .hit_x(dtlb_4k_x),
@@ -155,8 +172,8 @@ module mmu_top #(
     );
 
     mmu_super_tlb itlb_super (
-        .clk(clk), .rst(rst), .flush(flush),
-        .lookup_valid(mmu_enable), .lookup_vpn(f_vpn),
+        .clk(clk), .rst(rst), .flush(tlb_flush),
+        .lookup_valid(lookup_context_valid), .lookup_vpn(f_vpn),
         .hit(itlb_super_hit), .hit_ppn(itlb_super_ppn),
         .hit_r(itlb_super_r), .hit_w(itlb_super_w), .hit_x(itlb_super_x),
         .hit_u(itlb_super_u), .hit_g(itlb_super_g),
@@ -168,8 +185,8 @@ module mmu_top #(
     );
 
     mmu_super_tlb dtlb_super (
-        .clk(clk), .rst(rst), .flush(flush),
-        .lookup_valid(mmu_enable & mem_req), .lookup_vpn(d_vpn),
+        .clk(clk), .rst(rst), .flush(tlb_flush),
+        .lookup_valid(lookup_context_valid & mem_req), .lookup_vpn(d_vpn),
         .hit(dtlb_super_hit), .hit_ppn(dtlb_super_ppn),
         .hit_r(dtlb_super_r), .hit_w(dtlb_super_w), .hit_x(dtlb_super_x),
         .hit_u(dtlb_super_u), .hit_g(dtlb_super_g),
@@ -291,17 +308,40 @@ module mmu_top #(
     reg [1:0]  tstate;
     reg        r_walk_is_d;
     reg        r_walk_fault;
+    reg        r_walk_access_fault;
     reg [1:0]  r_walk_fault_cause;
     reg [19:0] r_walk_vpn;
     reg [31:0] r_walk_va;
     reg [31:0] r_walk_pa;
+    reg        flush_pending;
+    reg        configured_mmu_enable;
+    reg [19:0] configured_satp_ppn;
+    reg [1:0]  r_walk_priv;
+    reg        r_walk_sum;
+    reg        r_walk_mxr;
+
+    // A root/mode change invalidates every cached translation.  Track
+    // it locally as well as honoring the explicit SFENCE/flush input so
+    // the external-control mode cannot accidentally reuse a TLB entry
+    // after Satp_PPN changes without a separate pulse.
+    wire address_space_changed = (mmu_enable != configured_mmu_enable) ||
+                                 (satp_ppn != configured_satp_ppn);
+    wire invalidate_now = flush | address_space_changed;
+    assign lookup_context_valid = mmu_enable & ~invalidate_now;
 
     wire sel_d        = d_problem;
     wire sel_f        = !d_problem & f_problem;
     wire miss_now     = sel_d | sel_f;
     wire sel_needs_walk = sel_d ? d_needs_walk : f_needs_walk;
 
-    assign busy = (tstate == T_WALK) || ((tstate == T_IDLE) && miss_now);
+    wire access_context_changed = (current_priv != r_walk_priv) ||
+                                  (mstatus_sum != r_walk_sum) ||
+                                  (mstatus_mxr != r_walk_mxr);
+    wire gate_discard = invalidate_now | access_context_changed;
+
+    assign busy = (tstate == T_WALK) ||
+                  ((tstate == T_IDLE) && miss_now) ||
+                  ((tstate == T_GATE) && gate_discard && mmu_enable);
 
     wire        ptw_req_valid = (tstate == T_IDLE) && miss_now && sel_needs_walk;
     wire [19:0] ptw_req_vpn   = sel_d ? d_vpn : f_vpn;
@@ -310,7 +350,19 @@ module mmu_top #(
 
     wire        ptw_resp_valid;
     wire        ptw_resp_fault;
+    wire        ptw_resp_access_fault;
     wire [1:0]  ptw_resp_fault_cause;
+
+    // An invalidate that arrives during a walk must not be followed by
+    // a stale refill from that same walk. Hold it pending until the PTW
+    // returns, flush every TLB at that edge, discard the response and
+    // re-enter IDLE. A permission-context change also discards/retries
+    // the response, but needs no TLB flush because entries cache page
+    // metadata rather than the current privilege/SUM/MXR decision.
+    wire walk_invalidate = flush_pending | invalidate_now;
+    wire walk_discard = walk_invalidate | access_context_changed;
+    assign tlb_flush = ((tstate != T_WALK) && invalidate_now) ||
+                       ((tstate == T_WALK) && ptw_resp_valid && walk_invalidate);
 
     mmu_ptw ptw_inst (
         .clk(clk), .rst(rst),
@@ -325,6 +377,7 @@ module mmu_top #(
         .ready(),
         .resp_valid(ptw_resp_valid),
         .resp_fault(ptw_resp_fault),
+        .resp_access_fault(ptw_resp_access_fault),
         .resp_fault_cause(ptw_resp_fault_cause),
         .resp_ppn(resp_ppn),
         .resp_superpage(resp_superpage),
@@ -335,19 +388,27 @@ module mmu_top #(
         .mem_addr(ptw_mem_addr),
         .mem_wdata(ptw_mem_wdata),
         .mem_rdata(ptw_mem_rdata),
-        .mem_valid(ptw_mem_valid)
+        .mem_valid(ptw_mem_valid),
+        .mem_error(ptw_mem_error)
     );
 
     assign walk_vpn = r_walk_vpn;
 
-    wire refill_ok = (tstate == T_WALK) && ptw_resp_valid && !ptw_resp_fault;
+    wire refill_ok = (tstate == T_WALK) && ptw_resp_valid &&
+                     !ptw_resp_fault && !walk_discard;
     assign itlb_refill       = refill_ok && !r_walk_is_d && !resp_superpage;
     assign itlb_super_refill = refill_ok && !r_walk_is_d &&  resp_superpage;
     assign dtlb_refill       = refill_ok &&  r_walk_is_d && !resp_superpage;
     assign dtlb_super_refill = refill_ok &&  r_walk_is_d &&  resp_superpage;
 
-    assign fetch_fault       = (tstate == T_GATE) && r_walk_fault && !r_walk_is_d;
-    assign mem_fault         = (tstate == T_GATE) && r_walk_fault &&  r_walk_is_d;
+    assign fetch_fault       = (tstate == T_GATE) && r_walk_fault &&
+                               !r_walk_access_fault && !r_walk_is_d && !gate_discard;
+    assign mem_fault         = (tstate == T_GATE) && r_walk_fault &&
+                               !r_walk_access_fault && r_walk_is_d && !gate_discard;
+    assign fetch_access_fault = (tstate == T_GATE) && r_walk_access_fault &&
+                                !r_walk_is_d && !gate_discard;
+    assign mem_access_fault   = (tstate == T_GATE) && r_walk_access_fault &&
+                                r_walk_is_d && !gate_discard;
     assign fetch_fault_cause = fetch_fault ? r_walk_fault_cause : 2'b00;
     assign mem_fault_cause   = mem_fault   ? r_walk_fault_cause : 2'b00;
 
@@ -375,7 +436,8 @@ module mmu_top #(
         else if ((tstate == T_WALK) && ptw_resp_valid) begin
             trace_event_valid = 1'b1;
             trace_event_data = {
-                3'd2, r_walk_is_d, ptw_resp_fault,
+                walk_discard ? 3'd4 : 3'd2,
+                r_walk_is_d, ptw_resp_fault,
                 ptw_resp_fault_cause, r_walk_va,
                 {resp_ppn, r_walk_va[11:0]}, tstate, 7'b0
             };
@@ -410,23 +472,75 @@ module mmu_top #(
         end
     endgenerate
 
+    // A watchdog is useful in Vivado/ILA bring-up, but recovery is not
+    // attempted here. Once a request has entered a cache or bus, merely
+    // dropping ptw_mem_req cannot guarantee that its late response will
+    // not be mistaken for a later request. A real recovery path therefore
+    // also needs an error/cancel-or-drain handshake in the memory system.
+    generate
+        if (PTW_WATCHDOG_CYCLES > 0) begin : g_ptw_watchdog
+            reg [31:0] wait_cycles;
+            reg        timeout_sticky;
+            assign ptw_timeout_error = timeout_sticky;
+
+            always @(posedge clk) begin
+                if (rst) begin
+                    wait_cycles    <= 32'b0;
+                    timeout_sticky <= 1'b0;
+                end
+                else if ((tstate != T_WALK) || ptw_resp_valid) begin
+                    wait_cycles <= 32'b0;
+                end
+                else if (!timeout_sticky) begin
+                    if (wait_cycles >= PTW_WATCHDOG_CYCLES-1)
+                        timeout_sticky <= 1'b1;
+                    else
+                        wait_cycles <= wait_cycles + 32'd1;
+                end
+            end
+        end
+        else begin : g_no_ptw_watchdog
+            assign ptw_timeout_error = 1'b0;
+        end
+    endgenerate
+
     always @(posedge clk) begin
         if (rst) begin
             tstate             <= T_IDLE;
             r_walk_is_d        <= 1'b0;
             r_walk_fault       <= 1'b0;
+            r_walk_access_fault <= 1'b0;
             r_walk_fault_cause <= FAULT_NONE;
             r_walk_vpn         <= 20'b0;
             r_walk_va          <= 32'b0;
             r_walk_pa          <= 32'b0;
+            flush_pending      <= 1'b0;
+            configured_mmu_enable <= 1'b0;
+            configured_satp_ppn   <= 20'b0;
+            r_walk_priv        <= PRIV_S;
+            r_walk_sum         <= 1'b0;
+            r_walk_mxr         <= 1'b0;
         end
         else begin
+            configured_mmu_enable <= mmu_enable;
+            configured_satp_ppn   <= satp_ppn;
+
+            if ((tstate == T_WALK) && invalidate_now && !ptw_resp_valid)
+                flush_pending <= 1'b1;
+            else if ((tstate == T_WALK) && ptw_resp_valid && walk_invalidate)
+                flush_pending <= 1'b0;
+            else if (tstate != T_WALK)
+                flush_pending <= 1'b0;
+
             case (tstate)
                 T_IDLE: begin
                     if (miss_now) begin
                         r_walk_is_d <= sel_d;
                         r_walk_vpn  <= sel_d ? d_vpn : f_vpn;
                         r_walk_va   <= sel_d ? va_mem : va_fetch;
+                        r_walk_priv <= current_priv;
+                        r_walk_sum  <= mstatus_sum;
+                        r_walk_mxr  <= mstatus_mxr;
 
                         if (sel_needs_walk) begin
                             tstate <= T_WALK;
@@ -436,6 +550,7 @@ module mmu_top #(
                             // don't cover this access: no PTW
                             // walk needed, fault immediately.
                             r_walk_fault       <= 1'b1;
+                            r_walk_access_fault <= 1'b0;
                             r_walk_fault_cause <= FAULT_PERM;
                             r_walk_pa          <= sel_d ? pa_mem : pa_fetch;
                             tstate             <= T_GATE;
@@ -445,10 +560,23 @@ module mmu_top #(
 
                 T_WALK: begin
                     if (ptw_resp_valid) begin
-                        r_walk_fault       <= ptw_resp_fault;
-                        r_walk_fault_cause <= ptw_resp_fault_cause;
-                        r_walk_pa          <= {resp_ppn, r_walk_va[11:0]};
-                        tstate             <= T_GATE;
+                        if (walk_discard) begin
+                            // Do not expose a PA or fault derived from an
+                            // invalidated address space or stale permission
+                            // context. If translation remains enabled, IDLE
+                            // sees the held VA and starts a fresh check/walk.
+                            r_walk_fault       <= 1'b0;
+                            r_walk_access_fault <= 1'b0;
+                            r_walk_fault_cause <= FAULT_NONE;
+                            tstate             <= T_IDLE;
+                        end
+                        else begin
+                            r_walk_fault       <= ptw_resp_fault;
+                            r_walk_access_fault <= ptw_resp_access_fault;
+                            r_walk_fault_cause <= ptw_resp_fault_cause;
+                            r_walk_pa          <= {resp_ppn, r_walk_va[11:0]};
+                            tstate             <= T_GATE;
+                        end
                     end
                 end
 

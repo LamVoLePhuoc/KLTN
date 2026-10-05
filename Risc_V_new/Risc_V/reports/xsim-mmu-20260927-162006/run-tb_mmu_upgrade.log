@@ -1,0 +1,44 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_mmu_upgrade_behav/xsim_script.tcl
+# xsim {tb_mmu_upgrade_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] lookup_valid gates idle lookup
+[PASS] TLB hit VPN=00101 -> PPN=10101
+[PASS] TLB hit VPN=00105 -> PPN=10105
+[PASS] TLB hit VPN=00109 -> PPN=10109
+[PASS] TLB hit VPN=0010d -> PPN=1010d
+[PASS] TLB hit VPN=00101 -> PPN=10101
+[PASS] TLB hit VPN=00105 -> PPN=10105
+[PASS] TLB miss VPN=00109
+[PASS] TLB hit VPN=0010d -> PPN=1010d
+[PASS] TLB hit VPN=00111 -> PPN=10111
+[PASS] TLB hit VPN=00111 -> PPN=abcde
+[PASS] TLB hit VPN=00202 -> PPN=20202
+[PASS] TLB hit VPN=00111 -> PPN=abcde
+[PASS] TLB miss VPN=00101
+[PASS] TLB miss VPN=00111
+[PASS] TLB miss VPN=00202
+[PASS] Region VA=00000000 region=0 perm=110
+[PASS] Region VA=000fffff region=0 perm=110
+[PASS] Region VA=00100000 region=1 perm=111
+[PASS] Region VA=3fffffff region=1 perm=111
+[PASS] Region VA=40000000 region=2 perm=110
+[PASS] Region VA=7fffffff region=2 perm=110
+[PASS] Region VA=80000000 region=3 perm=011
+[PASS] Region VA=bfffffff region=3 perm=011
+[PASS] Region VA=c0000000 region=4 perm=011
+[PASS] Region VA=ffffffff region=4 perm=011
+[PASS] Debug buffer saturates and wraps
+[PASS] Debug buffer circular overwrite data
+---------------------------------------------
+MMU_UPGRADE_TB: PASS
+---------------------------------------------
+$finish called at time : 328 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_mmu_upgrade.v" Line 285
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Sep 27 16:20:33 2026...

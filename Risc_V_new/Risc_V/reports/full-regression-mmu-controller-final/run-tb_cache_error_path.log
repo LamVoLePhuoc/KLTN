@@ -1,0 +1,23 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-mmu-controller-final\run-tb_cache_error_path.log} -lib ../reports/.questa-work-95df10023e5c42508ff49ca1499ca7ca -c -quiet tb_cache_error_path 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# [PASS] I-cache failed fill completes fetch with error
+# [PASS] I-cache error response was not installed as a hit
+# [PASS] I-cache can refill successfully after an error
+# [PASS] D-cache failed fill completes load with error
+# [PASS] D-cache error response was not installed as a hit
+# [PASS] D-cache can refill successfully after an error
+# CACHE_ERROR_PATH_TB: PASS
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_error_path.v(135)
+#    Time: 130 ns  Iteration: 1  Instance: /tb_cache_error_path

@@ -4,7 +4,7 @@
 // core_l1_wrapper
 //
 // One "CORE N" box from the 4-CORE CPU WRAPPER diagram: RV32IMA +
-// per-core MMU (mmu_core_wrapper.v, already built) + private L1
+// per-core Sv32 address translation (mmu_core_wrapper.v) + private L1
 // I-Cache/D-Cache (l1_icache.v/l1_dcache.v, this session). This is
 // what quad_core_soc.v instantiates x4.
 //
@@ -14,6 +14,10 @@
 // the ports the L1s plug into: no further stalling logic needed
 // here, l1_icache/l1_dcache's own cpu_valid outputs ARE the
 // Instr_ValidF/Mem_ReadDataValidM/Mem_WriteDoneM signals.
+// Their matching error sidebands are preserved as well: a failed I$
+// fill becomes an instruction access fault, while a failed D$ fill/RFO
+// becomes the original load/store/PTW access fault. Failed lines are
+// never installed by either L1 cache.
 //
 // LR/SC note: l1_dcache's own INVALIDATE-type snoops (i.e. this
 // core's D$ copy of some line was just invalidated because another
@@ -51,13 +55,23 @@
 module core_l1_wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_1000,
     parameter        MMU_REGION_POLICY_ENABLE = 1,
-    parameter        MMU_DEBUG_TRACE_ENABLE   = 0
+    parameter        MMU_DEBUG_TRACE_ENABLE   = 0,
+    parameter integer MMU_PTW_WATCHDOG_CYCLES = 4096
 )(
     input  wire        clk,
     input  wire        rst,
 
     input  wire        Mmu_Flush,
     input  wire        Cache_Flush,   // pulse: clean/invalidate D$, then invalidate I$
+
+    // Cache-maintenance handshake.  Busy covers both an external
+    // Cache_Flush and an architectural FENCE.I.  Done is a one-cycle
+    // pulse after the I$ invalidate edge (or after a failed D$ clean),
+    // and Error is sticky until reset.  System/DMA logic must wait for
+    // Done and then inspect Error before touching coherent memory.
+    output wire        Cache_Flush_Busy,
+    output reg         Cache_Flush_Done,
+    output wire        Cache_Flush_Error,
 
     output wire [31:0] ResultW,
     output wire [31:0] ALU_ResultE_Debug,
@@ -66,22 +80,24 @@ module core_l1_wrapper #(
     output wire [1:0]  Fetch_PageFault_Cause,
     output wire [1:0]  Data_PageFault_Cause,
 
-    // ---- I$ miss port (to coherence_manager.v) ----
+    // ---- I$ miss port (to shared cache_controller_mmu) ----
     output wire         ibus_req_valid,
     output wire [31:0]  ibus_req_addr,
     input  wire         ibus_resp_valid,
+    input  wire         ibus_resp_error,
     input  wire [255:0] ibus_resp_line,
 
-    // ---- D$ request port (to coherence_manager.v) ----
+    // ---- D$ request port (to shared cache_controller_mmu) ----
     output wire         dbus_req_valid,
     output wire [1:0]   dbus_req_type,
     output wire [31:0]  dbus_req_addr,
     output wire [255:0] dbus_req_line,
     input  wire         dbus_resp_valid,
+    input  wire         dbus_resp_error,
     input  wire [255:0] dbus_resp_line,
     input  wire [1:0]   dbus_resp_state,
 
-    // ---- D$ snoop port (from coherence_manager.v) ----
+    // ---- D$ snoop port (from shared cache_controller_mmu) ----
     input  wire         dsnoop_valid,
     input  wire         dsnoop_type,
     input  wire [31:0]  dsnoop_addr,
@@ -94,6 +110,7 @@ module core_l1_wrapper #(
     wire [31:0] PCF;
     wire [31:0] InstrF;
     wire        Instr_ValidF;
+    wire        Instr_ErrorF;
 
     wire [31:0] Mem_AddrM;
     wire [31:0] Mem_WriteDataM;
@@ -105,6 +122,9 @@ module core_l1_wrapper #(
     wire [31:0] Mem_AmoOperandM;
     wire [31:0] Mem_ReadDataM;
     wire        Mem_DataValid;
+    wire        Mem_DataError;
+    (* mark_debug = "true" *) wire Fetch_AccessFault;
+    (* mark_debug = "true" *) wire Data_AccessFault;
 
     wire [31:0] snoop_addr_to_core;
     wire        snoop_we_to_core;
@@ -118,6 +138,8 @@ module core_l1_wrapper #(
     reg         icache_flush_pulse;
     wire        dcache_flush_busy;
     wire        dcache_flush_done;
+    wire        dcache_flush_error;
+    (* mark_debug = "true" *) reg cache_maintenance_error;
 
     wire cache_flush_trigger = (Cache_Flush && !cache_flush_seen) ||
                                (fence_i_m && !fence_i_seen);
@@ -126,6 +148,9 @@ module core_l1_wrapper #(
     // the same edge that the valid bits are being cleared.
     wire cache_maintenance_stall = cache_flush_active | cache_flush_trigger |
                                    icache_flush_pulse;
+
+    assign Cache_Flush_Busy  = cache_maintenance_stall;
+    assign Cache_Flush_Error = cache_maintenance_error;
 
     // FENCE.I and the external maintenance hook use the same ordered
     // sequence: freeze this in-order core, write back every Modified
@@ -139,12 +164,15 @@ module core_l1_wrapper #(
             cache_flush_queued <= 1'b0;
             dcache_flush_pulse <= 1'b0;
             icache_flush_pulse <= 1'b0;
+            cache_maintenance_error <= 1'b0;
+            Cache_Flush_Done <= 1'b0;
         end
         else begin
             cache_flush_seen   <= Cache_Flush;
             fence_i_seen       <= fence_i_m;
             dcache_flush_pulse <= 1'b0;
             icache_flush_pulse <= 1'b0;
+            Cache_Flush_Done   <= icache_flush_pulse;
 
             if (!cache_flush_active) begin
                 if (cache_flush_trigger) begin
@@ -156,7 +184,17 @@ module core_l1_wrapper #(
                 if (cache_flush_trigger)
                     cache_flush_queued <= 1'b1;
 
-                if (dcache_flush_done) begin
+                if (dcache_flush_error) begin
+                    // Do not invalidate I$ after a failed D$ clean: that
+                    // would falsely claim FENCE.I/maintenance completed.
+                    // The dirty D$ line is retained; expose a sticky ILA
+                    // diagnostic and release the core to avoid deadlock.
+                    cache_maintenance_error <= 1'b1;
+                    cache_flush_active <= 1'b0;
+                    cache_flush_queued <= 1'b0;
+                    Cache_Flush_Done <= 1'b1;
+                end
+                else if (dcache_flush_done) begin
                     icache_flush_pulse <= 1'b1;
                     if (cache_flush_queued || cache_flush_trigger) begin
                         cache_flush_queued <= 1'b0;
@@ -174,7 +212,9 @@ module core_l1_wrapper #(
         .RESET_ADDR(RESET_ADDR),
         .MMU_CTRL_FROM_CSR(1),
         .MMU_REGION_POLICY_ENABLE(MMU_REGION_POLICY_ENABLE),
-        .MMU_DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE)
+        .MMU_DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE),
+        .PTW_ATOMIC_AD_ENABLE(1),
+        .MMU_PTW_WATCHDOG_CYCLES(MMU_PTW_WATCHDOG_CYCLES)
     ) mmu_core (
         .clk                (clk),
         .rst                (rst),
@@ -194,6 +234,7 @@ module core_l1_wrapper #(
         .PCF                (PCF),
         .InstrF             (InstrF),
         .Instr_ValidF       (Instr_ValidF),
+        .Instr_ErrorF       (Instr_ErrorF),
 
         .Mem_AddrM          (Mem_AddrM),
         .Mem_WriteDataM     (Mem_WriteDataM),
@@ -206,12 +247,16 @@ module core_l1_wrapper #(
         .Mem_ReadDataM      (Mem_ReadDataM),
         .Mem_ReadDataValidM (Mem_DataValid),
         .Mem_WriteDoneM     (Mem_DataValid),
+        .Mem_ReadErrorM     (Mem_DataError),
+        .Mem_WriteErrorM    (Mem_DataError),
 
         .ResultW            (ResultW),
         .ALU_ResultE_Debug  (ALU_ResultE_Debug),
 
         .Fetch_PageFault       (Fetch_PageFault),
         .Data_PageFault        (Data_PageFault),
+        .Fetch_AccessFault     (Fetch_AccessFault),
+        .Data_AccessFault      (Data_AccessFault),
         .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
         .Data_PageFault_Cause  (Data_PageFault_Cause),
 
@@ -233,10 +278,12 @@ module core_l1_wrapper #(
         .cpu_addr       (PCF),
         .cpu_rdata      (InstrF),
         .cpu_valid      (Instr_ValidF),
+        .cpu_error      (Instr_ErrorF),
 
         .bus_req_valid  (ibus_req_valid),
         .bus_req_addr   (ibus_req_addr),
         .bus_resp_valid (ibus_resp_valid),
+        .bus_resp_error (ibus_resp_error),
         .bus_resp_line  (ibus_resp_line)
     );
 
@@ -257,12 +304,14 @@ module core_l1_wrapper #(
         .cpu_amo_operand(Mem_AmoOperandM),
         .cpu_rdata      (Mem_ReadDataM),
         .cpu_valid      (Mem_DataValid),
+        .cpu_error      (Mem_DataError),
 
         .bus_req_valid  (dbus_req_valid),
         .bus_req_type   (dbus_req_type),
         .bus_req_addr   (dbus_req_addr),
         .bus_req_line   (dbus_req_line),
         .bus_resp_valid (dbus_resp_valid),
+        .bus_resp_error (dbus_resp_error),
         .bus_resp_line  (dbus_resp_line),
         .bus_resp_state (dbus_resp_state),
 
@@ -272,7 +321,8 @@ module core_l1_wrapper #(
         .snoop_ack_valid (dsnoop_ack_valid),
         .snoop_ack_hit   (dsnoop_ack_hit),
         .snoop_ack_dirty (dsnoop_ack_dirty),
-        .snoop_ack_line  (dsnoop_ack_line)
+        .snoop_ack_line  (dsnoop_ack_line),
+        .flush_error     (dcache_flush_error)
     );
 
     // See header NOTE: fires on an invalidate-type snoop, not a

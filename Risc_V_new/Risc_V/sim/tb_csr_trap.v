@@ -131,6 +131,8 @@ module tb_csr_trap;
 
         .Fetch_PageFault_In(1'b0),
         .Data_PageFault_In(1'b0),
+        .Fetch_AccessFault_In(1'b0),
+        .Data_AccessFault_In(1'b0),
 
         .ResultW(ResultW), .ALU_ResultE_Debug(ALU_ResultE_Debug),
 

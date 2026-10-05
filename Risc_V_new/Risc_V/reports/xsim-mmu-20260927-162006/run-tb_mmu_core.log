@@ -1,0 +1,37 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_mmu_core_behav/xsim_script.tcl
+# xsim {tb_mmu_core_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+---------------------------------------------
+MMU_TB checks
+---------------------------------------------
+[PASS] x1 (addi): 0x00000005
+[PASS] x2 (addi): 0x0000000a
+[PASS] x3 (add): 0x0000000f
+[PASS] x4 (load back after store): 0x0000000f
+[PASS] x5 (lui 0x2): 0x00002000
+[PASS] x6 (lui 0x4): 0x00004000
+[PASS] x7 (addi 99): 0x00000063
+[PASS] x8 (RO load, sentinel intact): 0xdeadbeef
+[PASS] x9 (lui 0x3): 0x00003000
+[PASS] x10 (not-present fault -> 0): 0x00000000
+[PASS] x11 (mcause after not-present load trap): 0x0000000d
+[PASS] PA 0x4000 unchanged by blocked RO store: 0xdeadbeef
+[PASS] Code PTE has A set: 0x0000204b
+[PASS] RW data PTE has A+D set: 0x000030c7
+[PASS] RO data PTE has A set: 0x00004043
+[PASS] all PTW A/D updates used coherent AMOOR.W masks
+[PASS] Data_PageFault pulsed 2 times
+[PASS] Fetch_PageFault never pulsed (all fetches were mapped, as expected)
+---------------------------------------------
+MMU_TB: PASS
+---------------------------------------------
+$finish called at time : 20045 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_mmu_core.v" Line 433
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Sep 27 16:20:27 2026...

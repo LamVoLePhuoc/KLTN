@@ -126,6 +126,9 @@ module tb_mmu_core;
     wire        Mem_WriteEnM;
     wire        Mem_ReadEnM;
     wire [2:0]  MemOpM;
+    wire        Mem_AmoRmwM;
+    wire [4:0]  Mem_AmoOpM;
+    wire [31:0] Mem_AmoOperandM;
     wire [31:0] Mem_ReadDataM;
 
     // This harness models a dedicated, single-cycle-latency memory
@@ -145,6 +148,8 @@ module tb_mmu_core;
     wire        Data_PageFault;
     wire [1:0]  Fetch_PageFault_Cause;
     wire [1:0]  Data_PageFault_Cause;
+    wire        Fetch_AccessFault;
+    wire        Data_AccessFault;
 
     // ------------------------------------------------------
     // Behavioral RAM: program + page tables + data, all in one
@@ -155,13 +160,38 @@ module tb_mmu_core;
     // ------------------------------------------------------
     reg [31:0] ram [0:RAM_WORDS-1];
     integer i;
+    integer atomic_ad_write_count;
+    integer malformed_ad_write_count;
 
     assign InstrF        = ram[PCF[15:2]];
     assign Mem_ReadDataM = ram[Mem_AddrM[15:2]];
 
     always @(posedge clk) begin
         if (Mem_WriteEnM) begin
-            ram[Mem_AddrM[15:2]] <= Mem_WriteDataM;
+            if (Mem_AmoRmwM && (Mem_AmoOpM == 5'b01000))
+                ram[Mem_AddrM[15:2]] <= ram[Mem_AddrM[15:2]] |
+                                        Mem_AmoOperandM;
+            else
+                ram[Mem_AddrM[15:2]] <= Mem_WriteDataM;
+        end
+    end
+
+    // Every PTW write in this design is an A/D update. With the cached
+    // integration option enabled below it must leave the wrapper as a
+    // coherent AMOOR.W containing only the A/D mask, never as the AMO
+    // operation of the core instruction that happens to be stalled.
+    always @(posedge clk) begin
+        if (rst) begin
+            atomic_ad_write_count    <= 0;
+            malformed_ad_write_count <= 0;
+        end
+        else if (Mem_WriteEnM && dut.mmu_busy) begin
+            if (Mem_AmoRmwM && (Mem_AmoOpM == 5'b01000) &&
+                ((Mem_AmoOperandM == 32'h0000_0040) ||
+                 (Mem_AmoOperandM == 32'h0000_00C0)))
+                atomic_ad_write_count <= atomic_ad_write_count + 1;
+            else
+                malformed_ad_write_count <= malformed_ad_write_count + 1;
         end
     end
 
@@ -169,7 +199,8 @@ module tb_mmu_core;
     // DUT
     // ------------------------------------------------------
     mmu_core_wrapper #(
-        .RESET_ADDR(32'h0000_1000)
+        .RESET_ADDR(32'h0000_1000),
+        .PTW_ATOMIC_AD_ENABLE(1)
     ) dut (
         .clk                (clk),
         .rst                (rst),
@@ -185,24 +216,29 @@ module tb_mmu_core;
         .PCF                (PCF),
         .InstrF             (InstrF),
         .Instr_ValidF       (Instr_ValidF),
+        .Instr_ErrorF       (1'b0),
 
         .Mem_AddrM          (Mem_AddrM),
         .Mem_WriteDataM     (Mem_WriteDataM),
         .Mem_WriteEnM       (Mem_WriteEnM),
         .Mem_ReadEnM        (Mem_ReadEnM),
         .MemOpM             (MemOpM),
-        .Mem_AmoRmwM        (),
-        .Mem_AmoOpM         (),
-        .Mem_AmoOperandM    (),
+        .Mem_AmoRmwM        (Mem_AmoRmwM),
+        .Mem_AmoOpM         (Mem_AmoOpM),
+        .Mem_AmoOperandM    (Mem_AmoOperandM),
         .Mem_ReadDataM      (Mem_ReadDataM),
         .Mem_ReadDataValidM (Mem_ReadDataValidM),
         .Mem_WriteDoneM     (Mem_WriteDoneM),
+        .Mem_ReadErrorM     (1'b0),
+        .Mem_WriteErrorM    (1'b0),
 
         .ResultW            (ResultW),
         .ALU_ResultE_Debug  (ALU_ResultE_Debug),
 
         .Fetch_PageFault       (Fetch_PageFault),
         .Data_PageFault        (Data_PageFault),
+        .Fetch_AccessFault     (Fetch_AccessFault),
+        .Data_AccessFault      (Data_AccessFault),
         .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
         .Data_PageFault_Cause  (Data_PageFault_Cause),
 
@@ -315,6 +351,8 @@ module tb_mmu_core;
 
     initial begin
         errors               = 0;
+        atomic_ad_write_count = 0;
+        malformed_ad_write_count = 0;
         rst                  = 1'b1;
         Stall_Core_External  = 1'b0;
         Mmu_Enable           = 1'b1;
@@ -356,6 +394,16 @@ module tb_mmu_core;
         check_eq32("Code PTE has A set", ram[32'h0000_1004 >> 2], 32'h0000_204B);
         check_eq32("RW data PTE has A+D set", ram[32'h0000_1008 >> 2], 32'h0000_30C7);
         check_eq32("RO data PTE has A set", ram[32'h0000_1010 >> 2], 32'h0000_4043);
+
+        if ((atomic_ad_write_count != 3) ||
+            (malformed_ad_write_count != 0)) begin
+            $display("[FAIL] atomic A/D writes: good=%0d bad=%0d expected=3/0",
+                     atomic_ad_write_count, malformed_ad_write_count);
+            errors = errors + 1;
+        end
+        else begin
+            $display("[PASS] all PTW A/D updates used coherent AMOOR.W masks");
+        end
 
         if (data_fault_count < 2) begin
             $display("[FAIL] Data_PageFault pulse count: got=%0d expected>=2 (RO store + not-present load)", data_fault_count);

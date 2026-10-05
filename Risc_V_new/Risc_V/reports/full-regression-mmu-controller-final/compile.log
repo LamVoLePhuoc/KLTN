@@ -1,0 +1,117 @@
+QuestaSim-64 vlog 10.2c Compiler 2013.07 Jul 19 2013
+C:\questasim64_10.2c\win64\vlog.exe -work ../reports/.questa-work-95df10023e5c42508ff49ca1499ca7ca -l C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-mmu-controller-final\compile.log -f files.f C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_ahb_error_sideband.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_ahb_uncached.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_axi_request_hold.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_boot_ctrl.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_error_path.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_fence_i.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc_snoop.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_maintenance.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_uncached.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_ahb.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_error.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_watchdog.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_access_fault.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_mmu_bits.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_priv.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_trap.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_advanced.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_bus_error.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_context.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_core.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_policy.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_sfence.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_mmu_upgrade.v 
+-- Compiling module ALU
+-- Compiling module ALU_Decoder
+-- Compiling module Control_Unit
+-- Compiling module Main_Decoder
+-- Compiling module Mux_3_by_1
+-- Compiling module PC_Adder
+-- Compiling module PC_module
+-- Compiling module Register_File
+-- Compiling module Sign_Extend
+-- Compiling module csr_trap_unit
+-- Compiling module decode_stage
+-- Compiling module ex_mem_registers
+-- Compiling module execute_stage
+-- Compiling module MDU
+-- Compiling module fetch_stage
+-- Compiling module hazard_unit
+-- Compiling module id_ex_registers
+-- Compiling module if_id_registers
+-- Compiling module load_unit
+-- Compiling module mem_wb_registers
+-- Compiling module memory_stage
+-- Compiling module mux
+-- Compiling module RV32IMA
+-- Compiling module store_unit
+-- Compiling module sys_decoder
+-- Compiling module writeback_stage
+-- Compiling module mmu_debug_buffer
+-- Compiling module mmu_region_decode
+-- Compiling module mmu_tlb
+-- Compiling module mmu_super_tlb
+-- Compiling module mmu_ptw
+-- Compiling module mmu_top
+-- Compiling module mmu_core_wrapper
+-- Compiling module mmu_ip_wrapper
+-- Compiling module cache_debug_buffer
+-- Compiling module l1_icache
+-- Compiling module l1_dcache
+-- Compiling module l2_cache
+-- Compiling module core_l1_wrapper
+-- Compiling module cache_maintenance_tracker
+-- Compiling module coherence_manager_engine
+-- Compiling module coherence_manager
+-- Compiling module cache_controller_mmu
+-- Compiling module ahb_lite_l1_adapter
+-- Compiling module ahb_lite_l1_slave_adapter
+-- Compiling module boot_ctrl
+-- Compiling module quad_core_soc
+-- Compiling module quad_core_soc_ahb
+-- Compiling module quad_core_axi_wrapper
+-- Compiling module quad_core_axi_wrapper_ahb
+-- Compiling module quad_core_axi_wrapper_bootable
+-- Compiling module quad_core_axi_wrapper_ahb_bootable
+-- Compiling module round_robin_arbiter_2core
+-- Compiling module RV32IMA_IP_Wrapper
+-- Compiling module RV32IMA_DualCore_Wrapper
+-- Compiling module RV32IMA_DualCore_BoardTop
+-- Compiling module tb_ahb_error_sideband
+-- Compiling module tb_ahb_uncached
+-- Compiling module tb_axi_request_hold
+-- Compiling module tb_boot_ctrl
+-- Compiling module tb_cache_amo
+-- Compiling module tb_cache_error_path
+-- Compiling module tb_cache_fence_i
+-- Compiling module tb_cache_lrsc
+-- Compiling module tb_cache_lrsc_snoop
+-- Compiling module tb_cache_maintenance
+-- Compiling module tb_cache_uncached
+-- Compiling module tb_coherence
+-- Compiling module tb_coherence_ahb
+-- Compiling module tb_coherence_error
+-- Compiling module tb_coherence_watchdog
+-- Compiling module tb_csr_access_fault
+-- Compiling module tb_csr_mmu_bits
+-- Compiling module tb_csr_priv
+-- Compiling module tb_csr_trap
+-- Compiling module tb_mmu_advanced
+-- Compiling module tb_mmu_bus_error
+-- Compiling module tb_mmu_context
+-- Compiling module tb_mmu_core
+-- Compiling module tb_mmu_policy
+-- Compiling module tb_mmu_sfence
+-- Compiling module tb_mmu_upgrade
+
+Top level modules:
+	mmu_ip_wrapper
+	quad_core_axi_wrapper_bootable
+	quad_core_axi_wrapper_ahb_bootable
+	RV32IMA_IP_Wrapper
+	RV32IMA_DualCore_BoardTop
+	tb_ahb_error_sideband
+	tb_ahb_uncached
+	tb_axi_request_hold
+	tb_boot_ctrl
+	tb_cache_amo
+	tb_cache_error_path
+	tb_cache_fence_i
+	tb_cache_lrsc
+	tb_cache_lrsc_snoop
+	tb_cache_maintenance
+	tb_cache_uncached
+	tb_coherence
+	tb_coherence_ahb
+	tb_coherence_error
+	tb_coherence_watchdog
+	tb_csr_access_fault
+	tb_csr_mmu_bits
+	tb_csr_priv
+	tb_csr_trap
+	tb_mmu_advanced
+	tb_mmu_bus_error
+	tb_mmu_context
+	tb_mmu_core
+	tb_mmu_policy
+	tb_mmu_sfence
+	tb_mmu_upgrade

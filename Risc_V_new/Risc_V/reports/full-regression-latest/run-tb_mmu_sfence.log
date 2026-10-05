@@ -1,0 +1,21 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_mmu_sfence.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_mmu_sfence 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# [PASS] flush during PTW discards stale translation
+# [PASS] only the post-flush walk refills the TLB
+# [PASS] flush during A/D writeback re-walks safely
+# [PASS] A/D pre-flush response cannot refill the TLB
+# MMU_SFENCE_TB: PASS
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_mmu_sfence.v(152)
+#    Time: 291 ns  Iteration: 0  Instance: /tb_mmu_sfence

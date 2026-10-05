@@ -22,9 +22,12 @@
 // unused so an old MESI Exclusive value cannot silently become a
 // writable line after the protocol conversion.
 //
-// bus_req_type: 2'b00=READ (want S or E), 2'b01=RFO (want M,
+// bus_req_type: 2'b00=READ (want S), 2'b01=RFO (want M,
 // read-for-ownership/upgrade), 2'b10=WRITEBACK (voluntary eviction
-// of a dirty line, no response data expected beyond the ack pulse).
+// of a dirty line, no response data expected beyond the ack pulse),
+// 2'b11=UNCACHED.  UNCACHED is one word and never allocates a line;
+// bus_req_addr keeps the byte address while bus_req_line carries
+// {write-enable, byte-strobe, shifted-write-data} in bits [36:0].
 // snoop_type: 1'b0=INVALIDATE, 1'b1=DOWNGRADE (M -> S).
 //
 // IMPORTANT correctness note (local hit vs. snoop race):
@@ -60,7 +63,12 @@
 // ============================================================
 module l1_dcache #(
     parameter INDEX_BITS  = 9,     // 512 sets (32KB, 2-way, 32B line)
-    parameter LINE_WORDS  = 8      // 32B line = 8 x 32-bit words
+    parameter LINE_WORDS  = 8,     // 32B line = 8 x 32-bit words
+    // Physical 0xC000_0000..0xFFFF_FFFF is the MMIO/reserved region
+    // selected by mmu_region_decode.v.  Keep the decode parameterized
+    // so a board integration can move the device window coherently.
+    parameter [31:0] UNCACHED_BASE = 32'hC000_0000,
+    parameter [31:0] UNCACHED_MASK = 32'hC000_0000
 )(
     input  wire         clk,
     input  wire         rst,
@@ -79,6 +87,7 @@ module l1_dcache #(
     input  wire [31:0]  cpu_amo_operand, // raw rs2, not a precomputed result
     output wire [31:0]  cpu_rdata,
     output wire         cpu_valid,     // 1 exactly when this access has completed (hit this cycle, or miss just resolved)
+    output wire         cpu_error,     // asserted with cpu_valid when the miss/RFO failed
 
     // ---- Bus side (request to coherence_manager.v) ----
     output reg                        bus_req_valid,
@@ -86,6 +95,7 @@ module l1_dcache #(
     output reg  [31:0]                bus_req_addr,   // line-aligned
     output reg  [LINE_WORDS*32-1:0]   bus_req_line,   // valid for WRITEBACK only
     input  wire                       bus_resp_valid,
+    input  wire                       bus_resp_error,
     input  wire [LINE_WORDS*32-1:0]   bus_resp_line,
     input  wire [1:0]                 bus_resp_state, // granted MSI state (S/M) -- ignored for WRITEBACK acks
 
@@ -96,7 +106,12 @@ module l1_dcache #(
     output reg           snoop_ack_valid,
     output reg           snoop_ack_hit,
     output reg           snoop_ack_dirty,
-    output reg  [LINE_WORDS*32-1:0] snoop_ack_line
+    output reg  [LINE_WORDS*32-1:0] snoop_ack_line,
+
+    // A maintenance writeback has no architectural load/store to which
+    // an access fault can be attached. Abort safely, retain the dirty
+    // line and report a pulse for sticky ILA diagnostics upstream.
+    output reg           flush_error
 );
 
     localparam WAYS         = 2;
@@ -106,11 +121,15 @@ module l1_dcache #(
     localparam LINE_BITS    = LINE_WORDS * 32;
 
     localparam [1:0] ST_I = 2'b00, ST_S = 2'b01, ST_M = 2'b11;
-    localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01, REQ_WRITEBACK = 2'b10;
+    localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01,
+                     REQ_WRITEBACK = 2'b10, REQ_UNCACHED = 2'b11;
 
     wire [TAG_BITS-1:0]   addr_tag   = cpu_addr[31:32-TAG_BITS];
     wire [INDEX_BITS-1:0] addr_index = cpu_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
     wire [2:0]            addr_word  = cpu_addr[4:2];
+    wire                  uncached_access =
+                          ((cpu_addr & UNCACHED_MASK) ==
+                           (UNCACHED_BASE & UNCACHED_MASK));
 
     wire [TAG_BITS-1:0]   snoop_tag   = snoop_addr[31:32-TAG_BITS];
     wire [INDEX_BITS-1:0] snoop_index = snoop_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
@@ -157,7 +176,9 @@ module l1_dcache #(
     // Forward declarations used by the read-data mux below; the
     // miss/AMO FSM owns both registers later in the module.
     reg miss_done_pulse;
+    reg miss_error_pulse;
     reg fsm_amo;
+    reg fsm_uncached;
 
     wire access_ok = tag_hit_v & ~snoop_conflict &
                       (cpu_we ? (tag_hit_state_v == ST_M)
@@ -165,7 +186,10 @@ module l1_dcache #(
 
     wire [31:0] hit_word_raw = tag_hit_line_v[addr_word*32 +: 32];
     reg  [31:0] miss_amo_old_word;
-    wire [31:0] cpu_word_raw = (miss_done_pulse && fsm_amo) ?
+    reg  [31:0] uncached_read_word;
+    wire [31:0] cpu_word_raw = (miss_done_pulse && fsm_uncached) ?
+                               uncached_read_word :
+                               (miss_done_pulse && fsm_amo) ?
                                miss_amo_old_word : hit_word_raw;
 
     load_unit u_load_unit (
@@ -173,6 +197,19 @@ module l1_dcache #(
         .addr_offset (cpu_addr[1:0]),
         .mem_op      (cpu_memop),
         .load_data   (cpu_rdata)
+    );
+
+    // Reuse the architectural store formatter for the device path.
+    // Cached stores still merge locally in merge_line(); only uncached
+    // stores expose these byte enables to the external memory boundary.
+    wire [31:0] uncached_wdata;
+    wire [3:0]  uncached_wstrb;
+    store_unit u_uncached_store_unit (
+        .store_data (cpu_wdata),
+        .addr_offset(cpu_addr[1:0]),
+        .mem_op     (cpu_memop),
+        .axi_wdata  (uncached_wdata),
+        .axi_wstrb  (uncached_wstrb)
     );
 
     // ------------------------------------------------------
@@ -285,7 +322,7 @@ module l1_dcache #(
     localparam [2:0] S_IDLE = 3'd0, S_EVICT = 3'd1,
                      S_MISS_REQ = 3'd2, S_AFTER_EVICT = 3'd3,
                      S_FLUSH_SCAN = 3'd4, S_FLUSH_WB = 3'd5,
-                     S_FLUSH_GAP = 3'd6;
+                     S_FLUSH_GAP = 3'd6, S_UNCACHED_REQ = 3'd7;
     reg [2:0] state;
 
     reg                   fsm_way;
@@ -320,15 +357,19 @@ module l1_dcache #(
             state           <= S_IDLE;
             bus_req_valid   <= 1'b0;
             miss_done_pulse <= 1'b0;
+            miss_error_pulse <= 1'b0;
             flush_pending   <= 1'b0;
             flush_seen      <= 1'b0;
             flush_done      <= 1'b0;
+            flush_error     <= 1'b0;
             flush_set       <= {INDEX_BITS{1'b0}};
             flush_way       <= 1'b0;
             fsm_amo         <= 1'b0;
+            fsm_uncached    <= 1'b0;
             fsm_amo_op      <= 5'b0;
             fsm_amo_operand <= 32'b0;
             miss_amo_old_word <= 32'b0;
+            uncached_read_word <= 32'b0;
             snoop_ack_valid <= 1'b0;
             snoop_ack_hit   <= 1'b0;
             snoop_ack_dirty <= 1'b0;
@@ -342,7 +383,9 @@ module l1_dcache #(
         end
         else begin
             miss_done_pulse <= 1'b0;
+            miss_error_pulse <= 1'b0;
             flush_done      <= 1'b0;
+            flush_error     <= 1'b0;
             flush_seen      <= flush;
 
             if (flush && !flush_seen)
@@ -364,7 +407,32 @@ module l1_dcache #(
                     // reinterpret the still-held request as a fresh hit.
                     // This is essential for non-idempotent AMOs: otherwise
                     // a cold AMO would apply its RMW twice.
-                    else if (!miss_done_pulse && (cpu_re | cpu_we) && access_ok && cpu_we) begin
+                    else if (!miss_done_pulse && !miss_error_pulse &&
+                             (cpu_re | cpu_we) && uncached_access) begin
+                        // Device accesses are strongly ordered by this
+                        // blocking cache and bypass both tag/data arrays.
+                        // AMOs require an atomic-capable system bus, which
+                        // this AXI/AHB boundary does not advertise; fail them
+                        // instead of silently degrading atomicity.
+                        fsm_uncached <= 1'b1;
+                        fsm_amo      <= 1'b0;
+                        fsm_memop    <= cpu_memop;
+                        fsm_word_off <= {addr_word, cpu_addr[1:0]};
+                        if (cpu_amo) begin
+                            miss_error_pulse <= 1'b1;
+                        end
+                        else begin
+                            bus_req_valid <= 1'b1;
+                            bus_req_type  <= REQ_UNCACHED;
+                            bus_req_addr  <= cpu_addr;
+                            bus_req_line  <= {{(LINE_BITS-37){1'b0}},
+                                              cpu_we, uncached_wstrb,
+                                              uncached_wdata};
+                            state         <= S_UNCACHED_REQ;
+                        end
+                    end
+                    else if (!miss_done_pulse && !miss_error_pulse &&
+                             (cpu_re | cpu_we) && access_ok && cpu_we) begin
                         // Write hit on M: ownership was already obtained
                         // by an earlier RFO, so the update stays local.
                         data_r[tag_hit_way_v][addr_index]  <= cpu_amo ?
@@ -372,7 +440,8 @@ module l1_dcache #(
                             merge_line(tag_hit_line_v, addr_word, cpu_memop, cpu_wdata, cpu_addr[1:0]);
                         state_r[tag_hit_way_v][addr_index] <= ST_M;
                     end
-                    else if (!miss_done_pulse && (cpu_re | cpu_we) && !access_ok) begin
+                    else if (!miss_done_pulse && !miss_error_pulse &&
+                             (cpu_re | cpu_we) && !access_ok) begin
                         // Need the bus. Decide the fill way and
                         // whether its current occupant (if any, and
                         // if it's actually a DIFFERENT line) needs a
@@ -385,6 +454,7 @@ module l1_dcache #(
                         fsm_wdata <= cpu_wdata;
                         fsm_word_off <= {addr_word, cpu_addr[1:0]};
                         fsm_amo         <= cpu_amo;
+                        fsm_uncached    <= 1'b0;
                         fsm_amo_op      <= cpu_amo_op;
                         fsm_amo_operand <= cpu_amo_operand;
 
@@ -412,13 +482,18 @@ module l1_dcache #(
                 // ------------------------------------------------
                 S_EVICT: begin
                     if (bus_resp_valid) begin
-                        // Insert one low-valid cycle between the
-                        // writeback and the dependent fill/RFO. The
-                        // CM uses request deassertion as completion
-                        // acknowledgement and must not see two level
-                        // requests merged into one transaction.
                         bus_req_valid <= 1'b0;
-                        state         <= S_AFTER_EVICT;
+                        if (bus_resp_error) begin
+                            // The victim remains M and authoritative;
+                            // fail the held CPU operation without dropping it.
+                            miss_error_pulse <= 1'b1;
+                            state            <= S_IDLE;
+                        end
+                        else begin
+                            // Insert one low-valid cycle between the
+                            // writeback and the dependent fill/RFO.
+                            state <= S_AFTER_EVICT;
+                        end
                     end
                 end
 
@@ -433,8 +508,13 @@ module l1_dcache #(
                 S_MISS_REQ: begin
                     if (bus_resp_valid) begin
                         bus_req_valid <= 1'b0;
-
-                        if (fsm_we) begin
+                        if (bus_resp_error) begin
+                            // Never install or modify a line returned with
+                            // an error. The registered pulse completes the
+                            // held load/store/AMO as an access fault.
+                            miss_error_pulse <= 1'b1;
+                        end
+                        else if (fsm_we) begin
                             // Read-for-ownership done: apply the
                             // pending store on top of the fetched
                             // (pre-store) line before committing it.
@@ -458,11 +538,31 @@ module l1_dcache #(
                             // for compatibility and checked by the CM tests.
                             state_r[fsm_way][fsm_index] <= ST_S;
                         end
-                        tag_r[fsm_way][fsm_index] <= fsm_tag;
-                        lru_r[fsm_index]          <= ~fsm_way;
-
-                        miss_done_pulse <= 1'b1;
+                        if (!bus_resp_error) begin
+                            tag_r[fsm_way][fsm_index] <= fsm_tag;
+                            lru_r[fsm_index]          <= ~fsm_way;
+                            miss_done_pulse           <= 1'b1;
+                        end
                         state           <= S_IDLE;
+                    end
+                end
+
+                // ------------------------------------------------
+                // A single-word, non-allocating device transaction.  The
+                // coherence manager returns read data in response line word
+                // zero only; the held CPU address/memop perform extraction
+                // and sign extension through load_unit above.
+                S_UNCACHED_REQ: begin
+                    if (bus_resp_valid) begin
+                        bus_req_valid <= 1'b0;
+                        if (bus_resp_error) begin
+                            miss_error_pulse <= 1'b1;
+                        end
+                        else begin
+                            uncached_read_word <= bus_resp_line[31:0];
+                            miss_done_pulse    <= 1'b1;
+                        end
+                        state <= S_IDLE;
                     end
                 end
 
@@ -501,20 +601,28 @@ module l1_dcache #(
                 S_FLUSH_WB: begin
                     if (bus_resp_valid) begin
                         bus_req_valid <= 1'b0;
-                        state_r[flush_way][flush_set] <= ST_I;
-                        if ((flush_set == SETS-1) && (flush_way == 1'b1)) begin
-                            flush_done <= 1'b1;
-                            state      <= S_IDLE;
+                        if (bus_resp_error) begin
+                            // Preserve the dirty line and terminate this
+                            // maintenance pass without invalidating I$.
+                            flush_error <= 1'b1;
+                            state       <= S_IDLE;
                         end
                         else begin
-                            if (flush_way == 1'b0) begin
-                                flush_way <= 1'b1;
+                            state_r[flush_way][flush_set] <= ST_I;
+                            if ((flush_set == SETS-1) && (flush_way == 1'b1)) begin
+                                flush_done <= 1'b1;
+                                state      <= S_IDLE;
                             end
                             else begin
-                                flush_way <= 1'b0;
-                                flush_set <= flush_set + {{(INDEX_BITS-1){1'b0}}, 1'b1};
+                                if (flush_way == 1'b0) begin
+                                    flush_way <= 1'b1;
+                                end
+                                else begin
+                                    flush_way <= 1'b0;
+                                    flush_set <= flush_set + {{(INDEX_BITS-1){1'b0}}, 1'b1};
+                                end
+                                state <= S_FLUSH_GAP;
                             end
-                            state <= S_FLUSH_GAP;
                         end
                     end
                 end
@@ -543,7 +651,7 @@ module l1_dcache #(
                          (snoop_index == flush_set) &&
                          (snoop_hit_way_v == flush_way) &&
                          (state_r[flush_way][flush_set] != ST_M)) ||
-                        ((state == S_FLUSH_WB) && bus_resp_valid &&
+                        ((state == S_FLUSH_WB) && bus_resp_valid && !bus_resp_error &&
                          (snoop_index == flush_set) &&
                          (snoop_hit_way_v == flush_way))) begin
                         state_r[snoop_hit_way_v][snoop_index] <= ST_I;
@@ -569,8 +677,10 @@ module l1_dcache #(
     // from S_MISS_REQ, at which point state==S_IDLE only starts the
     // *next* cycle, and cpu_valid's hit term requires state==S_IDLE
     // this cycle) -- combined with a plain OR below.
-    wire cpu_valid_hit  = (state == S_IDLE) && !flush_pending && !flush &&
-                          access_ok && (cpu_re | cpu_we);
-    assign cpu_valid = cpu_valid_hit | miss_done_pulse;
+    wire cpu_valid_hit  = (state == S_IDLE) && !miss_error_pulse &&
+                          !flush_pending && !flush &&
+                          !uncached_access && access_ok && (cpu_re | cpu_we);
+    assign cpu_valid = cpu_valid_hit | miss_done_pulse | miss_error_pulse;
+    assign cpu_error = miss_error_pulse;
 
 endmodule

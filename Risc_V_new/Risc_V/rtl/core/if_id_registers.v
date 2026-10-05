@@ -21,7 +21,9 @@ module if_id_registers #(
     output reg [31:0] InstrD,
     output reg [31:0] PCD,
     output reg [31:0] PCPlus4D,
-    output reg        FetchPageFaultD
+    input         FetchAccessFaultF,
+    output reg        FetchPageFaultD,
+    output reg        FetchAccessFaultD
 );
 
     localparam NOP_INSTRUCTION = 32'h00000013;
@@ -32,18 +34,21 @@ module if_id_registers #(
             PCD             <= RESET_VECTOR;
             PCPlus4D        <= RESET_VECTOR + 32'h4;
             FetchPageFaultD <= 1'b0;
+            FetchAccessFaultD <= 1'b0;
         end
         else if (flush) begin
             InstrD          <= NOP_INSTRUCTION;
             PCD             <= 32'h0;
             PCPlus4D        <= 32'h0;
             FetchPageFaultD <= 1'b0;
+            FetchAccessFaultD <= 1'b0;
         end
         else if (!stall) begin
             InstrD          <= InstrF;
             PCD             <= PCF;
             PCPlus4D        <= PCPlus4F;
             FetchPageFaultD <= FetchPageFaultF;
+            FetchAccessFaultD <= FetchAccessFaultF;
         end
     end
 

@@ -42,11 +42,13 @@ module l1_icache #(
     input  wire [31:0]  cpu_addr,
     output wire [31:0]  cpu_rdata,
     output wire         cpu_valid,   // 1 exactly when cpu_rdata is valid for cpu_addr this cycle
+    output wire         cpu_error,   // asserted with cpu_valid when the line fill failed
 
     // ---- Bus side (line-fill request to the coherence/L2 subsystem) ----
     output reg               bus_req_valid,
     output reg  [31:0]       bus_req_addr,   // line-aligned (offset bits = 0)
     input  wire              bus_resp_valid,
+    input  wire              bus_resp_error,
     input  wire [LINE_WORDS*32-1:0] bus_resp_line // word 0 in bits[31:0], word 1 in [63:32], ...
 );
 
@@ -98,7 +100,13 @@ module l1_icache #(
     reg  [TAG_BITS-1:0]   miss_tag;
     reg                   miss_way; // which way we are about to fill
 
-    assign cpu_valid = (state == S_IDLE) && hit_v;
+    // A failed fill completes the held fetch without installing a cache
+    // line.  Keeping the error combinational with the response lets the
+    // core capture the access-fault tag on the same edge that terminates
+    // the miss; the following trap redirect prevents a retry of the old PC.
+    wire miss_error = (state == S_MISS) && bus_resp_valid && bus_resp_error;
+    assign cpu_valid = ((state == S_IDLE) && hit_v) | miss_error;
+    assign cpu_error = miss_error;
     assign cpu_rdata = hit_word;
 
     always @(posedge clk) begin
@@ -137,12 +145,14 @@ module l1_icache #(
 
                 S_MISS: begin
                     if (bus_resp_valid) begin
-                        bus_req_valid                       <= 1'b0;
-                        valid_r[miss_way][miss_index]        <= 1'b1;
-                        tag_r[miss_way][miss_index]          <= miss_tag;
-                        data_r[miss_way][miss_index]         <= bus_resp_line;
-                        lru_r[miss_index]                    <= ~miss_way; // evict the other way next time
-                        state                                <= S_IDLE;
+                        bus_req_valid <= 1'b0;
+                        if (!bus_resp_error) begin
+                            valid_r[miss_way][miss_index] <= 1'b1;
+                            tag_r[miss_way][miss_index]   <= miss_tag;
+                            data_r[miss_way][miss_index]  <= bus_resp_line;
+                            lru_r[miss_index]             <= ~miss_way; // evict the other way next time
+                        end
+                        state <= S_IDLE;
                     end
                 end
 

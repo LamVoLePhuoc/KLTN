@@ -18,6 +18,7 @@ module tb_csr_mmu_bits;
         .IsSretM(1'b0), .IsSfenceVmaM(1'b0), .IsPrivIllegalM(1'b0),
         .IsIllegalOpM(1'b0), .MemReadM(1'b0), .MemWriteM(1'b0),
         .FetchPageFaultM(1'b0), .DataPageFaultM(1'b0),
+        .FetchAccessFaultM(1'b0), .DataAccessFaultM(1'b0),
         .PCM(32'b0), .InstrM(32'b0), .MemAddrM(32'b0),
         .TrapTakenM(), .TrapPCM(), .CurrentPriv(), .Mmu_Enable_Csr(),
         .Satp_PPN_Csr(), .Mstatus_Sum(sum), .Mstatus_Mxr(mxr),

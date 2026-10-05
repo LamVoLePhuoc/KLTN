@@ -1,0 +1,26 @@
+addi x1, x0, 63
+addi x2, x0, 36
+blt x2, x1, haha
+fcvt.d.l f2, x1
+fcvt.d.l f3, x2
+fdiv.d f1, f2, f3
+
+haha:
+    fcvt.l.d x1, f1
+    addi x3, x1, 33
+    fcvt.d.l f3, x3
+
+    addi x4, x0, 100
+    addi x5, x0, 200
+    add x6, x4, x5
+
+    sd x6, 900(x0)
+    sd x6, 800(x0)
+    sd x6, 700(x0)
+    sd x6, 600(x0)
+    sd x6, 500(x0)
+    sd x6, 400(x0)
+    ld x1, 700(x0)
+    ld x2, 800(x0)
+    ld x3, 900(x0)
+

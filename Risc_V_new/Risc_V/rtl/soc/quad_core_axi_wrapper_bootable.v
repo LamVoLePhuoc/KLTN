@@ -48,6 +48,9 @@ module quad_core_axi_wrapper_bootable #(
     // ---------------- MMU control (tie off via Constant IP) ----------------
     input  wire         Mmu_Flush,
     input  wire         Cache_Flush,
+    output wire         Cache_Flush_Busy,
+    output wire         Cache_Flush_Done,
+    output wire         Cache_Flush_Error,
 
     // ---------------- Debug ----------------
     output wire [31:0] ResultW0, output wire [31:0] ResultW1, output wire [31:0] ResultW2, output wire [31:0] ResultW3,
@@ -128,6 +131,8 @@ module quad_core_axi_wrapper_bootable #(
 );
 
     wire core_go;
+    wire boot_cache_flush_request;
+    wire cache_flush_request = Cache_Flush | boot_cache_flush_request;
     wire gated_ARESETN = ARESETN & core_go;
 
     boot_ctrl u_boot_ctrl (
@@ -139,7 +144,11 @@ module quad_core_axi_wrapper_bootable #(
         .S_AXI_ARADDR(S_AXI_BOOT_ARADDR), .S_AXI_ARVALID(S_AXI_BOOT_ARVALID), .S_AXI_ARREADY(S_AXI_BOOT_ARREADY),
         .S_AXI_RDATA(S_AXI_BOOT_RDATA), .S_AXI_RRESP(S_AXI_BOOT_RRESP), .S_AXI_RVALID(S_AXI_BOOT_RVALID), .S_AXI_RREADY(S_AXI_BOOT_RREADY),
 
-        .core_go(core_go)
+        .core_go(core_go),
+        .cache_flush_busy(Cache_Flush_Busy),
+        .cache_flush_done(Cache_Flush_Done),
+        .cache_flush_error(Cache_Flush_Error),
+        .cache_flush_request(boot_cache_flush_request)
     );
 
     quad_core_axi_wrapper #(
@@ -148,7 +157,8 @@ module quad_core_axi_wrapper_bootable #(
     ) u_soc (
         .ACLK(ACLK), .ARESETN(gated_ARESETN),
 
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(cache_flush_request),
+        .Cache_Flush_Busy(Cache_Flush_Busy), .Cache_Flush_Done(Cache_Flush_Done), .Cache_Flush_Error(Cache_Flush_Error),
 
         .ResultW0(ResultW0), .ResultW1(ResultW1), .ResultW2(ResultW2), .ResultW3(ResultW3),
         .Fetch_PageFault0(Fetch_PageFault0), .Fetch_PageFault1(Fetch_PageFault1),

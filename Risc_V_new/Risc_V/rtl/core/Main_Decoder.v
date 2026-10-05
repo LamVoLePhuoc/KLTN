@@ -336,9 +336,17 @@ module Main_Decoder(
             // distinction for the datapath, not which instruction).
             // ====================================================
             OP_SYSTEM: begin
-                CSR = 1'b1;
-
                 if (Funct3 != 3'b000) begin
+                    // Only CSRRS/CSRRC/CSRRW and their immediate
+                    // variants are CSR accesses.  The funct3=000
+                    // privileged sub-space must not reach the CSR
+                    // address/privilege checker: ECALL and EBREAK use
+                    // Instr[31:20] as funct12, not as a CSR address.
+                    // Treating them as CSR operations made the unknown
+                    // "address" win the exception priority chain as
+                    // illegal-instruction (cause 2), masking their real
+                    // causes and preventing medeleg from taking effect.
+                    CSR       = 1'b1;
                     RegWrite  = 1'b1;
                     ALUSrc    = 1'b0;
                     ResultSrc = 2'b11;   // CSR read value (new)

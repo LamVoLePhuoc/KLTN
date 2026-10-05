@@ -1,0 +1,32 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_coherence_error.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_coherence_error 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_error.v(77): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 109, found 108.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_error.v(77): (vopt-2718) [TFMPC] - Missing connection for port 'mem_wstrb'.
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# [PASS] I-line memory error returned on iresp_error
+# [PASS] I-line error was not misrouted to D response
+# [PASS] coherence memory_error diagnostic latched
+# [PASS] I-line retry succeeds after error removal
+# [PASS] failed I-line response did not allocate L2
+# [PASS] D-line memory error returned on dresp_error
+# [PASS] dirty-victim writeback error returned to requester
+# [PASS] failed dirty victim restored valid+dirty in L2
+# [PASS] restored victim kept original L2 tag
+# [PASS] restored victim kept authoritative dirty data
+# [PASS] restored victim has no stale sharers
+# COHERENCE_ERROR_TB: PASS
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v(215)
+#    Time: 2045 ns  Iteration: 1  Instance: /tb_coherence_error

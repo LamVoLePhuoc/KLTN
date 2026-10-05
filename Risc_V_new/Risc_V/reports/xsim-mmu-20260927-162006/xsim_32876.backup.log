@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# xsim v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Sun Sep 27 16:20:50 2026
+# Process ID: 32876
+# Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-mmu-20260927-162006
+# Command line: xsim.exe -mode tcl -source {xsim.dir/tb_mmu_sfence_behav/xsim_script.tcl}
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-mmu-20260927-162006/xsim.log
+# Journal file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-mmu-20260927-162006\xsim.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_mmu_sfence_behav/xsim_script.tcl
+# xsim {tb_mmu_sfence_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] flush during PTW discards stale translation
+[PASS] only the post-flush walk refills the TLB
+[PASS] flush during A/D writeback re-walks safely
+[PASS] A/D pre-flush response cannot refill the TLB
+MMU_SFENCE_TB: PASS
+$finish called at time : 291 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_mmu_sfence.v" Line 152
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Sep 27 16:20:52 2026...

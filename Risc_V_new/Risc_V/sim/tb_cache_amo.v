@@ -37,10 +37,10 @@ module tb_cache_amo;
         .Fetch_PageFault(fetch_pf), .Data_PageFault(data_pf),
         .Fetch_PageFault_Cause(fetch_cause), .Data_PageFault_Cause(data_cause),
         .ibus_req_valid(ibus_req_valid), .ibus_req_addr(ibus_req_addr),
-        .ibus_resp_valid(ibus_resp_valid), .ibus_resp_line(ibus_resp_line),
+        .ibus_resp_valid(ibus_resp_valid), .ibus_resp_error(1'b0), .ibus_resp_line(ibus_resp_line),
         .dbus_req_valid(dbus_req_valid), .dbus_req_type(dbus_req_type),
         .dbus_req_addr(dbus_req_addr), .dbus_req_line(dbus_req_line),
-        .dbus_resp_valid(dbus_resp_valid), .dbus_resp_line(dbus_resp_line),
+        .dbus_resp_valid(dbus_resp_valid), .dbus_resp_error(1'b0), .dbus_resp_line(dbus_resp_line),
         .dbus_resp_state(dbus_resp_state),
         .dsnoop_valid(1'b0), .dsnoop_type(1'b0), .dsnoop_addr(32'b0),
         .dsnoop_ack_valid(), .dsnoop_ack_hit(), .dsnoop_ack_dirty(), .dsnoop_ack_line()

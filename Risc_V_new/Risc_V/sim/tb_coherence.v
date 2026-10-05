@@ -4,7 +4,7 @@
 // tb_coherence
 //
 // Self-checking testbench for the 4-core MSI subsystem:
-// l1_dcache.v + coherence_manager.v + l2_cache.v.
+// l1_dcache.v + cache_controller_mmu.v + peer l2_cache.v.
 // THIS IS THE MOST IMPORTANT TESTBENCH IN THE REPO RIGHT NOW --
 // coherence_manager.v is the highest-risk, least-verified file in
 // the whole design (see Risc_V_new/README.md mục 9). Run this
@@ -69,6 +69,7 @@ module tb_coherence;
     wire [31:0]  dreq_addr  [0:3];
     wire [255:0] dreq_line  [0:3];
     wire         dresp_valid[0:3];
+    wire         dresp_error[0:3];
     wire [255:0] dresp_line [0:3];
     wire [1:0]   dresp_state[0:3];
     wire         dsnoop_valid[0:3];
@@ -84,11 +85,29 @@ module tb_coherence;
     wire [31:0] perf_busy_cycles;
     wire        protocol_error;
     wire        timeout_error;
+    wire        memory_error;
     reg  [3:0]  debug_trace_rd_index;
     wire [95:0] debug_trace_rd_data;
     wire [4:0]  debug_trace_count;
     wire [3:0]  debug_trace_write_index;
     wire [3:0]  debug_controller_state;
+    wire         l2_cmd_valid;
+    wire         l2_cmd_we;
+    wire [31:0]  l2_cmd_addr;
+    wire [1:0]   l2_cmd_way;
+    wire [255:0] l2_cmd_wdata;
+    wire         l2_cmd_w_valid;
+    wire         l2_cmd_w_dirty;
+    wire [3:0]   l2_cmd_w_sharers;
+    wire         l2_resp_valid;
+    wire         l2_resp_hit;
+    wire [1:0]   l2_resp_way;
+    wire [14:0]  l2_resp_victim_tag;
+    wire         l2_resp_victim_valid;
+    wire         l2_resp_victim_dirty;
+    wire [3:0]   l2_resp_victim_sharers;
+    wire [255:0] l2_resp_line;
+    wire [3:0]   l2_resp_sharers;
 
     genvar gi;
     generate
@@ -100,13 +119,13 @@ module tb_coherence;
                 .cpu_we(c_we[gi]), .cpu_re(c_re[gi]), .cpu_memop(c_memop[gi]),
                 .cpu_amo(c_amo[gi]), .cpu_amo_op(c_amo_op[gi]),
                 .cpu_amo_operand(c_amo_operand[gi]),
-                .cpu_rdata(c_rdata[gi]), .cpu_valid(c_valid[gi]),
+                .cpu_rdata(c_rdata[gi]), .cpu_valid(c_valid[gi]), .cpu_error(),
                 .bus_req_valid(dreq_valid[gi]), .bus_req_type(dreq_type[gi]),
                 .bus_req_addr(dreq_addr[gi]), .bus_req_line(dreq_line[gi]),
-                .bus_resp_valid(dresp_valid[gi]), .bus_resp_line(dresp_line[gi]), .bus_resp_state(dresp_state[gi]),
+                .bus_resp_valid(dresp_valid[gi]), .bus_resp_error(dresp_error[gi]), .bus_resp_line(dresp_line[gi]), .bus_resp_state(dresp_state[gi]),
                 .snoop_valid(dsnoop_valid[gi]), .snoop_type(dsnoop_type[gi]), .snoop_addr(dsnoop_addr[gi]),
                 .snoop_ack_valid(dsnoop_ack_valid[gi]), .snoop_ack_hit(dsnoop_ack_hit[gi]),
-                .snoop_ack_dirty(dsnoop_ack_dirty[gi]), .snoop_ack_line(dsnoop_ack_line[gi])
+                .snoop_ack_dirty(dsnoop_ack_dirty[gi]), .snoop_ack_line(dsnoop_ack_line[gi]), .flush_error()
             );
         end
     endgenerate
@@ -126,6 +145,7 @@ module tb_coherence;
     wire        mem_we;
     wire [31:0] mem_addr;
     wire [31:0] mem_wdata;
+    wire [3:0]  mem_wstrb;
     reg  [31:0] mem_rdata;
     reg         mem_valid;
     integer dram_read_words;
@@ -155,48 +175,73 @@ module tb_coherence;
     // ------------------------------------------------------
     // DUT
     // ------------------------------------------------------
-    coherence_manager #(.DEBUG_TRACE_ENABLE(1)) u_cm (
+    cache_controller_mmu #(.DEBUG_TRACE_ENABLE(1)) u_cm (
         .clk(clk), .rst(rst),
 
         .c0_dreq_valid(dreq_valid[0]), .c0_dreq_type(dreq_type[0]), .c0_dreq_addr(dreq_addr[0]), .c0_dreq_line(dreq_line[0]),
-        .c0_dresp_valid(dresp_valid[0]), .c0_dresp_line(dresp_line[0]), .c0_dresp_state(dresp_state[0]),
+        .c0_dresp_valid(dresp_valid[0]), .c0_dresp_error(dresp_error[0]), .c0_dresp_line(dresp_line[0]), .c0_dresp_state(dresp_state[0]),
         .c0_dsnoop_valid(dsnoop_valid[0]), .c0_dsnoop_type(dsnoop_type[0]), .c0_dsnoop_addr(dsnoop_addr[0]),
         .c0_dsnoop_ack_valid(dsnoop_ack_valid[0]), .c0_dsnoop_ack_hit(dsnoop_ack_hit[0]),
         .c0_dsnoop_ack_dirty(dsnoop_ack_dirty[0]), .c0_dsnoop_ack_line(dsnoop_ack_line[0]),
-        .c0_ireq_valid(1'b0), .c0_ireq_addr(32'b0), .c0_iresp_valid(), .c0_iresp_line(),
+        .c0_ireq_valid(1'b0), .c0_ireq_addr(32'b0), .c0_iresp_valid(), .c0_iresp_error(), .c0_iresp_line(),
 
         .c1_dreq_valid(dreq_valid[1]), .c1_dreq_type(dreq_type[1]), .c1_dreq_addr(dreq_addr[1]), .c1_dreq_line(dreq_line[1]),
-        .c1_dresp_valid(dresp_valid[1]), .c1_dresp_line(dresp_line[1]), .c1_dresp_state(dresp_state[1]),
+        .c1_dresp_valid(dresp_valid[1]), .c1_dresp_error(dresp_error[1]), .c1_dresp_line(dresp_line[1]), .c1_dresp_state(dresp_state[1]),
         .c1_dsnoop_valid(dsnoop_valid[1]), .c1_dsnoop_type(dsnoop_type[1]), .c1_dsnoop_addr(dsnoop_addr[1]),
         .c1_dsnoop_ack_valid(dsnoop_ack_valid[1]), .c1_dsnoop_ack_hit(dsnoop_ack_hit[1]),
         .c1_dsnoop_ack_dirty(dsnoop_ack_dirty[1]), .c1_dsnoop_ack_line(dsnoop_ack_line[1]),
-        .c1_ireq_valid(1'b0), .c1_ireq_addr(32'b0), .c1_iresp_valid(), .c1_iresp_line(),
+        .c1_ireq_valid(1'b0), .c1_ireq_addr(32'b0), .c1_iresp_valid(), .c1_iresp_error(), .c1_iresp_line(),
 
         .c2_dreq_valid(dreq_valid[2]), .c2_dreq_type(dreq_type[2]), .c2_dreq_addr(dreq_addr[2]), .c2_dreq_line(dreq_line[2]),
-        .c2_dresp_valid(dresp_valid[2]), .c2_dresp_line(dresp_line[2]), .c2_dresp_state(dresp_state[2]),
+        .c2_dresp_valid(dresp_valid[2]), .c2_dresp_error(dresp_error[2]), .c2_dresp_line(dresp_line[2]), .c2_dresp_state(dresp_state[2]),
         .c2_dsnoop_valid(dsnoop_valid[2]), .c2_dsnoop_type(dsnoop_type[2]), .c2_dsnoop_addr(dsnoop_addr[2]),
         .c2_dsnoop_ack_valid(dsnoop_ack_valid[2]), .c2_dsnoop_ack_hit(dsnoop_ack_hit[2]),
         .c2_dsnoop_ack_dirty(dsnoop_ack_dirty[2]), .c2_dsnoop_ack_line(dsnoop_ack_line[2]),
-        .c2_ireq_valid(1'b0), .c2_ireq_addr(32'b0), .c2_iresp_valid(), .c2_iresp_line(),
+        .c2_ireq_valid(1'b0), .c2_ireq_addr(32'b0), .c2_iresp_valid(), .c2_iresp_error(), .c2_iresp_line(),
 
         .c3_dreq_valid(dreq_valid[3]), .c3_dreq_type(dreq_type[3]), .c3_dreq_addr(dreq_addr[3]), .c3_dreq_line(dreq_line[3]),
-        .c3_dresp_valid(dresp_valid[3]), .c3_dresp_line(dresp_line[3]), .c3_dresp_state(dresp_state[3]),
+        .c3_dresp_valid(dresp_valid[3]), .c3_dresp_error(dresp_error[3]), .c3_dresp_line(dresp_line[3]), .c3_dresp_state(dresp_state[3]),
         .c3_dsnoop_valid(dsnoop_valid[3]), .c3_dsnoop_type(dsnoop_type[3]), .c3_dsnoop_addr(dsnoop_addr[3]),
         .c3_dsnoop_ack_valid(dsnoop_ack_valid[3]), .c3_dsnoop_ack_hit(dsnoop_ack_hit[3]),
         .c3_dsnoop_ack_dirty(dsnoop_ack_dirty[3]), .c3_dsnoop_ack_line(dsnoop_ack_line[3]),
-        .c3_ireq_valid(1'b0), .c3_ireq_addr(32'b0), .c3_iresp_valid(), .c3_iresp_line(),
+        .c3_ireq_valid(1'b0), .c3_ireq_addr(32'b0), .c3_iresp_valid(), .c3_iresp_error(), .c3_iresp_line(),
 
-        .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid),
+        .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr),
+        .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),
+        .mem_rdata(mem_rdata), .mem_valid(mem_valid), .mem_error(1'b0),
         .perf_total_requests(perf_total_requests), .perf_d_bus_reads(perf_d_bus_reads),
         .perf_d_rfos(perf_d_rfos), .perf_d_writebacks(perf_d_writebacks),
         .perf_i_reads(perf_i_reads), .perf_l2_hits(perf_l2_hits), .perf_l2_misses(perf_l2_misses),
         .perf_snoop_requests(perf_snoop_requests), .perf_mem_read_words(perf_mem_read_words),
         .perf_mem_write_words(perf_mem_write_words), .perf_busy_cycles(perf_busy_cycles),
-        .protocol_error(protocol_error), .timeout_error(timeout_error),
+        .protocol_error(protocol_error), .timeout_error(timeout_error), .memory_error(memory_error),
         .debug_trace_rd_index(debug_trace_rd_index), .debug_trace_rd_data(debug_trace_rd_data),
         .debug_trace_count(debug_trace_count), .debug_trace_write_index(debug_trace_write_index),
-        .debug_controller_state(debug_controller_state)
+        .debug_controller_state(debug_controller_state),
+        .l2_cmd_valid_o(l2_cmd_valid), .l2_cmd_we_o(l2_cmd_we),
+        .l2_cmd_addr_o(l2_cmd_addr), .l2_cmd_way_o(l2_cmd_way),
+        .l2_cmd_wdata_o(l2_cmd_wdata), .l2_cmd_w_valid_o(l2_cmd_w_valid),
+        .l2_cmd_w_dirty_o(l2_cmd_w_dirty), .l2_cmd_w_sharers_o(l2_cmd_w_sharers),
+        .l2_resp_valid_i(l2_resp_valid), .l2_resp_hit_i(l2_resp_hit),
+        .l2_resp_way_i(l2_resp_way), .l2_resp_victim_tag_i(l2_resp_victim_tag),
+        .l2_resp_victim_valid_i(l2_resp_victim_valid),
+        .l2_resp_victim_dirty_i(l2_resp_victim_dirty),
+        .l2_resp_victim_sharers_i(l2_resp_victim_sharers),
+        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers)
+    );
+
+    l2_cache u_shared_l2 (
+        .clk(clk), .rst(rst),
+        .cmd_valid(l2_cmd_valid), .cmd_we(l2_cmd_we),
+        .cmd_addr(l2_cmd_addr), .cmd_way(l2_cmd_way),
+        .cmd_wdata(l2_cmd_wdata), .cmd_w_valid(l2_cmd_w_valid),
+        .cmd_w_dirty(l2_cmd_w_dirty), .cmd_w_sharers(l2_cmd_w_sharers),
+        .resp_valid(l2_resp_valid), .resp_hit(l2_resp_hit),
+        .resp_way(l2_resp_way), .resp_victim_tag(l2_resp_victim_tag),
+        .resp_victim_valid(l2_resp_victim_valid),
+        .resp_victim_dirty(l2_resp_victim_dirty),
+        .resp_victim_sharers(l2_resp_victim_sharers),
+        .resp_line(l2_resp_line), .resp_sharers(l2_resp_sharers)
     );
 
     // ------------------------------------------------------
@@ -242,61 +287,76 @@ module tb_coherence;
 
     task automatic do_read(input integer core, input [31:0] addr, output [31:0] data);
         begin
+            // Drive away from the DUT sampling edge.  This avoids an
+            // active-region race that different simulators may order
+            // differently when the request is asserted/deasserted at posedge.
+            @(negedge clk);
             c_addr[core]  = addr;
             c_we[core]    = 1'b0;
             c_re[core]    = 1'b1;
             c_memop[core] = 3'b010; // LW
-            @(posedge clk);
-            while (!c_valid[core]) @(posedge clk);
+            @(posedge clk); #1;
+            while (!c_valid[core]) begin
+                @(posedge clk); #1;
+            end
             data = c_rdata[core];
+            @(negedge clk);
             c_re[core] = 1'b0;
-            @(posedge clk); // 1 idle cycle so the next op starts clean
         end
     endtask
 
     task automatic do_write(input integer core, input [31:0] addr, input [31:0] wdata);
         begin
+            @(negedge clk);
             c_addr[core]  = addr;
             c_wdata[core] = wdata;
             c_we[core]    = 1'b1;
             c_re[core]    = 1'b0;
             c_memop[core] = 3'b010; // SW
-            @(posedge clk);
-            while (!c_valid[core]) @(posedge clk);
+            @(posedge clk); #1;
+            while (!c_valid[core]) begin
+                @(posedge clk); #1;
+            end
+            @(negedge clk);
             c_we[core] = 1'b0;
-            @(posedge clk);
         end
     endtask
 
     task automatic do_read_op(input integer core, input [31:0] addr,
                               input [2:0] memop, output [31:0] data);
         begin
+            @(negedge clk);
             c_addr[core]  = addr;
             c_we[core]    = 1'b0;
             c_re[core]    = 1'b1;
             c_memop[core] = memop;
-            wait (c_valid[core]);
-            #1 data = c_rdata[core];
-            @(posedge clk);
+            @(posedge clk); #1;
+            while (!c_valid[core]) begin
+                @(posedge clk); #1;
+            end
+            data = c_rdata[core];
+            @(negedge clk);
             c_re[core]    = 1'b0;
             c_memop[core] = 3'b010;
-            @(posedge clk);
         end
     endtask
 
     task automatic do_write_op(input integer core, input [31:0] addr,
                                input [31:0] wdata, input [2:0] memop);
         begin
+            @(negedge clk);
             c_addr[core]  = addr;
             c_wdata[core] = wdata;
             c_we[core]    = 1'b1;
             c_re[core]    = 1'b0;
             c_memop[core] = memop;
-            wait (c_valid[core]);
-            @(posedge clk);
+            @(posedge clk); #1;
+            while (!c_valid[core]) begin
+                @(posedge clk); #1;
+            end
+            @(negedge clk);
             c_we[core]    = 1'b0;
             c_memop[core] = 3'b010;
-            @(posedge clk);
         end
     endtask
 
@@ -372,6 +432,13 @@ module tb_coherence;
     integer resp_order [0:3];
     integer resp_count;
     reg [31:0] rr_rd0, rr_rd1, rr_rd2, rr_rd3;
+    reg [31:0] stress_model [0:63];
+    reg [31:0] stress_lfsr;
+    reg [31:0] stress_value;
+    integer stress_i;
+    integer stress_core;
+    integer stress_word;
+    integer stress_failures;
 
     initial begin
         errors = 0;
@@ -383,6 +450,7 @@ module tb_coherence;
             c_amo[k] = 1'b0; c_amo_op[k] = 5'b0; c_amo_operand[k] = 32'b0;
         end
         repeat (5) @(posedge clk);
+        @(negedge clk);
         rst = 1'b0;
         repeat (2) @(posedge clk);
 
@@ -465,7 +533,7 @@ module tb_coherence;
         check_true("H: flushed value was recovered from L2", dram_read_words == snap_reads);
 
         $display("MSI I: simultaneous misses are served in round-robin order");
-        rr_start = u_cm.rr_next;
+        rr_start = u_cm.u_protocol_engine.rr_next;
         rr_first = (rr_start < 4) ? rr_start : 0;
         resp_count = 0;
         fork
@@ -538,13 +606,75 @@ module tb_coherence;
         do_read(1, 32'h0001_8000, rd);
         check_eq32("K: nonzero-word AMO preserves neighboring lane", rd, 32'h1234_5678);
 
-        check_true("L: CM performance counters observed all D requests",
+        $display("MSI L: deterministic randomized ownership/flush stress");
+        stress_lfsr = 32'h1ACE_B00C;
+        stress_failures = 0;
+        for (stress_i = 0; stress_i < 64; stress_i = stress_i + 1)
+            stress_model[stress_i] = 32'b0;
+
+        // Long, reproducible sequence across eight lines. Writes force
+        // ownership migration between all four cores; reads compare the
+        // externally visible value against a transaction-level scoreboard.
+        // Periodic private-cache flushes exercise dirty writeback and stale
+        // directory pruning in the middle of the sequence.
+        for (stress_i = 0; stress_i < 160; stress_i = stress_i + 1) begin
+            stress_lfsr = {stress_lfsr[30:0],
+                           stress_lfsr[31] ^ stress_lfsr[21] ^
+                           stress_lfsr[1] ^ stress_lfsr[0]};
+            stress_core = stress_lfsr[1:0];
+            stress_word = stress_lfsr[7:2];
+            if (stress_lfsr[8]) begin
+                stress_value = 32'h5A00_0000 ^ (stress_i << 8) ^
+                               (stress_core << 4) ^ stress_word;
+                do_write(stress_core, 32'h0003_0000 + (stress_word << 2),
+                         stress_value);
+                stress_model[stress_word] = stress_value;
+            end
+            else begin
+                do_read(stress_core, 32'h0003_0000 + (stress_word << 2), rd);
+                if (rd !== stress_model[stress_word]) begin
+                    $display("[FAIL] L: stress op=%0d core=%0d word=%0d got=0x%08h expected=0x%08h",
+                             stress_i, stress_core, stress_word, rd,
+                             stress_model[stress_word]);
+                    stress_failures = stress_failures + 1;
+                    errors = errors + 1;
+                end
+            end
+
+            if ((stress_i % 23) == 22) begin
+                @(negedge clk);
+                c_flush[stress_core] = 1'b1;
+                @(negedge clk);
+                c_flush[stress_core] = 1'b0;
+                wait (c_flush_busy[stress_core]);
+                wait (c_flush_done[stress_core]);
+                @(posedge clk);
+            end
+        end
+
+        // Force final ownership transfers from a different core for every
+        // word so no dirty value can remain hidden in its last writer.
+        for (stress_i = 0; stress_i < 64; stress_i = stress_i + 1) begin
+            stress_core = (stress_i + 1) % 4;
+            do_read(stress_core, 32'h0003_0000 + (stress_i << 2), rd);
+            if (rd !== stress_model[stress_i]) begin
+                $display("[FAIL] L: final stress word=%0d got=0x%08h expected=0x%08h",
+                         stress_i, rd, stress_model[stress_i]);
+                stress_failures = stress_failures + 1;
+                errors = errors + 1;
+            end
+        end
+        check_true("L: randomized MSI scoreboard stayed coherent",
+                   stress_failures == 0);
+
+        check_true("M: CM performance counters observed all D requests",
                    perf_total_requests == (perf_d_bus_reads + perf_d_rfos + perf_d_writebacks));
-        check_true("L: CM observed both L2 hits and misses",
+        check_true("M: CM observed both L2 hits and misses",
                    (perf_l2_hits != 0) && (perf_l2_misses != 0));
-        check_true("L: CM protocol checker stayed clean", !protocol_error);
-        check_true("L: CM handshake watchdog stayed clean", !timeout_error);
-        check_true("L: optional CM trace buffer captured events", debug_trace_count != 0);
+        check_true("M: CM protocol checker stayed clean", !protocol_error);
+        check_true("M: CM handshake watchdog stayed clean", !timeout_error);
+        check_true("M: CM external-memory error flag stayed clean", !memory_error);
+        check_true("M: optional CM trace buffer captured events", debug_trace_count != 0);
 
         check_true("MSI never granted removed Exclusive state", e_grant_count == 0);
 
@@ -560,7 +690,7 @@ module tb_coherence;
     end
 
     initial begin
-        #(CLK_PERIOD * 20000);
+        #(CLK_PERIOD * 60000);
         $display("MSI_COHERENCE_TB: FAIL (global timeout -- dump coherence FSM waves)");
         $finish;
     end

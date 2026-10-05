@@ -89,7 +89,18 @@ module mmu_core_wrapper #(
     // mmu_top.  Both default off for backward compatibility and so
     // board bitstreams contain no debug buffer unless requested.
     parameter          MMU_REGION_POLICY_ENABLE = 0,
-    parameter          MMU_DEBUG_TRACE_ENABLE   = 0
+    parameter          MMU_DEBUG_TRACE_ENABLE   = 0,
+
+    // Set only when the downstream data path is l1_dcache.  In that
+    // configuration PTW A/D updates are emitted as a coherent AMOOR.W
+    // of bits A/D, so another hart cannot have its concurrent PTE edit
+    // overwritten by the PTW's earlier read value. Direct AXI/simple
+    // RAM users keep the legacy full-word write by leaving this zero.
+    parameter          PTW_ATOMIC_AD_ENABLE     = 0,
+
+    // Zero removes the diagnostic counter. A non-zero value latches an
+    // internal mark_debug flag if one PTW transaction waits this long.
+    parameter integer  MMU_PTW_WATCHDOG_CYCLES = 0
 )(
     input  wire        clk,
     input  wire        rst,
@@ -98,7 +109,7 @@ module mmu_core_wrapper #(
     // MMU control
     input  wire        Mmu_Enable,
     input  wire [19:0] Satp_PPN,     // physical page number of the root page table
-    input  wire        Mmu_Flush,    // pulse to invalidate both TLBs (only when idle, see NOTE above)
+    input  wire        Mmu_Flush,    // pulse to invalidate all TLBs; safe even during a PTW
 
     // Snoop for LR/SC (see NOTE above: physical domain)
     input  wire [31:0] Snoop_Addr,
@@ -108,6 +119,7 @@ module mmu_core_wrapper #(
     output wire [31:0] PCF,
     input  wire [31:0] InstrF,
     input  wire        Instr_ValidF,      // 1 exactly when InstrF is valid for PCF
+    input  wire        Instr_ErrorF,      // valid with Instr_ValidF; instruction access failed
 
     // Memory bus (physical address out)
     output wire [31:0] Mem_AddrM,
@@ -121,6 +133,8 @@ module mmu_core_wrapper #(
     input  wire [31:0] Mem_ReadDataM,
     input  wire        Mem_ReadDataValidM, // 1 exactly when Mem_ReadDataM is valid for Mem_AddrM
     input  wire        Mem_WriteDoneM,     // 1 exactly when the store at Mem_AddrM has completed
+    input  wire        Mem_ReadErrorM,     // valid with Mem_ReadDataValidM
+    input  wire        Mem_WriteErrorM,    // valid with Mem_WriteDoneM
 
     // Debug / WB
     output wire [31:0] ResultW,
@@ -129,6 +143,8 @@ module mmu_core_wrapper #(
     // MMU status
     output wire        Fetch_PageFault,
     output wire        Data_PageFault,
+    output wire        Fetch_AccessFault,
+    output wire        Data_AccessFault,
     output wire [1:0]  Fetch_PageFault_Cause,
     output wire [1:0]  Data_PageFault_Cause,
 
@@ -156,6 +172,9 @@ module mmu_core_wrapper #(
     wire        mem_we_core;
     wire        mem_re_core;
     wire [2:0]  memop_core;
+    wire        mem_amo_core;
+    wire [4:0]  mem_amo_op_core;
+    wire [31:0] mem_amo_operand_core;
     wire [31:0] mem_rdata_to_core;
 
     wire mem_req_core = mem_re_core | mem_we_core;
@@ -173,6 +192,8 @@ module mmu_core_wrapper #(
     wire [31:0] pa_mem;
     wire        fetch_fault;
     wire        mem_fault;
+    wire        mmu_fetch_access_fault;
+    wire        mmu_mem_access_fault;
     wire        mmu_busy;
 
     wire        ptw_mem_req;
@@ -191,6 +212,7 @@ module mmu_core_wrapper #(
     wire [1:0]  mmu_debug_controller_state;
     wire [2:0]  mmu_debug_fetch_region;
     wire [2:0]  mmu_debug_mem_region;
+    (* mark_debug = "true" *) wire mmu_ptw_timeout_error;
 
     // ------------------------------------------------------
     // CSR-vs-external MMU control mux (see MMU_CTRL_FROM_CSR above).
@@ -214,10 +236,12 @@ module mmu_core_wrapper #(
     wire        mmu_sum_eff    = MMU_CTRL_FROM_CSR ? mstatus_sum_csr : EXTERNAL_SUM;
     wire        mmu_mxr_eff    = MMU_CTRL_FROM_CSR ? mstatus_mxr_csr : EXTERNAL_MXR;
     wire        ptw_mem_valid  = ptw_mem_we ? Mem_WriteDoneM : Mem_ReadDataValidM;
+    wire        ptw_mem_error  = ptw_mem_we ? Mem_WriteErrorM : Mem_ReadErrorM;
 
     mmu_top #(
         .REGION_POLICY_ENABLE(MMU_REGION_POLICY_ENABLE),
-        .DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE)
+        .DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE),
+        .PTW_WATCHDOG_CYCLES(MMU_PTW_WATCHDOG_CYCLES)
     ) mmu (
         .clk(clk), .rst(rst),
 
@@ -238,6 +262,8 @@ module mmu_core_wrapper #(
 
         .fetch_fault(fetch_fault),
         .mem_fault(mem_fault),
+        .fetch_access_fault(mmu_fetch_access_fault),
+        .mem_access_fault(mmu_mem_access_fault),
         .fetch_fault_cause(Fetch_PageFault_Cause),
         .mem_fault_cause(Data_PageFault_Cause),
 
@@ -247,6 +273,7 @@ module mmu_core_wrapper #(
         .ptw_mem_wdata(ptw_mem_wdata),
         .ptw_mem_rdata(Mem_ReadDataM),
         .ptw_mem_valid(ptw_mem_valid),
+        .ptw_mem_error(ptw_mem_error),
 
         .busy(mmu_busy),
 
@@ -256,11 +283,23 @@ module mmu_core_wrapper #(
         .debug_trace_write_index(mmu_debug_trace_write_index),
         .debug_controller_state(mmu_debug_controller_state),
         .debug_fetch_region(mmu_debug_fetch_region),
-        .debug_mem_region(mmu_debug_mem_region)
+        .debug_mem_region(mmu_debug_mem_region),
+        .ptw_timeout_error(mmu_ptw_timeout_error)
     );
 
     assign Fetch_PageFault = fetch_fault;
     assign Data_PageFault  = mem_fault;
+
+    // A failed page-table access is reported by mmu_top at T_GATE.
+    // Normal fetch/load/store response errors are accepted only with
+    // their matching completion pulse and only while the core, not the
+    // PTW, owns that memory channel.
+    wire core_fetch_access_fault = ~mmu_busy & Instr_ValidF & Instr_ErrorF;
+    wire core_data_access_fault = ~mmu_busy &
+                                  ((mem_re_core & Mem_ReadDataValidM & Mem_ReadErrorM) |
+                                   (mem_we_core & Mem_WriteDoneM & Mem_WriteErrorM));
+    assign Fetch_AccessFault = mmu_fetch_access_fault | core_fetch_access_fault;
+    assign Data_AccessFault  = mmu_mem_access_fault | core_data_access_fault;
 
     // ------------------------------------------------------
     // Multi-cycle memory stall (see header NOTE). While mmu_busy,
@@ -274,17 +313,15 @@ module mmu_core_wrapper #(
     // request parked afterwards; its bus enables are then suppressed
     // so stores and AMOs cannot be accepted twice.
     // ------------------------------------------------------
-    // NOTE: keyed off Mem_WriteEnM/Mem_ReadEnM (the *actual*, already
-    // fault-gated bus outputs below), not the raw core-side
-    // mem_we_core/mem_re_core -- a store that mem_fault suppressed
-    // never asserts Mem_WriteEnM, so it must never wait for a
-    // Mem_WriteDoneM that (correctly) will never come. A faulting
-    // *load* is different: Mem_ReadEnM is NOT suppressed on fault
-    // (only the returned data is, via mem_rdata_to_core below), so a
-    // real read is genuinely issued and genuinely needs to complete.
-    wire core_store_req = mem_we_core & ~mem_fault;
-    wire core_load_req  = mem_re_core;
-    wire fetch_wait = ~mmu_busy & ~Instr_ValidF;
+    // NOTE: completion waits use the effective, fault-gated requests,
+    // not raw mem_we_core/mem_re_core. A translation or PTW access
+    // fault suppresses both loads and stores, so neither may wait for
+    // a bus completion that will never be requested. A direct physical
+    // bus error is different: its matching completion has arrived.
+    wire core_store_req = mem_we_core & ~mem_fault & ~mmu_mem_access_fault;
+    wire core_load_req  = mem_re_core & ~mem_fault & ~mmu_mem_access_fault;
+    wire fetch_wait = ~mmu_busy & ~fetch_fault & ~mmu_fetch_access_fault &
+                      ~Instr_ValidF;
     wire data_wait  = ~mmu_busy & ~core_data_completed &
                       (core_store_req ? ~Mem_WriteDoneM :
                        core_load_req  ? ~Mem_ReadDataValidM :
@@ -314,7 +351,8 @@ module mmu_core_wrapper #(
     // VA turned out to fault once resolved.
     // ------------------------------------------------------
     assign PCF            = pa_fetch;
-    assign instrf_to_core = fetch_fault ? 32'h0000_0013 : InstrF;
+    assign instrf_to_core = (fetch_fault | Fetch_AccessFault) ?
+                            32'h0000_0013 : InstrF;
 
     // ------------------------------------------------------
     // Data side: while the MMU is busy (walking either side),
@@ -331,7 +369,21 @@ module mmu_core_wrapper #(
     assign MemOpM         = mmu_busy ? 3'b010        : memop_core;
     assign Mem_WriteDataM = mmu_busy ? ptw_mem_wdata : mem_wdata_core;
 
-    assign mem_rdata_to_core = mem_fault ? 32'b0 : Mem_ReadDataM;
+    // The PTW is the sole owner of the D-memory port while mmu_busy.
+    // Never leak a stalled core AMO onto a PTE read/write. On the
+    // coherent cached path, turn the A/D write into AMOOR.W with only
+    // the A/D mask as operand; l1_dcache then performs one serialized
+    // read-modify-write after obtaining M ownership. The full updated
+    // PTE remains on Mem_WriteDataM for non-AMO downstream users.
+    assign Mem_AmoRmwM = mmu_busy ?
+                         (PTW_ATOMIC_AD_ENABLE && ptw_mem_req && ptw_mem_we) :
+                         mem_amo_core;
+    assign Mem_AmoOpM = mmu_busy ? 5'b01000 : mem_amo_op_core; // AMOOR.W
+    assign Mem_AmoOperandM = mmu_busy ? (ptw_mem_wdata & 32'h0000_00C0) :
+                                      mem_amo_operand_core;
+
+    assign mem_rdata_to_core = (mem_fault | Data_AccessFault) ?
+                               32'b0 : Mem_ReadDataM;
 
     // ------------------------------------------------------
     // Core (virtual-address world)
@@ -354,9 +406,9 @@ module mmu_core_wrapper #(
         .Mem_WriteEnM       (mem_we_core),
         .Mem_ReadEnM        (mem_re_core),
         .MemOpM             (memop_core),
-        .Mem_AmoRmwM        (Mem_AmoRmwM),
-        .Mem_AmoOpM         (Mem_AmoOpM),
-        .Mem_AmoOperandM    (Mem_AmoOperandM),
+        .Mem_AmoRmwM        (mem_amo_core),
+        .Mem_AmoOpM         (mem_amo_op_core),
+        .Mem_AmoOperandM    (mem_amo_operand_core),
         .Mem_ReadDataM      (mem_rdata_to_core),
 
         // LR/SC VA-vs-PA fix (see memory_stage.v/RV32IMA.v headers):
@@ -379,6 +431,8 @@ module mmu_core_wrapper #(
         // blocking a store with nowhere for software to catch it.
         .Fetch_PageFault_In (fetch_fault),
         .Data_PageFault_In  (mem_fault),
+        .Fetch_AccessFault_In(Fetch_AccessFault),
+        .Data_AccessFault_In (Data_AccessFault),
 
         .ResultW            (ResultW),
         .ALU_ResultE_Debug  (ALU_ResultE_Debug),

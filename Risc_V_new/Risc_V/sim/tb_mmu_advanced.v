@@ -10,7 +10,7 @@ module tb_mmu_advanced;
     reg [19:0] req_vpn;
     reg [1:0] req_priv;
     reg [19:0] satp_ppn;
-    wire ready, resp_valid, resp_fault, resp_superpage;
+    wire ready, resp_valid, resp_fault, resp_access_fault, resp_superpage;
     wire [1:0] resp_fault_cause;
     wire [19:0] resp_ppn;
     wire resp_r, resp_w, resp_x, resp_u, resp_g, resp_a, resp_d;
@@ -30,12 +30,14 @@ module tb_mmu_advanced;
         .req_priv(req_priv), .req_sum(req_sum), .req_mxr(req_mxr),
         .satp_ppn(satp_ppn), .ready(ready),
         .resp_valid(resp_valid), .resp_fault(resp_fault),
+        .resp_access_fault(resp_access_fault),
         .resp_fault_cause(resp_fault_cause), .resp_ppn(resp_ppn),
         .resp_superpage(resp_superpage), .resp_r(resp_r), .resp_w(resp_w),
         .resp_x(resp_x), .resp_u(resp_u), .resp_g(resp_g),
         .resp_a(resp_a), .resp_d(resp_d),
         .mem_req(mem_req), .mem_we(mem_we), .mem_addr(mem_addr),
-        .mem_wdata(mem_wdata), .mem_rdata(mem_rdata), .mem_valid(mem_valid)
+        .mem_wdata(mem_wdata), .mem_rdata(mem_rdata), .mem_valid(mem_valid),
+        .mem_error(1'b0)
     );
 
     always #5 clk = ~clk;
@@ -65,7 +67,7 @@ module tb_mmu_advanced;
     endtask
 
     task expect_ok;
-        input [255:0] name;
+        input [511:0] name;
         begin
             if (resp_fault) begin
                 $display("[FAIL] %0s fault cause=%0d", name, resp_fault_cause);
@@ -75,7 +77,7 @@ module tb_mmu_advanced;
     endtask
 
     task expect_fault;
-        input [255:0] name;
+        input [511:0] name;
         input [1:0] cause;
         begin
             if (!resp_fault || resp_fault_cause !== cause) begin
@@ -153,6 +155,34 @@ module tb_mmu_advanced;
         start_request(0, 1, 2'b01, 1, 0);
         expect_fault("S fetch rejects user page even with SUM=1", 2'd2);
 
+        // Non-leaf U/A/D are reserved. A pointer's G bit, however,
+        // legally makes every leaf below it global and must propagate.
+        root_pte = {20'h00200, 12'h011}; // V+U pointer: reserved
+        start_request(0, 0, 2'b01, 0, 0);
+        expect_fault("non-leaf U/A/D encoding rejected", 2'd3);
+        root_pte = {20'h00200, 12'h021}; // V+G pointer: legal
+        leaf_pte = {20'h34567, 12'h043}; // V+R+A, leaf G=0
+        start_request(0, 0, 2'b01, 0, 0);
+        expect_ok("non-leaf G mapping accepted");
+        if (!resp_g) begin
+            $display("[FAIL] non-leaf G bit did not propagate to response");
+            errors=errors+1;
+        end else $display("[PASS] non-leaf G propagates to leaf metadata");
+
+        // In this PA32/custom-PTE layout PPN occupies [31:12]. RSW
+        // [9:8] remains available to software, but unused [11:10]
+        // must be rejected on both non-leaf and leaf PTEs.
+        root_pte = {20'h00200, 12'h401}; // bit10 set on pointer
+        start_request(0, 0, 2'b01, 0, 0);
+        expect_fault("non-leaf PTE[11:10] rejected", 2'd3);
+        root_pte = {20'h00200, 12'h001};
+        leaf_pte = {20'h34567, 12'h843}; // bit11 + V+R+A
+        start_request(0, 0, 2'b01, 0, 0);
+        expect_fault("leaf PTE[11:10] rejected", 2'd3);
+        leaf_pte = {20'h34567, 12'h143}; // RSW[0] + V+R+A
+        start_request(0, 0, 2'b01, 0, 0);
+        expect_ok("leaf RSW bits remain software-defined");
+
         // Aligned level-1 leaf maps a 4 MiB superpage and updates A.
         root_pte = {SUPER_PPN, 12'h00B}; // V+R+X, aligned, A=0
         start_request(0, 1, 2'b01, 0, 0);
@@ -176,6 +206,12 @@ module tb_mmu_advanced;
             $display("[FAIL] super-TLB cross-subpage hit=%b ppn=%h", stlb_hit, stlb_hit_ppn);
             errors=errors+1;
         end else $display("[PASS] super-TLB matches all VPN[9:0] subpages");
+        @(negedge clk); stlb_flush=1;
+        @(negedge clk); stlb_flush=0; #1;
+        if (stlb_hit) begin
+            $display("[FAIL] super-TLB flush left a valid entry");
+            errors=errors+1;
+        end else $display("[PASS] super-TLB flush invalidates entries");
 
         $display("---------------------------------------------");
         if (errors==0) $display("MMU_ADVANCED_TB: PASS");

@@ -1,0 +1,37 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\xsim-race-fix-verification\run-tb_axi_request_hold.log} -lib ../reports/.questa-work-de8437d69ab443eea80990536fd06be2 -c -quiet tb_axi_request_hold 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_axi_request_hold.v(29): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 36, found 33.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_axi_request_hold.v(29): (vopt-2718) [TFMPC] - Missing connection for port 'Cache_Flush_Error'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_axi_request_hold.v(29): (vopt-2718) [TFMPC] - Missing connection for port 'Cache_Flush_Done'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_axi_request_hold.v(29): (vopt-2718) [TFMPC] - Missing connection for port 'Cache_Flush_Busy'.
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# [PASS] read request pulse is latched onto ARVALID and ARADDR
+# [PASS] ARVALID/address remain stable while ARREADY is low
+# [PASS] ARVALID/address remain stable while ARREADY is low
+# [PASS] ARVALID/address remain stable while ARREADY is low
+# [PASS] AR handshake retires address phase and enables read response
+# [PASS] RVALID/RREADY completion returns one clean mem_valid pulse
+# [PASS] write request latches address, data and uncached byte strobe
+# [PASS] AWVALID/WVALID payload remains stable under joint backpressure
+# [PASS] AWVALID/WVALID payload remains stable under joint backpressure
+# [PASS] independent AW handshake does not drop pending WVALID
+# [PASS] independent W handshake waits for write response
+# [PASS] BRESP error completes the latched request with mem_error
+# AXI_REQUEST_HOLD_TB: PASS
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_axi_request_hold.v(133)
+#    Time: 250 ns  Iteration: 1  Instance: /tb_axi_request_hold

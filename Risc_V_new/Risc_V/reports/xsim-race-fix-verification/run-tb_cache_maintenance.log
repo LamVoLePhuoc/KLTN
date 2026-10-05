@@ -1,0 +1,30 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\xsim-race-fix-verification\run-tb_cache_maintenance.log} -lib ../reports/.questa-work-de8437d69ab443eea80990536fd06be2 -c -quiet tb_cache_maintenance 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# [PASS] busy asserts immediately with request
+# [PASS] staggered core 0 completion does not finish transaction
+# [PASS] staggered cores 1/2 completion does not finish transaction
+# [PASS] all four idle completions produce one done pulse
+# [PASS] done is exactly one cycle
+# [PASS] busy asserts immediately with request
+# [PASS] busy core's earlier FENCE.I done is not miscounted
+# [PASS] queued external maintenance completes after core becomes idle
+# [PASS] busy asserts immediately with request
+# [PASS] error is reported together with completion
+# [PASS] maintenance error remains sticky until reset
+# [PASS] busy asserts immediately with request
+# [PASS] watchdog reports a stuck maintenance without unsafe completion
+# CACHE_MAINTENANCE_TB: PASS
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_maintenance.v(120)
+#    Time: 425 ns  Iteration: 1  Instance: /tb_cache_maintenance

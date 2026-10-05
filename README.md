@@ -52,15 +52,17 @@ KLTN/
 │       ├── docs/architecture/    Tài liệu và hình kiến trúc
 │       └── Risc_V.xpr            Vivado project
 ├── Controller_Cache_2Cores_RV32IA/  Tài liệu/RTL tham khảo 2 lõi
-├── cache_reference/              Các thử nghiệm cache/MMU trước đây
+├── MMU/                          Source thử nghiệm cache/MMU cũ; đã bỏ build artifacts
+├── KLTN_Reference/               Source MMU/cache tham khảo từ đồ án trước
 ├── mmu_reference/                Mã nguồn MMU tham khảo
 ├── ahb3lite_interconnect-master_reference/  AHB-Lite tham khảo
-├── output/                       Slide và các sản phẩm bàn giao
+├── output/                       Chỉ giữ slide/sản phẩm bàn giao, không giữ simulator work library
 └── README.md                     Trang tổng quan này
 ```
 
 Nhánh phát triển chính là [`Risc_V_new/Risc_V`](Risc_V_new/Risc_V). Các thư mục có
-tên `reference` chỉ dùng tham khảo, không phải source của hierarchy 4 lõi hiện hành.
+tên `reference` và `MMU/` chỉ dùng tham khảo, không phải source của hierarchy 4 lõi
+hiện hành. Bản `cache_reference/` đã được bỏ vì trùng byte-for-byte với `MMU/`.
 
 ## 4. Cấu trúc RTL
 

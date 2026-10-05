@@ -82,6 +82,7 @@ module tb_coherence_ahb;
     wire [31:0]  dreq_addr  [0:3];
     wire [255:0] dreq_line  [0:3];
     wire         dresp_valid[0:3];
+    wire         dresp_error[0:3];
     wire [255:0] dresp_line [0:3];
     wire [1:0]   dresp_state[0:3];
     wire         dsnoop_valid[0:3];
@@ -98,6 +99,7 @@ module tb_coherence_ahb;
     wire [31:0]  bus_req_addr  [0:3];
     wire [255:0] bus_req_line  [0:3];
     wire         bus_resp_valid[0:3];
+    wire         bus_resp_error[0:3];
     wire [255:0] bus_resp_line [0:3];
     wire [1:0]   bus_resp_state[0:3];
 
@@ -113,6 +115,8 @@ module tb_coherence_ahb;
     wire        hready [0:3];
     wire [1:0]  hresp  [0:3];
     wire        hmastlock [0:3];
+    wire [2:0]  hsize [0:3];
+    wire [3:0]  hprot [0:3];
 
     genvar gi;
     generate
@@ -123,32 +127,32 @@ module tb_coherence_ahb;
                 .cpu_addr(c_addr[gi]), .cpu_wdata(c_wdata[gi]),
                 .cpu_we(c_we[gi]), .cpu_re(c_re[gi]), .cpu_memop(c_memop[gi]),
                 .cpu_amo(1'b0), .cpu_amo_op(5'b0), .cpu_amo_operand(32'b0),
-                .cpu_rdata(c_rdata[gi]), .cpu_valid(c_valid[gi]),
+                .cpu_rdata(c_rdata[gi]), .cpu_valid(c_valid[gi]), .cpu_error(),
                 .bus_req_valid(bus_req_valid[gi]), .bus_req_type(bus_req_type[gi]),
                 .bus_req_addr(bus_req_addr[gi]), .bus_req_line(bus_req_line[gi]),
-                .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
+                .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_error(bus_resp_error[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
                 .snoop_valid(dsnoop_valid[gi]), .snoop_type(dsnoop_type[gi]), .snoop_addr(dsnoop_addr[gi]),
                 .snoop_ack_valid(dsnoop_ack_valid[gi]), .snoop_ack_hit(dsnoop_ack_hit[gi]),
-                .snoop_ack_dirty(dsnoop_ack_dirty[gi]), .snoop_ack_line(dsnoop_ack_line[gi])
+                .snoop_ack_dirty(dsnoop_ack_dirty[gi]), .snoop_ack_line(dsnoop_ack_line[gi]), .flush_error()
             );
 
             ahb_lite_l1_adapter u_ahb_m (
                 .HCLK(clk), .HRESETn(HRESETn),
                 .bus_req_valid(bus_req_valid[gi]), .bus_req_type(bus_req_type[gi]),
                 .bus_req_addr(bus_req_addr[gi]), .bus_req_line(bus_req_line[gi]),
-                .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
-                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HSIZE(), .HTRANS(htrans[gi]),
-                .HWDATA(hwdata[gi]), .HBURST(), .HPROT(), .HMASTLOCK(hmastlock[gi]),
+                .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_error(bus_resp_error[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
+                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HSIZE(hsize[gi]), .HTRANS(htrans[gi]),
+                .HWDATA(hwdata[gi]), .HBURST(), .HPROT(hprot[gi]), .HMASTLOCK(hmastlock[gi]),
                 .HRDATA(hrdata[gi]), .HREADY(hready[gi]), .HRESP(hresp[gi])
             );
 
             ahb_lite_l1_slave_adapter u_ahb_s (
                 .HCLK(clk), .HRESETn(HRESETn),
-                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]),
+                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]), .HSIZE(hsize[gi]), .HPROT(hprot[gi]),
                 .HREADYOUT(hready[gi]), .HRDATA(hrdata[gi]), .HRESP(hresp[gi]),
                 .dreq_valid(dreq_valid[gi]), .dreq_type(dreq_type[gi]),
                 .dreq_addr(dreq_addr[gi]), .dreq_line(dreq_line[gi]),
-                .dresp_valid(dresp_valid[gi]), .dresp_line(dresp_line[gi]), .dresp_state(dresp_state[gi])
+                .dresp_valid(dresp_valid[gi]), .dresp_error(dresp_error[gi]), .dresp_line(dresp_line[gi]), .dresp_state(dresp_state[gi])
             );
         end
     endgenerate
@@ -190,38 +194,38 @@ module tb_coherence_ahb;
         .clk(clk), .rst(rst),
 
         .c0_dreq_valid(dreq_valid[0]), .c0_dreq_type(dreq_type[0]), .c0_dreq_addr(dreq_addr[0]), .c0_dreq_line(dreq_line[0]),
-        .c0_dresp_valid(dresp_valid[0]), .c0_dresp_line(dresp_line[0]), .c0_dresp_state(dresp_state[0]),
+        .c0_dresp_valid(dresp_valid[0]), .c0_dresp_error(dresp_error[0]), .c0_dresp_line(dresp_line[0]), .c0_dresp_state(dresp_state[0]),
         .c0_dsnoop_valid(dsnoop_valid[0]), .c0_dsnoop_type(dsnoop_type[0]), .c0_dsnoop_addr(dsnoop_addr[0]),
         .c0_dsnoop_ack_valid(dsnoop_ack_valid[0]), .c0_dsnoop_ack_hit(dsnoop_ack_hit[0]),
         .c0_dsnoop_ack_dirty(dsnoop_ack_dirty[0]), .c0_dsnoop_ack_line(dsnoop_ack_line[0]),
-        .c0_ireq_valid(1'b0), .c0_ireq_addr(32'b0), .c0_iresp_valid(), .c0_iresp_line(),
+        .c0_ireq_valid(1'b0), .c0_ireq_addr(32'b0), .c0_iresp_valid(), .c0_iresp_error(), .c0_iresp_line(),
 
         .c1_dreq_valid(dreq_valid[1]), .c1_dreq_type(dreq_type[1]), .c1_dreq_addr(dreq_addr[1]), .c1_dreq_line(dreq_line[1]),
-        .c1_dresp_valid(dresp_valid[1]), .c1_dresp_line(dresp_line[1]), .c1_dresp_state(dresp_state[1]),
+        .c1_dresp_valid(dresp_valid[1]), .c1_dresp_error(dresp_error[1]), .c1_dresp_line(dresp_line[1]), .c1_dresp_state(dresp_state[1]),
         .c1_dsnoop_valid(dsnoop_valid[1]), .c1_dsnoop_type(dsnoop_type[1]), .c1_dsnoop_addr(dsnoop_addr[1]),
         .c1_dsnoop_ack_valid(dsnoop_ack_valid[1]), .c1_dsnoop_ack_hit(dsnoop_ack_hit[1]),
         .c1_dsnoop_ack_dirty(dsnoop_ack_dirty[1]), .c1_dsnoop_ack_line(dsnoop_ack_line[1]),
-        .c1_ireq_valid(1'b0), .c1_ireq_addr(32'b0), .c1_iresp_valid(), .c1_iresp_line(),
+        .c1_ireq_valid(1'b0), .c1_ireq_addr(32'b0), .c1_iresp_valid(), .c1_iresp_error(), .c1_iresp_line(),
 
         .c2_dreq_valid(dreq_valid[2]), .c2_dreq_type(dreq_type[2]), .c2_dreq_addr(dreq_addr[2]), .c2_dreq_line(dreq_line[2]),
-        .c2_dresp_valid(dresp_valid[2]), .c2_dresp_line(dresp_line[2]), .c2_dresp_state(dresp_state[2]),
+        .c2_dresp_valid(dresp_valid[2]), .c2_dresp_error(dresp_error[2]), .c2_dresp_line(dresp_line[2]), .c2_dresp_state(dresp_state[2]),
         .c2_dsnoop_valid(dsnoop_valid[2]), .c2_dsnoop_type(dsnoop_type[2]), .c2_dsnoop_addr(dsnoop_addr[2]),
         .c2_dsnoop_ack_valid(dsnoop_ack_valid[2]), .c2_dsnoop_ack_hit(dsnoop_ack_hit[2]),
         .c2_dsnoop_ack_dirty(dsnoop_ack_dirty[2]), .c2_dsnoop_ack_line(dsnoop_ack_line[2]),
-        .c2_ireq_valid(1'b0), .c2_ireq_addr(32'b0), .c2_iresp_valid(), .c2_iresp_line(),
+        .c2_ireq_valid(1'b0), .c2_ireq_addr(32'b0), .c2_iresp_valid(), .c2_iresp_error(), .c2_iresp_line(),
 
         .c3_dreq_valid(dreq_valid[3]), .c3_dreq_type(dreq_type[3]), .c3_dreq_addr(dreq_addr[3]), .c3_dreq_line(dreq_line[3]),
-        .c3_dresp_valid(dresp_valid[3]), .c3_dresp_line(dresp_line[3]), .c3_dresp_state(dresp_state[3]),
+        .c3_dresp_valid(dresp_valid[3]), .c3_dresp_error(dresp_error[3]), .c3_dresp_line(dresp_line[3]), .c3_dresp_state(dresp_state[3]),
         .c3_dsnoop_valid(dsnoop_valid[3]), .c3_dsnoop_type(dsnoop_type[3]), .c3_dsnoop_addr(dsnoop_addr[3]),
         .c3_dsnoop_ack_valid(dsnoop_ack_valid[3]), .c3_dsnoop_ack_hit(dsnoop_ack_hit[3]),
         .c3_dsnoop_ack_dirty(dsnoop_ack_dirty[3]), .c3_dsnoop_ack_line(dsnoop_ack_line[3]),
-        .c3_ireq_valid(1'b0), .c3_ireq_addr(32'b0), .c3_iresp_valid(), .c3_iresp_line(),
+        .c3_ireq_valid(1'b0), .c3_ireq_addr(32'b0), .c3_iresp_valid(), .c3_iresp_error(), .c3_iresp_line(),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid),
+        .mem_rdata(mem_rdata), .mem_valid(mem_valid), .mem_error(1'b0),
         .perf_total_requests(), .perf_d_bus_reads(), .perf_d_rfos(), .perf_d_writebacks(),
         .perf_i_reads(), .perf_l2_hits(), .perf_l2_misses(), .perf_snoop_requests(),
-        .perf_mem_read_words(), .perf_mem_write_words(), .perf_busy_cycles(), .protocol_error(), .timeout_error(),
+        .perf_mem_read_words(), .perf_mem_write_words(), .perf_busy_cycles(), .protocol_error(), .timeout_error(), .memory_error(),
         .debug_trace_rd_index(4'b0), .debug_trace_rd_data(), .debug_trace_count(),
         .debug_trace_write_index(), .debug_controller_state()
     );
@@ -276,29 +280,35 @@ module tb_coherence_ahb;
 
     task automatic do_read(input integer core, input [31:0] addr, output [31:0] data);
         begin
+            @(negedge clk);
             c_addr[core]  = addr;
             c_we[core]    = 1'b0;
             c_re[core]    = 1'b1;
             c_memop[core] = 3'b010; // LW
-            @(posedge clk);
-            while (!c_valid[core]) @(posedge clk);
+            @(posedge clk); #1;
+            while (!c_valid[core]) begin
+                @(posedge clk); #1;
+            end
             data = c_rdata[core];
+            @(negedge clk);
             c_re[core] = 1'b0;
-            @(posedge clk); // 1 idle cycle so the next op starts clean
         end
     endtask
 
     task automatic do_write(input integer core, input [31:0] addr, input [31:0] wdata);
         begin
+            @(negedge clk);
             c_addr[core]  = addr;
             c_wdata[core] = wdata;
             c_we[core]    = 1'b1;
             c_re[core]    = 1'b0;
             c_memop[core] = 3'b010; // SW
-            @(posedge clk);
-            while (!c_valid[core]) @(posedge clk);
+            @(posedge clk); #1;
+            while (!c_valid[core]) begin
+                @(posedge clk); #1;
+            end
+            @(negedge clk);
             c_we[core] = 1'b0;
-            @(posedge clk);
         end
     endtask
 
@@ -338,6 +348,7 @@ module tb_coherence_ahb;
             c_addr[k] = 32'b0; c_wdata[k] = 32'b0; c_we[k] = 1'b0; c_re[k] = 1'b0; c_memop[k] = 3'b010;
         end
         repeat (5) @(posedge clk);
+        @(negedge clk);
         rst = 1'b0;
         repeat (2) @(posedge clk);
 

@@ -17,6 +17,7 @@ module tb_cache_fence_i;
     wire [31:0] result_w, alu_debug;
     wire fetch_pf, data_pf;
     wire [1:0] fetch_cause, data_cause;
+    wire cache_flush_busy, cache_flush_done, cache_flush_error;
 
     wire ibus_req_valid;
     wire [31:0] ibus_req_addr;
@@ -33,14 +34,16 @@ module tb_cache_fence_i;
 
     core_l1_wrapper #(.RESET_ADDR(32'h0000_1000)) dut (
         .clk(clk), .rst(rst), .Mmu_Flush(1'b0), .Cache_Flush(1'b0),
+        .Cache_Flush_Busy(cache_flush_busy), .Cache_Flush_Done(cache_flush_done),
+        .Cache_Flush_Error(cache_flush_error),
         .ResultW(result_w), .ALU_ResultE_Debug(alu_debug),
         .Fetch_PageFault(fetch_pf), .Data_PageFault(data_pf),
         .Fetch_PageFault_Cause(fetch_cause), .Data_PageFault_Cause(data_cause),
         .ibus_req_valid(ibus_req_valid), .ibus_req_addr(ibus_req_addr),
-        .ibus_resp_valid(ibus_resp_valid), .ibus_resp_line(ibus_resp_line),
+        .ibus_resp_valid(ibus_resp_valid), .ibus_resp_error(1'b0), .ibus_resp_line(ibus_resp_line),
         .dbus_req_valid(dbus_req_valid), .dbus_req_type(dbus_req_type),
         .dbus_req_addr(dbus_req_addr), .dbus_req_line(dbus_req_line),
-        .dbus_resp_valid(dbus_resp_valid), .dbus_resp_line(dbus_resp_line),
+        .dbus_resp_valid(dbus_resp_valid), .dbus_resp_error(1'b0), .dbus_resp_line(dbus_resp_line),
         .dbus_resp_state(dbus_resp_state),
         .dsnoop_valid(1'b0), .dsnoop_type(1'b0), .dsnoop_addr(32'b0),
         .dsnoop_ack_valid(), .dsnoop_ack_hit(), .dsnoop_ack_dirty(), .dsnoop_ack_line()
@@ -87,12 +90,14 @@ module tb_cache_fence_i;
     integer errors;
     integer cycles;
     reg maintenance_seen;
+    reg maintenance_done_seen;
     reg unexpected_dbus;
 
     initial begin
         errors = 0;
         cycles = 0;
         maintenance_seen = 1'b0;
+        maintenance_done_seen = 1'b0;
         unexpected_dbus = 1'b0;
         rst = 1'b1;
         repeat (5) @(posedge clk);
@@ -103,6 +108,8 @@ module tb_cache_fence_i;
             cycles = cycles + 1;
             if (dut.cache_flush_active)
                 maintenance_seen = 1'b1;
+            if (cache_flush_done)
+                maintenance_done_seen = 1'b1;
             if (dbus_req_valid)
                 unexpected_dbus = 1'b1;
         end
@@ -119,6 +126,8 @@ module tb_cache_fence_i;
                 cycles = cycles + 1;
                 if (dbus_req_valid)
                     unexpected_dbus = 1'b1;
+                if (cache_flush_done)
+                    maintenance_done_seen = 1'b1;
             end
             if (dut.cache_flush_active) begin
                 $display("[FAIL] D$ flush walker did not finish");
@@ -129,7 +138,18 @@ module tb_cache_fence_i;
             end
         end
 
-        repeat (20) @(posedge clk);
+        repeat (20) begin
+            @(posedge clk);
+            if (cache_flush_done)
+                maintenance_done_seen = 1'b1;
+        end
+        if (!maintenance_done_seen || cache_flush_error) begin
+            $display("[FAIL] maintenance handshake done/error was incorrect");
+            errors = errors + 1;
+        end
+        else begin
+            $display("[PASS] maintenance handshake completed without error");
+        end
         if (ibus_request_starts < 2) begin
             $display("[FAIL] I$ was not invalidated/refetched, requests=%0d", ibus_request_starts);
             errors = errors + 1;

@@ -1,0 +1,37 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-mmu-controller-final\run-tb_csr_trap.log} -lib ../reports/.questa-work-95df10023e5c42508ff49ca1499ca7ca -c -quiet tb_csr_trap 
+# ** Note: (vsim-3812) Design is being optimized...
+# 
+# //  Questa Sim-64
+# //  Version 10.2c Unknown Platform Jul 19 2013
+# //
+# //  Copyright 1991-2013 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION
+# //  WHICH IS THE PROPERTY OF MENTOR GRAPHICS CORPORATION OR ITS
+# //  LICENSORS AND IS SUBJECT TO LICENSE TERMS.
+# //
+# run -all 
+# ---------------------------------------------
+# tb_csr_trap checks
+# ---------------------------------------------
+# [PASS] x1  (LUI mtvec target): 0x00002000
+# [PASS] x2  (LUI test value): 0x12345000
+# [PASS] x3  (CSRRW old mscratch=reset0): 0x00000000
+# [PASS] x4  (CSRRS pure read): 0x12345000
+# [PASS] x5  (ADDI mask): 0x000000f0
+# [PASS] x6  (CSRRS old, before OR): 0x12345000
+# [PASS] x7  (CSRRC old, before AND-clr): 0x123450f0
+# [PASS] x8  (CSRRWI old, before =5): 0x12345000
+# [PASS] x9  (CSRRSI old, before OR 3): 0x00000005
+# [PASS] x10 (resumed after EBREAK): 0x00000111
+# [PASS] x11 (resumed after ECALL): 0x00000222
+# [PASS] x12 (resumed after illegal instr): 0x00000333
+# [PASS] x13 (mcause after illegal instr): 0x00000002
+# [PASS] x14 (final mscratch): 0x00000007
+# [PASS] CurrentPriv stayed M throughout: 0x00000003
+# ---------------------------------------------
+# CSR_TRAP_TB: PASS
+# ---------------------------------------------
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_csr_trap.v(238)
+#    Time: 4045 ns  Iteration: 1  Instance: /tb_csr_trap
