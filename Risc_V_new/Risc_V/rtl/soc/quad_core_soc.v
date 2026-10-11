@@ -64,12 +64,14 @@ module quad_core_soc #(
     // Per-core bus wiring (I$ req/resp, D$ req/resp, D$ snoop)
     // ------------------------------------------------------
     wire         ibus_req_valid   [0:3];
+    wire         ibus_req_ready   [0:3];
     wire [31:0]  ibus_req_addr    [0:3];
     wire         ibus_resp_valid  [0:3];
     wire         ibus_resp_error  [0:3];
     wire [255:0] ibus_resp_line   [0:3];
 
     wire         dbus_req_valid   [0:3];
+    wire         dbus_req_ready   [0:3];
     wire [1:0]   dbus_req_type    [0:3];
     wire [31:0]  dbus_req_addr    [0:3];
     wire [255:0] dbus_req_line    [0:3];
@@ -149,9 +151,9 @@ module quad_core_soc #(
         .ResultW(ResultW0), .ALU_ResultE_Debug(alu_dbg_unused0),
         .Fetch_PageFault(Fetch_PageFault0), .Data_PageFault(Data_PageFault0),
         .Fetch_PageFault_Cause(fpc_unused0), .Data_PageFault_Cause(dpc_unused0),
-        .ibus_req_valid(ibus_req_valid[0]), .ibus_req_addr(ibus_req_addr[0]),
+        .ibus_req_valid(ibus_req_valid[0]), .ibus_req_ready(ibus_req_ready[0]), .ibus_req_addr(ibus_req_addr[0]),
         .ibus_resp_valid(ibus_resp_valid[0]), .ibus_resp_error(ibus_resp_error[0]), .ibus_resp_line(ibus_resp_line[0]),
-        .dbus_req_valid(dbus_req_valid[0]), .dbus_req_type(dbus_req_type[0]),
+        .dbus_req_valid(dbus_req_valid[0]), .dbus_req_ready(dbus_req_ready[0]), .dbus_req_type(dbus_req_type[0]),
         .dbus_req_addr(dbus_req_addr[0]), .dbus_req_line(dbus_req_line[0]),
         .dbus_resp_valid(dbus_resp_valid[0]), .dbus_resp_error(dbus_resp_error[0]), .dbus_resp_line(dbus_resp_line[0]), .dbus_resp_state(dbus_resp_state[0]),
         .dsnoop_valid(dsnoop_valid[0]), .dsnoop_type(dsnoop_type[0]), .dsnoop_addr(dsnoop_addr[0]),
@@ -166,9 +168,9 @@ module quad_core_soc #(
         .ResultW(ResultW1), .ALU_ResultE_Debug(alu_dbg_unused1),
         .Fetch_PageFault(Fetch_PageFault1), .Data_PageFault(Data_PageFault1),
         .Fetch_PageFault_Cause(fpc_unused1), .Data_PageFault_Cause(dpc_unused1),
-        .ibus_req_valid(ibus_req_valid[1]), .ibus_req_addr(ibus_req_addr[1]),
+        .ibus_req_valid(ibus_req_valid[1]), .ibus_req_ready(ibus_req_ready[1]), .ibus_req_addr(ibus_req_addr[1]),
         .ibus_resp_valid(ibus_resp_valid[1]), .ibus_resp_error(ibus_resp_error[1]), .ibus_resp_line(ibus_resp_line[1]),
-        .dbus_req_valid(dbus_req_valid[1]), .dbus_req_type(dbus_req_type[1]),
+        .dbus_req_valid(dbus_req_valid[1]), .dbus_req_ready(dbus_req_ready[1]), .dbus_req_type(dbus_req_type[1]),
         .dbus_req_addr(dbus_req_addr[1]), .dbus_req_line(dbus_req_line[1]),
         .dbus_resp_valid(dbus_resp_valid[1]), .dbus_resp_error(dbus_resp_error[1]), .dbus_resp_line(dbus_resp_line[1]), .dbus_resp_state(dbus_resp_state[1]),
         .dsnoop_valid(dsnoop_valid[1]), .dsnoop_type(dsnoop_type[1]), .dsnoop_addr(dsnoop_addr[1]),
@@ -183,9 +185,9 @@ module quad_core_soc #(
         .ResultW(ResultW2), .ALU_ResultE_Debug(alu_dbg_unused2),
         .Fetch_PageFault(Fetch_PageFault2), .Data_PageFault(Data_PageFault2),
         .Fetch_PageFault_Cause(fpc_unused2), .Data_PageFault_Cause(dpc_unused2),
-        .ibus_req_valid(ibus_req_valid[2]), .ibus_req_addr(ibus_req_addr[2]),
+        .ibus_req_valid(ibus_req_valid[2]), .ibus_req_ready(ibus_req_ready[2]), .ibus_req_addr(ibus_req_addr[2]),
         .ibus_resp_valid(ibus_resp_valid[2]), .ibus_resp_error(ibus_resp_error[2]), .ibus_resp_line(ibus_resp_line[2]),
-        .dbus_req_valid(dbus_req_valid[2]), .dbus_req_type(dbus_req_type[2]),
+        .dbus_req_valid(dbus_req_valid[2]), .dbus_req_ready(dbus_req_ready[2]), .dbus_req_type(dbus_req_type[2]),
         .dbus_req_addr(dbus_req_addr[2]), .dbus_req_line(dbus_req_line[2]),
         .dbus_resp_valid(dbus_resp_valid[2]), .dbus_resp_error(dbus_resp_error[2]), .dbus_resp_line(dbus_resp_line[2]), .dbus_resp_state(dbus_resp_state[2]),
         .dsnoop_valid(dsnoop_valid[2]), .dsnoop_type(dsnoop_type[2]), .dsnoop_addr(dsnoop_addr[2]),
@@ -200,9 +202,9 @@ module quad_core_soc #(
         .ResultW(ResultW3), .ALU_ResultE_Debug(alu_dbg_unused3),
         .Fetch_PageFault(Fetch_PageFault3), .Data_PageFault(Data_PageFault3),
         .Fetch_PageFault_Cause(fpc_unused3), .Data_PageFault_Cause(dpc_unused3),
-        .ibus_req_valid(ibus_req_valid[3]), .ibus_req_addr(ibus_req_addr[3]),
+        .ibus_req_valid(ibus_req_valid[3]), .ibus_req_ready(ibus_req_ready[3]), .ibus_req_addr(ibus_req_addr[3]),
         .ibus_resp_valid(ibus_resp_valid[3]), .ibus_resp_error(ibus_resp_error[3]), .ibus_resp_line(ibus_resp_line[3]),
-        .dbus_req_valid(dbus_req_valid[3]), .dbus_req_type(dbus_req_type[3]),
+        .dbus_req_valid(dbus_req_valid[3]), .dbus_req_ready(dbus_req_ready[3]), .dbus_req_type(dbus_req_type[3]),
         .dbus_req_addr(dbus_req_addr[3]), .dbus_req_line(dbus_req_line[3]),
         .dbus_resp_valid(dbus_resp_valid[3]), .dbus_resp_error(dbus_resp_error[3]), .dbus_resp_line(dbus_resp_line[3]), .dbus_resp_state(dbus_resp_state[3]),
         .dsnoop_valid(dsnoop_valid[3]), .dsnoop_type(dsnoop_type[3]), .dsnoop_addr(dsnoop_addr[3]),
@@ -211,40 +213,41 @@ module quad_core_soc #(
     );
 
     cache_controller_mmu #(
-        .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE)
+        .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE),
+        .REQUEST_QUEUE_ENABLE(1)
     ) u_cache_controller_mmu (
         .clk(clk), .rst(rst),
 
-        .c0_dreq_valid(dbus_req_valid[0]), .c0_dreq_type(dbus_req_type[0]), .c0_dreq_addr(dbus_req_addr[0]), .c0_dreq_line(dbus_req_line[0]),
+        .c0_dreq_valid(dbus_req_valid[0]), .c0_dreq_ready(dbus_req_ready[0]), .c0_dreq_type(dbus_req_type[0]), .c0_dreq_addr(dbus_req_addr[0]), .c0_dreq_line(dbus_req_line[0]),
         .c0_dresp_valid(dbus_resp_valid[0]), .c0_dresp_error(dbus_resp_error[0]), .c0_dresp_line(dbus_resp_line[0]), .c0_dresp_state(dbus_resp_state[0]),
         .c0_dsnoop_valid(dsnoop_valid[0]), .c0_dsnoop_type(dsnoop_type[0]), .c0_dsnoop_addr(dsnoop_addr[0]),
         .c0_dsnoop_ack_valid(dsnoop_ack_valid[0]), .c0_dsnoop_ack_hit(dsnoop_ack_hit[0]),
         .c0_dsnoop_ack_dirty(dsnoop_ack_dirty[0]), .c0_dsnoop_ack_line(dsnoop_ack_line[0]),
-        .c0_ireq_valid(ibus_req_valid[0]), .c0_ireq_addr(ibus_req_addr[0]),
+        .c0_ireq_valid(ibus_req_valid[0]), .c0_ireq_ready(ibus_req_ready[0]), .c0_ireq_addr(ibus_req_addr[0]),
         .c0_iresp_valid(ibus_resp_valid[0]), .c0_iresp_error(ibus_resp_error[0]), .c0_iresp_line(ibus_resp_line[0]),
 
-        .c1_dreq_valid(dbus_req_valid[1]), .c1_dreq_type(dbus_req_type[1]), .c1_dreq_addr(dbus_req_addr[1]), .c1_dreq_line(dbus_req_line[1]),
+        .c1_dreq_valid(dbus_req_valid[1]), .c1_dreq_ready(dbus_req_ready[1]), .c1_dreq_type(dbus_req_type[1]), .c1_dreq_addr(dbus_req_addr[1]), .c1_dreq_line(dbus_req_line[1]),
         .c1_dresp_valid(dbus_resp_valid[1]), .c1_dresp_error(dbus_resp_error[1]), .c1_dresp_line(dbus_resp_line[1]), .c1_dresp_state(dbus_resp_state[1]),
         .c1_dsnoop_valid(dsnoop_valid[1]), .c1_dsnoop_type(dsnoop_type[1]), .c1_dsnoop_addr(dsnoop_addr[1]),
         .c1_dsnoop_ack_valid(dsnoop_ack_valid[1]), .c1_dsnoop_ack_hit(dsnoop_ack_hit[1]),
         .c1_dsnoop_ack_dirty(dsnoop_ack_dirty[1]), .c1_dsnoop_ack_line(dsnoop_ack_line[1]),
-        .c1_ireq_valid(ibus_req_valid[1]), .c1_ireq_addr(ibus_req_addr[1]),
+        .c1_ireq_valid(ibus_req_valid[1]), .c1_ireq_ready(ibus_req_ready[1]), .c1_ireq_addr(ibus_req_addr[1]),
         .c1_iresp_valid(ibus_resp_valid[1]), .c1_iresp_error(ibus_resp_error[1]), .c1_iresp_line(ibus_resp_line[1]),
 
-        .c2_dreq_valid(dbus_req_valid[2]), .c2_dreq_type(dbus_req_type[2]), .c2_dreq_addr(dbus_req_addr[2]), .c2_dreq_line(dbus_req_line[2]),
+        .c2_dreq_valid(dbus_req_valid[2]), .c2_dreq_ready(dbus_req_ready[2]), .c2_dreq_type(dbus_req_type[2]), .c2_dreq_addr(dbus_req_addr[2]), .c2_dreq_line(dbus_req_line[2]),
         .c2_dresp_valid(dbus_resp_valid[2]), .c2_dresp_error(dbus_resp_error[2]), .c2_dresp_line(dbus_resp_line[2]), .c2_dresp_state(dbus_resp_state[2]),
         .c2_dsnoop_valid(dsnoop_valid[2]), .c2_dsnoop_type(dsnoop_type[2]), .c2_dsnoop_addr(dsnoop_addr[2]),
         .c2_dsnoop_ack_valid(dsnoop_ack_valid[2]), .c2_dsnoop_ack_hit(dsnoop_ack_hit[2]),
         .c2_dsnoop_ack_dirty(dsnoop_ack_dirty[2]), .c2_dsnoop_ack_line(dsnoop_ack_line[2]),
-        .c2_ireq_valid(ibus_req_valid[2]), .c2_ireq_addr(ibus_req_addr[2]),
+        .c2_ireq_valid(ibus_req_valid[2]), .c2_ireq_ready(ibus_req_ready[2]), .c2_ireq_addr(ibus_req_addr[2]),
         .c2_iresp_valid(ibus_resp_valid[2]), .c2_iresp_error(ibus_resp_error[2]), .c2_iresp_line(ibus_resp_line[2]),
 
-        .c3_dreq_valid(dbus_req_valid[3]), .c3_dreq_type(dbus_req_type[3]), .c3_dreq_addr(dbus_req_addr[3]), .c3_dreq_line(dbus_req_line[3]),
+        .c3_dreq_valid(dbus_req_valid[3]), .c3_dreq_ready(dbus_req_ready[3]), .c3_dreq_type(dbus_req_type[3]), .c3_dreq_addr(dbus_req_addr[3]), .c3_dreq_line(dbus_req_line[3]),
         .c3_dresp_valid(dbus_resp_valid[3]), .c3_dresp_error(dbus_resp_error[3]), .c3_dresp_line(dbus_resp_line[3]), .c3_dresp_state(dbus_resp_state[3]),
         .c3_dsnoop_valid(dsnoop_valid[3]), .c3_dsnoop_type(dsnoop_type[3]), .c3_dsnoop_addr(dsnoop_addr[3]),
         .c3_dsnoop_ack_valid(dsnoop_ack_valid[3]), .c3_dsnoop_ack_hit(dsnoop_ack_hit[3]),
         .c3_dsnoop_ack_dirty(dsnoop_ack_dirty[3]), .c3_dsnoop_ack_line(dsnoop_ack_line[3]),
-        .c3_ireq_valid(ibus_req_valid[3]), .c3_ireq_addr(ibus_req_addr[3]),
+        .c3_ireq_valid(ibus_req_valid[3]), .c3_ireq_ready(ibus_req_ready[3]), .c3_ireq_addr(ibus_req_addr[3]),
         .c3_iresp_valid(ibus_resp_valid[3]), .c3_iresp_error(ibus_resp_error[3]), .c3_iresp_line(ibus_resp_line[3]),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),

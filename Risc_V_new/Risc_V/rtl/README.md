@@ -10,9 +10,9 @@ The active quad-core design is grouped by architectural block. Module names and 
 ```text
 rtl/
 ├── core/             RV32IMA pipeline, execution units, CSR, trap and privilege logic
-├── mmu/              Per-core Sv32 translation plus the shared cache-controller MMU facade
+├── mmu/              Per-core Sv32 translation plus the complete shared cache-controller MMU
 ├── cache/            Per-core L1 I/D caches, shared L2 cache and the core-L1 subsystem wrapper
-├── coherence/        MSI policy engine, round-robin arbitration, snoop and memory transactions
+├── coherence/        Backward-compatible facade for legacy integrated-L2 tests
 ├── interconnect/ahb/ AHB-Lite adapters used at the L1/coherence boundary
 ├── soc/              Four-core integration and AXI4-facing wrappers
 ├── boot/             Boot control register block used by bootable wrappers
@@ -44,11 +44,11 @@ until the pre/post-DMA maintenance sequence completes.
 
 ```text
 soc -> cache/core subsystem -> mmu -> core
-soc -> cache_controller_mmu -> coherence policy engine
+soc -> cache_controller_mmu (owns arbitration, MSI FSM, snoop and memory transactions)
 soc -> cache/L2 (peer of cache_controller_mmu)
 soc -> interconnect/ahb -> cache_controller_mmu
 soc -> boot
-mmu, coherence -> debug (optional generate blocks)
+mmu -> debug (optional generate blocks)
 legacy_2core -> core
 ```
 

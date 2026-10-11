@@ -19,7 +19,7 @@ This folder contains the presentation-ready block diagrams generated from the ac
 - `mmu_top` translates virtual addresses to physical addresses per core. The design uses separate instruction and data TLBs with one shared two-level PTW per core.
 - `cache_controller_mmu` is the adviser-named shared MMU/cache controller for the whole four-core CPU: it performs round-robin arbitration, block movement, MSI and external-memory sequencing. It is a peer of `l2_cache`, not a replacement for Sv32 translation. See `MMU_CACHE_CONTROLLER_REDESIGN.md`.
 - `cache` contains private L1 caches and a shared L2 cache. Each D-cache stores MSI state per line.
-- `coherence` implements the policy engine used inside `cache_controller_mmu`: it serializes cache-miss traffic, tracks sharers, issues snoops and connects the cache hierarchy to external memory.
+- `cache_controller_mmu` owns the arbitration, MSI transaction FSM, parallel-snoop scoreboard and external-memory line engine. `coherence/` now contains only the legacy facade that selects the internal-L2 compatibility mode.
 - `interconnect/ahb` translates cache-side requests to the AHB-Lite signal-level protocol used by the AHB-oriented SoC top.
 - `soc` instantiates four core/cache subsystems and exposes the external memory interface through AXI4-facing wrappers.
 - `boot` provides the control path required to load software into DRAM and release the processor at the selected entry point.
@@ -27,7 +27,7 @@ This folder contains the presentation-ready block diagrams generated from the ac
 
 ## Data paths
 
-1. Instruction fetch: `PC virtual address -> iTLB -> physical address -> L1 I-cache -> coherence manager/L2 on miss`.
+1. Instruction fetch: `PC virtual address -> iTLB -> physical address -> L1 I-cache -> cache controller/L2 on miss`.
 2. Cached load/store: `data virtual address -> dTLB -> physical address -> L1 D-cache -> shared cache controller (MMU) -> MSI request/snoop <-> peer L2 -> external memory`.
 3. Device load/store: `physical 0xC000_0000..0xFFFF_FFFF -> D-cache uncached selector -> one-word coherence bypass -> AHB HPROT/HSIZE -> AXI WSTRB -> peripheral`; no L1/L2 allocation or snoop is performed.
 4. Page-table walk: `TLB miss -> shared PTW -> page-table memory request -> optional A/D update -> TLB refill -> retry`.

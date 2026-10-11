@@ -82,6 +82,7 @@ module core_l1_wrapper #(
 
     // ---- I$ miss port (to shared cache_controller_mmu) ----
     output wire         ibus_req_valid,
+    input  wire         ibus_req_ready,
     output wire [31:0]  ibus_req_addr,
     input  wire         ibus_resp_valid,
     input  wire         ibus_resp_error,
@@ -89,6 +90,7 @@ module core_l1_wrapper #(
 
     // ---- D$ request port (to shared cache_controller_mmu) ----
     output wire         dbus_req_valid,
+    input  wire         dbus_req_ready,
     output wire [1:0]   dbus_req_type,
     output wire [31:0]  dbus_req_addr,
     output wire [255:0] dbus_req_line,
@@ -281,6 +283,7 @@ module core_l1_wrapper #(
         .cpu_error      (Instr_ErrorF),
 
         .bus_req_valid  (ibus_req_valid),
+        .bus_req_ready  (ibus_req_ready),
         .bus_req_addr   (ibus_req_addr),
         .bus_resp_valid (ibus_resp_valid),
         .bus_resp_error (ibus_resp_error),
@@ -307,6 +310,7 @@ module core_l1_wrapper #(
         .cpu_error      (Mem_DataError),
 
         .bus_req_valid  (dbus_req_valid),
+        .bus_req_ready  (dbus_req_ready),
         .bus_req_type   (dbus_req_type),
         .bus_req_addr   (dbus_req_addr),
         .bus_req_line   (dbus_req_line),

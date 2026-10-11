@@ -91,6 +91,7 @@ module l1_dcache #(
 
     // ---- Bus side (request to coherence_manager.v) ----
     output reg                        bus_req_valid,
+    input  wire                       bus_req_ready,
     output reg  [1:0]                 bus_req_type,
     output reg  [31:0]                bus_req_addr,   // line-aligned
     output reg  [LINE_WORDS*32-1:0]   bus_req_line,   // valid for WRITEBACK only
@@ -387,6 +388,12 @@ module l1_dcache #(
             flush_done      <= 1'b0;
             flush_error     <= 1'b0;
             flush_seen      <= flush;
+
+            // Once accepted, request payload is owned by the shared
+            // controller.  This cache may therefore drop valid while it
+            // remains in the same blocking state waiting for the response.
+            if (bus_req_valid && bus_req_ready)
+                bus_req_valid <= 1'b0;
 
             if (flush && !flush_seen)
                 flush_pending <= 1'b1;

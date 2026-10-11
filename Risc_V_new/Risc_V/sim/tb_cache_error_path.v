@@ -21,7 +21,7 @@ module tb_cache_error_path;
         .clk(clk), .rst(rst), .flush(1'b0),
         .cpu_addr(i_cpu_addr), .cpu_rdata(i_cpu_rdata),
         .cpu_valid(i_cpu_valid), .cpu_error(i_cpu_error),
-        .bus_req_valid(i_req_valid), .bus_req_addr(i_req_addr),
+        .bus_req_valid(i_req_valid), .bus_req_ready(1'b0), .bus_req_addr(i_req_addr),
         .bus_resp_valid(i_resp_valid), .bus_resp_error(i_resp_error),
         .bus_resp_line(i_resp_line)
     );
@@ -47,7 +47,7 @@ module tb_cache_error_path;
         .cpu_amo(d_cpu_amo), .cpu_amo_op(d_cpu_amo_op),
         .cpu_amo_operand(d_cpu_amo_operand),
         .cpu_rdata(d_cpu_rdata), .cpu_valid(d_cpu_valid), .cpu_error(d_cpu_error),
-        .bus_req_valid(d_req_valid), .bus_req_type(d_req_type),
+        .bus_req_valid(d_req_valid), .bus_req_ready(1'b0), .bus_req_type(d_req_type),
         .bus_req_addr(d_req_addr), .bus_req_line(d_req_line),
         .bus_resp_valid(d_resp_valid), .bus_resp_error(d_resp_error),
         .bus_resp_line(d_resp_line), .bus_resp_state(2'b01),

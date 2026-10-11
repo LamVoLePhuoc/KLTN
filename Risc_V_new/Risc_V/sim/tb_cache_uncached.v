@@ -45,7 +45,7 @@ module tb_cache_uncached;
         .cpu_re(cpu_re), .cpu_memop(cpu_memop), .cpu_amo(cpu_amo),
         .cpu_amo_op(5'b00000), .cpu_amo_operand(cpu_wdata),
         .cpu_rdata(cpu_rdata), .cpu_valid(cpu_valid), .cpu_error(cpu_error),
-        .bus_req_valid(dreq_valid), .bus_req_type(dreq_type),
+        .bus_req_valid(dreq_valid), .bus_req_ready(1'b0), .bus_req_type(dreq_type),
         .bus_req_addr(dreq_addr), .bus_req_line(dreq_line),
         .bus_resp_valid(dresp_valid), .bus_resp_error(dresp_error),
         .bus_resp_line(dresp_line), .bus_resp_state(dresp_state),

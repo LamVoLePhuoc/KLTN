@@ -46,6 +46,7 @@ module l1_icache #(
 
     // ---- Bus side (line-fill request to the coherence/L2 subsystem) ----
     output reg               bus_req_valid,
+    input  wire              bus_req_ready,
     output reg  [31:0]       bus_req_addr,   // line-aligned (offset bits = 0)
     input  wire              bus_resp_valid,
     input  wire              bus_resp_error,
@@ -131,6 +132,8 @@ module l1_icache #(
             end
         end
         else begin
+            if (bus_req_valid && bus_req_ready)
+                bus_req_valid <= 1'b0;
             case (state)
                 S_IDLE: begin
                     if (!hit_v) begin

@@ -70,8 +70,19 @@ chu kỳ.
 5. Nếu miss, controller xử lý dirty victim (snoop và write-back nếu cần), đọc đủ
    tám word từ memory, fill L2 rồi cấp line cho requester.
 6. Địa chỉ `0xC000_0000..0xFFFF_FFFF` đi qua nhánh uncached, không allocate L1/L2.
-7. Requester giữ `valid` đến khi nhận response; controller chờ `valid` hạ trước
-   khi nhận lại nguồn đó, tránh xử lý trùng một yêu cầu mức.
+7. Native L1 requester giữ payload ổn định đến cạnh `valid && ready`; facade/AHB
+   tương thích cũ tiếp tục giữ `valid` đến response và chờ hạ mức trước khi nhận lại.
+
+Sau đợt hoàn thiện mới, native L1 path dùng handshake `valid/ready`: controller
+chốt toàn bộ payload tại cạnh accept và L1 được phép hạ `valid` ngay sau đó. Một
+skid queue một phần tử có thể nhận trước transaction kế tiếp, nhưng FSM MSI vẫn
+commit tuần tự nên không tạo race trên cùng cache line. Đường AHB và facade cũ
+giữ level-valid mode để tương thích với adapter/testbench hiện hữu.
+
+Snoop tới nhiều sharer được phát song song và theo dõi bằng bitmap ACK. Vì MSI
+chỉ cho phép tối đa một dirty owner, controller báo `protocol_error` nếu nhận
+nhiều dirty response cho cùng transaction. Cải tiến này giảm số chu kỳ
+invalidate/downgrade mà không thay đổi mô hình nguyên tử của transaction.
 
 ## 5. Ý nghĩa các nhóm tín hiệu theo lời thầy
 
@@ -97,7 +108,8 @@ tích hợp Vivado; không được nối hai miền clock trực tiếp chỉ b
 ## 7. Bằng chứng kiểm thử
 
 `tb_coherence.v` dùng trực tiếp topology mới: bốn D-cache thật nối vào
-`cache_controller_mmu`, còn `l2_cache` là instance đồng cấp. Test kiểm tra I→S,
+`cache_controller_mmu`, còn `l2_cache` là instance đồng cấp. Test kiểm tra handshake
+`valid/ready`, ổn định payload khi back-pressure, snoop song song, I→S,
 S→M, M→S, M→I, bốn sharer, false sharing, dirty eviction L1/L2, full-cache flush,
 round-robin đồng thời và AMO. Các test cũ vẫn có thể dùng `coherence_manager` với
 L2 nội bộ nhờ chế độ tương thích `EXTERNAL_L2=0`.

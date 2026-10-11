@@ -65,6 +65,7 @@ module tb_coherence;
     // l1_dcache <-> coherence_manager per-core buses
     // ------------------------------------------------------
     wire         dreq_valid [0:3];
+    wire         dreq_ready [0:3];
     wire [1:0]   dreq_type  [0:3];
     wire [31:0]  dreq_addr  [0:3];
     wire [255:0] dreq_line  [0:3];
@@ -120,7 +121,7 @@ module tb_coherence;
                 .cpu_amo(c_amo[gi]), .cpu_amo_op(c_amo_op[gi]),
                 .cpu_amo_operand(c_amo_operand[gi]),
                 .cpu_rdata(c_rdata[gi]), .cpu_valid(c_valid[gi]), .cpu_error(),
-                .bus_req_valid(dreq_valid[gi]), .bus_req_type(dreq_type[gi]),
+                .bus_req_valid(dreq_valid[gi]), .bus_req_ready(dreq_ready[gi]), .bus_req_type(dreq_type[gi]),
                 .bus_req_addr(dreq_addr[gi]), .bus_req_line(dreq_line[gi]),
                 .bus_resp_valid(dresp_valid[gi]), .bus_resp_error(dresp_error[gi]), .bus_resp_line(dresp_line[gi]), .bus_resp_state(dresp_state[gi]),
                 .snoop_valid(dsnoop_valid[gi]), .snoop_type(dsnoop_type[gi]), .snoop_addr(dsnoop_addr[gi]),
@@ -175,31 +176,31 @@ module tb_coherence;
     // ------------------------------------------------------
     // DUT
     // ------------------------------------------------------
-    cache_controller_mmu #(.DEBUG_TRACE_ENABLE(1)) u_cm (
+    cache_controller_mmu #(.DEBUG_TRACE_ENABLE(1), .REQUEST_QUEUE_ENABLE(1)) u_cm (
         .clk(clk), .rst(rst),
 
-        .c0_dreq_valid(dreq_valid[0]), .c0_dreq_type(dreq_type[0]), .c0_dreq_addr(dreq_addr[0]), .c0_dreq_line(dreq_line[0]),
+        .c0_dreq_valid(dreq_valid[0]), .c0_dreq_ready(dreq_ready[0]), .c0_dreq_type(dreq_type[0]), .c0_dreq_addr(dreq_addr[0]), .c0_dreq_line(dreq_line[0]),
         .c0_dresp_valid(dresp_valid[0]), .c0_dresp_error(dresp_error[0]), .c0_dresp_line(dresp_line[0]), .c0_dresp_state(dresp_state[0]),
         .c0_dsnoop_valid(dsnoop_valid[0]), .c0_dsnoop_type(dsnoop_type[0]), .c0_dsnoop_addr(dsnoop_addr[0]),
         .c0_dsnoop_ack_valid(dsnoop_ack_valid[0]), .c0_dsnoop_ack_hit(dsnoop_ack_hit[0]),
         .c0_dsnoop_ack_dirty(dsnoop_ack_dirty[0]), .c0_dsnoop_ack_line(dsnoop_ack_line[0]),
         .c0_ireq_valid(1'b0), .c0_ireq_addr(32'b0), .c0_iresp_valid(), .c0_iresp_error(), .c0_iresp_line(),
 
-        .c1_dreq_valid(dreq_valid[1]), .c1_dreq_type(dreq_type[1]), .c1_dreq_addr(dreq_addr[1]), .c1_dreq_line(dreq_line[1]),
+        .c1_dreq_valid(dreq_valid[1]), .c1_dreq_ready(dreq_ready[1]), .c1_dreq_type(dreq_type[1]), .c1_dreq_addr(dreq_addr[1]), .c1_dreq_line(dreq_line[1]),
         .c1_dresp_valid(dresp_valid[1]), .c1_dresp_error(dresp_error[1]), .c1_dresp_line(dresp_line[1]), .c1_dresp_state(dresp_state[1]),
         .c1_dsnoop_valid(dsnoop_valid[1]), .c1_dsnoop_type(dsnoop_type[1]), .c1_dsnoop_addr(dsnoop_addr[1]),
         .c1_dsnoop_ack_valid(dsnoop_ack_valid[1]), .c1_dsnoop_ack_hit(dsnoop_ack_hit[1]),
         .c1_dsnoop_ack_dirty(dsnoop_ack_dirty[1]), .c1_dsnoop_ack_line(dsnoop_ack_line[1]),
         .c1_ireq_valid(1'b0), .c1_ireq_addr(32'b0), .c1_iresp_valid(), .c1_iresp_error(), .c1_iresp_line(),
 
-        .c2_dreq_valid(dreq_valid[2]), .c2_dreq_type(dreq_type[2]), .c2_dreq_addr(dreq_addr[2]), .c2_dreq_line(dreq_line[2]),
+        .c2_dreq_valid(dreq_valid[2]), .c2_dreq_ready(dreq_ready[2]), .c2_dreq_type(dreq_type[2]), .c2_dreq_addr(dreq_addr[2]), .c2_dreq_line(dreq_line[2]),
         .c2_dresp_valid(dresp_valid[2]), .c2_dresp_error(dresp_error[2]), .c2_dresp_line(dresp_line[2]), .c2_dresp_state(dresp_state[2]),
         .c2_dsnoop_valid(dsnoop_valid[2]), .c2_dsnoop_type(dsnoop_type[2]), .c2_dsnoop_addr(dsnoop_addr[2]),
         .c2_dsnoop_ack_valid(dsnoop_ack_valid[2]), .c2_dsnoop_ack_hit(dsnoop_ack_hit[2]),
         .c2_dsnoop_ack_dirty(dsnoop_ack_dirty[2]), .c2_dsnoop_ack_line(dsnoop_ack_line[2]),
         .c2_ireq_valid(1'b0), .c2_ireq_addr(32'b0), .c2_iresp_valid(), .c2_iresp_error(), .c2_iresp_line(),
 
-        .c3_dreq_valid(dreq_valid[3]), .c3_dreq_type(dreq_type[3]), .c3_dreq_addr(dreq_addr[3]), .c3_dreq_line(dreq_line[3]),
+        .c3_dreq_valid(dreq_valid[3]), .c3_dreq_ready(dreq_ready[3]), .c3_dreq_type(dreq_type[3]), .c3_dreq_addr(dreq_addr[3]), .c3_dreq_line(dreq_line[3]),
         .c3_dresp_valid(dresp_valid[3]), .c3_dresp_error(dresp_error[3]), .c3_dresp_line(dresp_line[3]), .c3_dresp_state(dresp_state[3]),
         .c3_dsnoop_valid(dsnoop_valid[3]), .c3_dsnoop_type(dsnoop_type[3]), .c3_dsnoop_addr(dsnoop_addr[3]),
         .c3_dsnoop_ack_valid(dsnoop_ack_valid[3]), .c3_dsnoop_ack_hit(dsnoop_ack_hit[3]),
@@ -249,10 +250,18 @@ module tb_coherence;
     // count only its rising edge. Also reject the removed MESI E state.
     // ------------------------------------------------------
     reg prev_dreq_valid [0:3];
+    integer errors;
     integer busrd_count;
     integer rfo_count;
     integer wb_count;
     integer e_grant_count;
+    integer max_parallel_snoops;
+    integer snoops_this_cycle;
+    reg [3:0] accepted_pending;
+    reg [3:0] stalled_prev;
+    reg [1:0] stalled_type [0:3];
+    reg [31:0] stalled_addr [0:3];
+    reg [255:0] stalled_line [0:3];
     integer mon_i;
     always @(posedge clk) begin
         if (rst) begin
@@ -260,11 +269,54 @@ module tb_coherence;
             rfo_count    <= 0;
             wb_count     <= 0;
             e_grant_count <= 0;
+            max_parallel_snoops <= 0;
+            accepted_pending <= 4'b0;
+            stalled_prev <= 4'b0;
             for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1)
                 prev_dreq_valid[mon_i] <= 1'b0;
         end
         else begin
+            if ((32'd0 + dreq_ready[0] + dreq_ready[1] + dreq_ready[2] + dreq_ready[3]) > 1) begin
+                $display("[FAIL] more than one D request was accepted in one cycle");
+                errors = errors + 1;
+            end
+            if ((32'd0 + dresp_valid[0] + dresp_valid[1] + dresp_valid[2] + dresp_valid[3]) > 1) begin
+                $display("[FAIL] serialized controller returned multiple D responses in one cycle");
+                errors = errors + 1;
+            end
+            snoops_this_cycle = 32'd0 + dsnoop_valid[0] + dsnoop_valid[1] +
+                                dsnoop_valid[2] + dsnoop_valid[3];
+            if (snoops_this_cycle > max_parallel_snoops)
+                max_parallel_snoops <= snoops_this_cycle;
             for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1) begin
+                if (stalled_prev[mon_i] &&
+                    (!dreq_valid[mon_i] ||
+                     (dreq_type[mon_i] !== stalled_type[mon_i]) ||
+                     (dreq_addr[mon_i] !== stalled_addr[mon_i]) ||
+                     (dreq_line[mon_i] !== stalled_line[mon_i]))) begin
+                    $display("[FAIL] core %0d changed request payload while valid && !ready", mon_i);
+                    errors = errors + 1;
+                end
+                stalled_prev[mon_i] <= dreq_valid[mon_i] && !dreq_ready[mon_i];
+                if (dreq_valid[mon_i] && !dreq_ready[mon_i]) begin
+                    stalled_type[mon_i] <= dreq_type[mon_i];
+                    stalled_addr[mon_i] <= dreq_addr[mon_i];
+                    stalled_line[mon_i] <= dreq_line[mon_i];
+                end
+                if (dreq_valid[mon_i] && dreq_ready[mon_i]) begin
+                    if (accepted_pending[mon_i]) begin
+                        $display("[FAIL] ready/valid accepted a second request from core %0d before response", mon_i);
+                        errors = errors + 1;
+                    end
+                    accepted_pending[mon_i] <= 1'b1;
+                end
+                if (dresp_valid[mon_i]) begin
+                    if (!accepted_pending[mon_i]) begin
+                        $display("[FAIL] response for core %0d had no accepted request", mon_i);
+                        errors = errors + 1;
+                    end
+                    accepted_pending[mon_i] <= 1'b0;
+                end
                 if (dreq_valid[mon_i] && !prev_dreq_valid[mon_i]) begin
                     case (dreq_type[mon_i])
                         2'b00: busrd_count <= busrd_count + 1;
@@ -282,7 +334,6 @@ module tb_coherence;
     // ------------------------------------------------------
     // Test sequencing tasks
     // ------------------------------------------------------
-    integer errors;
     integer k;
 
     task automatic do_read(input integer core, input [31:0] addr, output [31:0] data);
@@ -480,6 +531,8 @@ module tb_coherence;
         snap_rfo = rfo_count;
         do_write(2, FOUR_ADDR, 32'hBBBB_0002);
         check_true("D: shared writer generated one RFO", rfo_count == snap_rfo + 1);
+        check_true("D: all three remote sharers were snooped in parallel",
+                   max_parallel_snoops >= 3);
         do_read(0, FOUR_ADDR, rd);
         check_eq32("D: core0 re-fetches writer value", rd, 32'hBBBB_0002);
         do_read(1, FOUR_ADDR, rd);
@@ -533,7 +586,7 @@ module tb_coherence;
         check_true("H: flushed value was recovered from L2", dram_read_words == snap_reads);
 
         $display("MSI I: simultaneous misses are served in round-robin order");
-        rr_start = u_cm.u_protocol_engine.rr_next;
+        rr_start = u_cm.rr_next;
         rr_first = (rr_start < 4) ? rr_start : 0;
         resp_count = 0;
         fork
