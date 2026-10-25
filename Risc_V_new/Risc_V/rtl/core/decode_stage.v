@@ -78,25 +78,34 @@ module decode_stage(
     // Control_Unit phải lấy Funct5 = funct7[6:2]
     // rồi truyền vào Main_Decoder.
     // =========================================================
+    wire       RegWrite_raw;
+    wire       MemWrite_raw;
+    wire       MemRead_raw;
+    wire       Branch_raw;
+    wire       Jump_raw;
+    wire       Atomic_raw;
+    wire       CSR_raw;
+    wire       Fence_raw;
+
     Control_Unit control (
         .Op         (InstrD[6:0]),
         .funct7     (InstrD[31:25]),
         .funct3     (InstrD[14:12]),
 
-        .RegWrite   (RegWriteD),
+        .RegWrite   (RegWrite_raw),
         .ALUSrc     (ALUSrcD),
         .ALUSrcA    (ALUSrcA_D),
-        .MemWrite   (MemWriteD),
-        .MemRead    (MemReadD),
+        .MemWrite   (MemWrite_raw),
+        .MemRead    (MemRead_raw),
         .ResultSrc  (ResultSrcD),
-        .Branch     (BranchD),
-        .Jump       (JumpD),
+        .Branch     (Branch_raw),
+        .Jump       (Jump_raw),
         .ImmSrc     (ImmSrcD),
         .ALUControl (ALUControlD),
         .MemOp      (MemOpD),
-        .CSR        (CSR_D),
-        .Fence      (Fence_D),
-        .Atomic     (AtomicD)
+        .CSR        (CSR_raw),
+        .Fence      (Fence_raw),
+        .Atomic     (Atomic_raw)
     );
 
     // =========================================================
@@ -167,6 +176,21 @@ module decode_stage(
         .IsPrivIllegalD (IsPrivIllegalD),
         .IsIllegalOpD   (IsIllegalOpD)
     );
+
+    // A reserved funct field used to retain Main_Decoder's coarse opcode
+    // controls until the instruction reached M.  That was too late for a
+    // JALR redirect and could let an illegal STORE/AMO reach the memory port.
+    // Preserve the exception tag, but turn the instruction itself into a
+    // side-effect-free pipeline entry immediately in D.
+    wire kill_illegal = IsIllegalOpD | IsPrivIllegalD;
+    assign RegWriteD = RegWrite_raw & ~kill_illegal;
+    assign MemWriteD = MemWrite_raw & ~kill_illegal;
+    assign MemReadD  = MemRead_raw  & ~kill_illegal;
+    assign BranchD   = Branch_raw   & ~kill_illegal;
+    assign JumpD     = Jump_raw     & ~kill_illegal;
+    assign AtomicD   = Atomic_raw   & ~kill_illegal;
+    assign CSR_D     = CSR_raw      & ~kill_illegal;
+    assign Fence_D   = Fence_raw    & ~kill_illegal;
 
     // =========================================================
     // 4. EXTRACT INTEGER REGISTER ADDRESSES

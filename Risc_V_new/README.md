@@ -23,20 +23,21 @@ Thiết kế một SoC 4 lõi RISC-V RV32IMA phục vụ nghiên cứu hệ th�
 
 | Hạng mục | Trạng thái | Bằng chứng/ghi chú |
 |---|---|---|
-| RV32IMA pipeline | RTL đã có | Pipeline 5 tầng, hazard/forwarding, MDU và RV32A |
+| RV32IMA pipeline | RTL đã rà soát/bổ sung test | Pipeline 5 tầng, hazard/forwarding, MDU, RV32A, legality decode; `tb_core_rv32ima_isa.v` mới cần chạy regression |
 | CSR/trap/privilege | **PASS hiện tại** | ECALL/EBREAK, M/S/U transition và `medeleg` đã được khóa bằng `tb_csr_priv.v` |
 | MMU/TLB/PTW Sv32 | **PASS hiện tại** | Bộ regression MMU + CSR SUM/MXR/access-fault đã PASS; flush giữa PTW được kiểm chứng |
 | Shared cache controller (MMU) | **PASS hiện tại** | Đồng cấp với L2; round-robin 8 nguồn, block transfer và MSI chạy trong `tb_coherence.v` |
 | L1/L2 cache | **PASS hiện tại** | FENCE.I, AMO, LR/SC, MSI, error sideband và uncached/MMIO đã chạy lại |
 | Coherence MSI | **PASS hiện tại** | `MSI_COHERENCE_TB` và `MSI_COHERENCE_AHB_TB` đã chạy lại bằng QuestaSim |
 | AHB-Lite adapters | **PASS trong integration MSI/AHB** | Đã kiểm tra RFO, `HMASTLOCK`, `HREADY`, snoop và writeback |
-| AXI4/boot wrapper | RTL đã có | Chưa có bằng chứng synthesis/board end-to-end |
-| Vivado synthesis/implementation | Chưa xác nhận | Chưa có report utilization, timing hoặc power hiện hành |
+| AXI4/boot wrapper | **Synthesis PASS (wrapper AHB/AXI4)** | `quad_core_axi_wrapper_ahb` đã synthesize; bootable wrapper và board end-to-end chưa xác nhận |
+| Source-level DMA | RTL + testbench đã có, **chưa chạy lại** | AXI4 burst memcpy, AXI-Lite register, pre/post cache maintenance và `tb_dma_end_to_end.v` |
+| Vivado synthesis/implementation | **Full-BD synthesis PASS** | Vivado 2022.2, `xc7z030fbv676-1`: 0 error/0 critical warning; post-synthesis timing 100 MHz chưa đạt, implementation/power chưa chạy |
 | FPGA hardware test | Chưa hoàn tất | Chưa chứng minh luồng SD–DRAM–CPU–SD trên board thật |
 
-> **Mốc kiểm tra gần nhất:** toàn bộ source trong
-> [`Risc_V/rtl/files.f`](Risc_V/rtl/files.f) compile thành công và toàn bộ **26/26**
-> testbench `sim/tb_*.v` PASS bằng QuestaSim 10.2c.
+> **Mốc đã xác nhận gần nhất:** phiên bản nền trước đợt bổ sung legality decode và
+> DMA compile thành công, **26/26** testbench PASS bằng QuestaSim 10.2c. Source hiện
+> có thêm test RV32IMA/DMA; cần chạy lại regression trước khi nâng mốc xác nhận.
 
 ## 3. Kiến trúc hệ thống
 
@@ -107,6 +108,9 @@ lại thư mục phẳng khi thêm block mới.
 - Forwarding, load-use hazard, branch redirect và stall ngoài.
 - CSR/trap cung cấp `satp`, `SUM`, `MXR`, privilege mode và trap redirect cho MMU.
 - RV32A gồm LR/SC và các AMO word; reservation được theo dõi theo địa chỉ vật lý.
+- Decoder kiểm tra cả opcode lẫn các tổ hợp `funct3/funct7/funct5` dành riêng và
+  triệt side effect của illegal instruction ngay tại Decode.
+- `mhartid` được tham số hóa xuyên qua wrapper; bốn core nhận giá trị 0, 1, 2, 3.
 
 ### 5.2. MMU
 
@@ -129,6 +133,11 @@ cách dùng thuật ngữ để tránh gộp TLB/PTW vào cache controller.
 ### 5.3. Cache và MSI coherence
 
 - Mỗi lõi có L1 I-cache và L1 D-cache; L2 dùng chung.
+- Data/tag/state của L1 được truy cập đồng bộ bằng XPM Block RAM; data L2 512 KiB
+  được chia thành tám bank 32-bit để Vivado suy diễn RAMB36 thay vì dựng một mux
+  khổng lồ từ mảng bất đồng bộ. D-cache scrub 512 set sau reset; L2 scrub 4096 set
+  và giữ request đầu tiên trong lúc khởi tạo. Vì vậy reset-to-first-response có độ
+  trễ hữu hạn nhưng synthesis không còn mắc ở biến data 4.194.304 bit.
 - `cache_controller_mmu` là controller chung của toàn CPU 4 core và là instance
   đồng cấp với `l2_cache` trong cả top direct-wire lẫn top AHB. Giao diện giữa hai
   khối mang command/address/data và status hit/miss/victim/dirty/sharer.
@@ -164,6 +173,16 @@ cách dùng thuật ngữ để tránh gộp TLB/PTW vào cache controller.
 - Thanh ghi AXI-Lite `CACHE` tại offset `0xC` cho phép PS phát maintenance và poll
   `Busy/Done/Error/Rejected`; register map và trình tự DMA nằm trong
   `docs/BOOT_DMA_PROTOCOL.md`.
+
+### 5.5. Source-level DMA
+
+- `rtl/dma/soc_dma_controller.v` ghép AXI4-Lite register file, coordinator cache
+  và AXI4 memory-to-memory engine; không phụ thuộc IP sinh tự động của Vivado.
+- DMA dùng burst INCR có giới hạn, không vượt biên 4 KiB, kiểm tra alignment và
+  lan truyền `RRESP/BRESP` lỗi.
+- Trình tự bắt buộc là buffer quiesced → pre-flush → copy → post-flush. Watchdog
+  chỉ chẩn đoán và không tạo completion giả khi giao dịch còn outstanding.
+- `software/ps_loader/soc_dma.h` là API C độc lập BSP cho register map này.
 
 ## 6. Kiểm chứng
 
@@ -228,12 +247,19 @@ eviction, flush, AMO, RFO/`HMASTLOCK`, `HREADY` và full-line writeback. Test MS
 còn chạy chuỗi pseudo-random tái lập gồm 160 giao dịch ownership/read/write,
 xen kẽ flush và kiểm tra 64 word cuối bằng scoreboard độc lập.
 
-### 6.2. Tổng kết regression hiện hành
+### 6.2. Tổng kết regression
 
-Toàn bộ 26 testbench tự kiểm trong `sim/tb_*.v` đã được compile lại từ source sạch
-và đều PASS. Log/tóm tắt gần nhất nằm ở `Risc_V/reports/full-regression-latest/`.
-Kết quả này là bằng chứng RTL simulation; chưa thay thế XSIM, synthesis,
+Baseline trước thay đổi core/DMA có 26 testbench tự kiểm compile sạch và đều PASS;
+log nằm ở `Risc_V/reports/full-regression-latest/`. Source hiện bổ sung
+`tb_core_rv32ima_isa.v`, `tb_core_instruction_legality.v` và
+`tb_dma_end_to_end.v`. Chưa được phép ghi nhận chúng PASS cho tới khi simulator
+chạy lại thành công. Kết quả RTL simulation cũng không thay thế XSIM, synthesis,
 implementation hoặc kiểm thử trên board.
+
+Sau thay đổi lưu trữ cache đồng bộ, các test trọng yếu `tb_cache_error_path`,
+`tb_cache_fence_i`, `tb_cache_maintenance`, `tb_coherence` và
+`tb_coherence_ahb` cũng đã PASS trên Vivado XSIM 2022.2. Watchdog của
+cache-controller là 8192 chu kỳ để bao phủ scrub 4096 set của L2.
 
 ## 7. Entry point và build
 
@@ -243,6 +269,7 @@ Các entry point chính:
 - `rtl/soc/quad_core_soc_ahb.v`: đường AHB-Lite;
 - `rtl/soc/quad_core_axi_wrapper_ahb.v`: wrapper AXI4 cho SoC AHB;
 - `rtl/soc/quad_core_axi_wrapper_ahb_bootable.v`: wrapper bootable;
+- `rtl/dma/soc_dma_controller.v`: DMA AXI4 + AXI4-Lite, tự điều phối cache;
 - `rtl/files.f`: inventory chuẩn cho simulator/static checks.
 
 Vivado scripts:
@@ -252,6 +279,7 @@ Vivado scripts:
 - `scripts/build_soc_zu5ev_boot.tcl`.
 - `software/ps_loader/boot_ctrl.h`: register map/API độc lập BSP cho PS loader và
   cache maintenance trước/sau DMA.
+- `software/ps_loader/soc_dma.h`: register map/API cho source-level DMA.
 
 Questa full regression (tự compile toàn bộ `rtl/files.f`, tìm mọi `sim/tb_*.v`,
 ghi log và tạo lại `reports/full-regression-latest/summary.{md,csv}`):
@@ -262,9 +290,82 @@ pwsh -File scripts/run_full_regression.ps1
 
 Các script đã được cập nhật để tìm source theo cấu trúc block hiện tại.
 
+### 7.1. Kết quả synthesis cache/quad-core gần nhất
+
+Ngày 18-10-2026, `quad_core_axi_wrapper_ahb` được synthesize trực tiếp bằng
+Vivado 2022.2 cho `xc7z030fbv676-1`, dùng `auto_detect_xpm` và
+`flatten_hierarchy=rebuilt`:
+
+| Chỉ số | Kết quả |
+|---|---:|
+| Thời gian `synth_design` | 6 phút 05 giây |
+| Peak memory | 2.17 GiB |
+| Slice LUT | 54,636 / 78,600 (69.51%) |
+| Slice register | 34,250 / 157,200 (21.79%) |
+| Block RAM tile | 232 / 265 (87.55%) |
+| DSP48E1 | 48 / 400 (12.00%) |
+| Lỗi / critical warning | 0 / 0 |
+
+BRAM là tài nguyên sát giới hạn nhất. Không tăng dung lượng cache hoặc thêm BRAM
+khác trước khi chạy lại utilization. Project-flow của Vivado tự nhận XPM; với
+non-project flow phải gọi `auto_detect_xpm` trước `synth_design`.
+
+### 7.2. Kết quả synthesis toàn Block Design `soc_4core_trial`
+
+Ngày 19-10-2026, toàn hierarchy `soc_4core_trial_wrapper` được synthesize sạch
+bằng Vivado 2022.2 trên cùng part `xc7z030fbv676-1`:
+
+| Chỉ số | Kết quả |
+|---|---:|
+| Thời gian `synth_design` | 10 phút 40 giây |
+| Thời gian launch/wait toàn run | 11 phút 40 giây |
+| Peak memory | 2.10 GiB |
+| Slice LUT | 56,443 / 78,600 (71.81%) |
+| Slice register | 35,943 / 157,200 (22.86%) |
+| Block RAM tile | 248 / 265 (93.58%) |
+| DSP48E1 | 48 / 400 (12.00%) |
+| Lỗi / critical warning | 0 / 0 |
+| Post-synthesis WNS tại 100 MHz | -5.308 ns (**chưa đạt**) |
+
+BRAM 64 KiB trong Block Design chỉ là bộ nhớ thử nghiệm đứng thay DDR ở ngoài
+CPU; thay đổi này không giảm L1 hoặc L2 (L2 vẫn 512 KiB). Cấu hình cũ dùng BRAM
+256 KiB làm bộ nhớ ngoài khiến tổng tài nguyên lên 296/265 tile và không thể đặt
+lên part hiện tại. Nền tảng DDR thật không bị giới hạn bởi dung lượng BRAM thử này.
+
+Synthesis đã thành công nhưng chưa được xem là timing closure. Cảnh báo quan trọng
+còn lại cho thấy thanh ghi đầu ra BRAM của L2 có thể cải thiện timing; hướng tối ưu
+tiếp theo là thêm pipeline có kiểm soát tại đường đọc L2, cập nhật latency/handshake
+và regression, rồi mới chạy implementation/place-and-route ở 100 MHz.
+
+### 7.3. Làm mới module reference và chạy synthesis trong Vivado
+
+Mở `Risc_V.xpr`, chọn **Window → Tcl Console** và chạy từ thư mục project:
+
+```tcl
+set_property SOURCE_MGMT_MODE All [current_project]
+set_property XPM_LIBRARIES {XPM_MEMORY} [current_project]
+update_compile_order -fileset sources_1
+open_bd_design [get_files */soc_4core_trial.bd]
+update_module_reference [get_ips soc_4core_trial_cpu0_0]
+validate_bd_design
+save_bd_design
+generate_target -force all [get_files */soc_4core_trial.bd]
+reset_run synth_1
+launch_runs synth_1 -jobs 4
+wait_on_run synth_1
+open_run synth_1
+```
+
+Nếu `soc_4core_trial` ở gốc Sources không có menu **Generate Output Products** thì
+đó không phải lỗi: lệnh `generate_target` phía trên hoặc
+`source scripts/build_soc_4core_trial.tcl` sẽ tạo output products. Không chuyển
+compile order về Manual vì `update_module_reference` không hỗ trợ chế độ đó.
+
 ## 8. Giới hạn và rủi ro còn lại
 
-- Chưa có báo cáo Vivado synthesis, implementation, timing, utilization và power.
+- Chưa có báo cáo implementation, post-route timing và power. Ước lượng
+  post-synthesis của full BD tại 100 MHz hiện có WNS -5.308 ns, vì vậy chưa timing
+  closure và chưa nên dùng kết quả này để kết luận Fmax.
 - Chưa chứng minh boot/workload 4 lõi end-to-end trên FPGA thật.
 - Uncached/MMIO hiện là cửa sổ vật lý tham số hóa mặc định
   `0xC000_0000..0xFFFF_FFFF`, blocking và tối đa một word; chưa hỗ trợ atomic trên
@@ -278,11 +379,10 @@ Các script đã được cập nhật để tìm source theo cấu trúc block 
   memory chưa có cancel/drain cho response đến muộn.
 - A/D atomic đã đóng ở đường L1 D-cache/coherence; `mmu_ip_wrapper` AXI trực tiếp vẫn
   dùng full-word PTE write cho đến khi AXI atomic/lock được triển khai.
-- DMA chưa là coherence master trực tiếp. RTL hiện có protocol coarse-grain:
-  quiesce phần mềm dùng buffer, phát `Cache_Flush`, chờ `Cache_Flush_Done`, kiểm tra
-  `Cache_Flush_Error`, chạy DMA, rồi lặp lại maintenance trước khi CPU đọc dữ liệu.
-  PS có thể thực hiện toàn bộ handshake qua `boot_ctrl.CACHE`; coherent DMA theo
-  từng line vẫn là phần mở rộng sau.
+- DMA chưa là coherence master trực tiếp. `soc_dma_controller` hiện thực protocol
+  coarse-grain tự động (quiesce, pre-flush, DMA, post-flush); PS vẫn có thể dùng
+  đường thủ công qua `boot_ctrl.CACHE`. Coherent DMA theo từng line và scatter-
+  gather vẫn là phần mở rộng sau.
 - Coherence manager blocking giới hạn throughput khi contention cao.
 - Kết nối SD phụ thuộc board, phải xác nhận đường vật lý trước khi chốt boot flow.
 

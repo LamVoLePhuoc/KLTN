@@ -119,6 +119,13 @@ if {[llength [get_projects -quiet]] == 0} {
     error "No open Vivado project. Open Risc_V_new/Risc_V/Risc_V.xpr first, then re-source this script."
 }
 
+# Module-reference cells require automatic source management.  Projects
+# previously saved in DisplayOnly/manual mode otherwise ignore them.
+if {[get_property SOURCE_MGMT_MODE [current_project]] ne "All"} {
+    puts "--> Switching Source Management to automatic compile order"
+    set_property SOURCE_MGMT_MODE All [current_project]
+}
+
 set BD_NAME       "soc_zu5ev_boot"
 set MEM_SIZE_BYTES 262144 ;# 256KB -- trial-fit size, same as build_soc_4core_trial.tcl
 

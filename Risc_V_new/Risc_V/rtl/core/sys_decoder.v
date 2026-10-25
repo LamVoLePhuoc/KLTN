@@ -40,7 +40,7 @@ module sys_decoder (
     output wire IsWfiD,
     output wire IsSfenceVmaD,
     output wire IsPrivIllegalD,   // funct3==0 but none of the above matched
-    output wire IsIllegalOpD      // OpD doesn't match any opcode Main_Decoder.v knows at all
+    output wire IsIllegalOpD      // unknown opcode or reserved RV32IMA encoding
 );
 
     localparam [6:0] OP_SYSTEM   = 7'b1110011;
@@ -56,30 +56,88 @@ module sys_decoder (
     localparam [6:0] OP_JALR     = 7'b1100111;
     localparam [6:0] OP_JAL      = 7'b1101111;
 
-    // Mirrors the opcode set Main_Decoder.v's case statement recognizes
-    // (see that file) -- kept here, not there, so Main_Decoder.v's own
-    // datapath-control case statement doesn't need touching just to
-    // add an "else illegal" arm.
-    assign IsIllegalOpD = ~(OpD == OP_LOAD || OpD == OP_MISC_MEM || OpD == OP_OP_IMM ||
-                             OpD == OP_AUIPC || OpD == OP_STORE || OpD == OP_AMO ||
-                             OpD == OP_OP || OpD == OP_LUI || OpD == OP_BRANCH ||
-                             OpD == OP_JALR || OpD == OP_JAL || OpD == OP_SYSTEM);
-
     wire [2:0]  funct3   = InstrD[14:12];
     wire [11:0] funct12  = InstrD[31:20];
     wire [6:0]  funct7   = InstrD[31:25];
+    wire [4:0]  funct5   = InstrD[31:27];
     wire [4:0]  rs2      = InstrD[24:20];
+    wire [4:0]  rs1      = InstrD[19:15];
+    wire [4:0]  rd       = InstrD[11:7];
+
+    wire load_legal = (funct3 == 3'b000) || (funct3 == 3'b001) ||
+                      (funct3 == 3'b010) || (funct3 == 3'b100) ||
+                      (funct3 == 3'b101);
+    wire store_legal = (funct3 == 3'b000) || (funct3 == 3'b001) ||
+                       (funct3 == 3'b010);
+    wire branch_legal = (funct3 == 3'b000) || (funct3 == 3'b001) ||
+                        (funct3 == 3'b100) || (funct3 == 3'b101) ||
+                        (funct3 == 3'b110) || (funct3 == 3'b111);
+
+    // RV32 shift-immediate instructions reserve every upper-immediate value
+    // except 0000000 (logical) and, for right shifts, 0100000 (arithmetic).
+    wire op_imm_legal =
+        (funct3 == 3'b001) ? (funct7 == 7'b0000000) :
+        (funct3 == 3'b101) ? ((funct7 == 7'b0000000) ||
+                              (funct7 == 7'b0100000)) : 1'b1;
+
+    wire op_legal = (funct7 == 7'b0000000) ||
+                    (funct7 == 7'b0000001) ||
+                    ((funct7 == 7'b0100000) &&
+                     ((funct3 == 3'b000) || (funct3 == 3'b101)));
+
+    wire amo_funct5_legal =
+        (funct5 == 5'b00000) || (funct5 == 5'b00001) ||
+        (funct5 == 5'b00010) || (funct5 == 5'b00011) ||
+        (funct5 == 5'b00100) || (funct5 == 5'b01000) ||
+        (funct5 == 5'b01100) || (funct5 == 5'b10000) ||
+        (funct5 == 5'b10100) || (funct5 == 5'b11000) ||
+        (funct5 == 5'b11100);
+    wire amo_legal = (funct3 == 3'b010) && amo_funct5_legal &&
+                     ((funct5 != 5'b00010) || (rs2 == 5'd0));
+
+    wire csr_funct3_legal = (funct3 == 3'b001) || (funct3 == 3'b010) ||
+                            (funct3 == 3'b011) || (funct3 == 3'b101) ||
+                            (funct3 == 3'b110) || (funct3 == 3'b111);
+
+    // The funct3=000 privileged SYSTEM subspace is checked below by
+    // IsPrivIllegalD.  Keeping that check separate preserves the precise
+    // ECALL/EBREAK/xRET/SFENCE decode while this expression validates all
+    // other RV32IMA instruction encodings before they can cause side effects.
+    wire encoding_legal =
+        ((OpD == OP_LOAD)     && load_legal) ||
+        ((OpD == OP_MISC_MEM) && ((funct3 == 3'b000) || (funct3 == 3'b001))) ||
+        ((OpD == OP_OP_IMM)   && op_imm_legal) ||
+        (OpD == OP_AUIPC) ||
+        ((OpD == OP_STORE)    && store_legal) ||
+        ((OpD == OP_AMO)      && amo_legal) ||
+        ((OpD == OP_OP)       && op_legal) ||
+        (OpD == OP_LUI) ||
+        ((OpD == OP_BRANCH)   && branch_legal) ||
+        ((OpD == OP_JALR)     && (funct3 == 3'b000)) ||
+        (OpD == OP_JAL) ||
+        ((OpD == OP_SYSTEM)   && ((funct3 == 3'b000) || csr_funct3_legal));
+
+    assign IsIllegalOpD = ~encoding_legal;
 
     assign IsSystemD = (OpD == OP_SYSTEM);
     assign IsCsrD    = IsSystemD & (funct3 != 3'b000);
     assign IsPrivD   = IsSystemD & (funct3 == 3'b000);
 
-    assign IsEcallD      = IsPrivD & (funct12 == 12'h000);
-    assign IsEbreakD     = IsPrivD & (funct12 == 12'h001);
-    assign IsSretD       = IsPrivD & (funct7 == 7'b0001000) & (rs2 == 5'b00010);
-    assign IsMretD       = IsPrivD & (funct7 == 7'b0011000) & (rs2 == 5'b00010);
-    assign IsWfiD        = IsPrivD & (funct7 == 7'b0001000) & (rs2 == 5'b00101);
-    assign IsSfenceVmaD  = IsPrivD & (funct7 == 7'b0001001);
+    assign IsEcallD      = IsPrivD & (funct12 == 12'h000) &
+                           (rs1 == 5'd0) & (rd == 5'd0);
+    assign IsEbreakD     = IsPrivD & (funct12 == 12'h001) &
+                           (rs1 == 5'd0) & (rd == 5'd0);
+    assign IsSretD       = IsPrivD & (funct7 == 7'b0001000) &
+                           (rs2 == 5'b00010) & (rs1 == 5'd0) &
+                           (rd == 5'd0);
+    assign IsMretD       = IsPrivD & (funct7 == 7'b0011000) &
+                           (rs2 == 5'b00010) & (rs1 == 5'd0) &
+                           (rd == 5'd0);
+    assign IsWfiD        = IsPrivD & (funct7 == 7'b0001000) &
+                           (rs2 == 5'b00101) & (rs1 == 5'd0) &
+                           (rd == 5'd0);
+    assign IsSfenceVmaD  = IsPrivD & (funct7 == 7'b0001001) &
+                           (rd == 5'd0);
 
     assign IsPrivIllegalD = IsPrivD & ~(IsEcallD | IsEbreakD | IsSretD | IsMretD | IsWfiD | IsSfenceVmaD);
 

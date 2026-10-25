@@ -67,6 +67,7 @@
 // ============================================================
 module mmu_core_wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_1000,
+    parameter [31:0] HART_ID    = 32'd0,
 
     // 0 (default): mmu_top is driven by the plain external
     // Mmu_Enable/Satp_PPN inputs below, exactly as before this
@@ -177,7 +178,12 @@ module mmu_core_wrapper #(
     wire [31:0] mem_amo_operand_core;
     wire [31:0] mem_rdata_to_core;
 
-    wire mem_req_core = mem_re_core | mem_we_core;
+    // These come from the pre-gating M-stage controls.  In particular an
+    // SC.W request must not be inferred from mem_we_core because that output
+    // depends on the translated physical address used by the reservation
+    // comparison, which would form a combinational loop through the MMU.
+    wire        mem_req_core;
+    wire        mem_store_intent_core;
     // A cache hit may complete while the pipeline remains frozen for an
     // unrelated instruction miss or external maintenance operation.  Remember
     // that completion so a level-held M-stage store/AMO is not issued again on
@@ -257,7 +263,7 @@ module mmu_core_wrapper #(
 
         .va_mem(mem_addr_va),
         .mem_req(mem_req_core),
-        .mem_is_store(mem_we_core),
+        .mem_is_store(mem_store_intent_core),
         .pa_mem(pa_mem),
 
         .fetch_fault(fetch_fault),
@@ -389,7 +395,8 @@ module mmu_core_wrapper #(
     // Core (virtual-address world)
     // ------------------------------------------------------
     RV32IMA #(
-        .RESET_ADDR(RESET_ADDR)
+        .RESET_ADDR(RESET_ADDR),
+        .HART_ID(HART_ID)
     ) core (
         .clk                (clk),
         .rst                (rst),
@@ -409,6 +416,8 @@ module mmu_core_wrapper #(
         .Mem_AmoRmwM        (mem_amo_core),
         .Mem_AmoOpM         (mem_amo_op_core),
         .Mem_AmoOperandM    (mem_amo_operand_core),
+        .Mem_RequestM       (mem_req_core),
+        .Mem_StoreIntentM   (mem_store_intent_core),
         .Mem_ReadDataM      (mem_rdata_to_core),
 
         // LR/SC VA-vs-PA fix (see memory_stage.v/RV32IMA.v headers):

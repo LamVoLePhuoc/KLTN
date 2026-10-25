@@ -7,7 +7,7 @@ module coherence_manager #(
     parameter LINE_WORDS = 8,
     parameter PERF_COUNTER_ENABLE = 1,
     parameter DEBUG_TRACE_ENABLE = 0,
-    parameter integer WATCHDOG_LIMIT = 1024
+    parameter integer WATCHDOG_LIMIT = 8192
 )(
     input wire clk, input wire rst,
     input wire c0_dreq_valid, input wire [1:0] c0_dreq_type, input wire [31:0] c0_dreq_addr, input wire [255:0] c0_dreq_line,

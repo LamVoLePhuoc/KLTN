@@ -6,7 +6,7 @@ module tb_csr_access_fault;
     reg clk, rst, csr_op;
     reg [2:0] funct3;
     reg [11:0] csr_addr;
-    reg [31:0] csr_wdata;
+    reg [31:0] csr_wdata, instr_m;
     reg mem_read, mem_write;
     reg fetch_access_fault, data_access_fault;
     reg [31:0] pc_m, mem_addr;
@@ -14,7 +14,7 @@ module tb_csr_access_fault;
     wire trap_taken;
     integer errors;
 
-    csr_trap_unit dut (
+    csr_trap_unit #(.HART_ID(32'd3)) dut (
         .clk(clk), .rst(rst), .Stall_Core_External(1'b0),
         .CsrOpM(csr_op), .CsrFunct3M(funct3), .CsrAddrM(csr_addr),
         .CsrWDataM(csr_wdata), .CsrRDataM(csr_rdata),
@@ -24,7 +24,7 @@ module tb_csr_access_fault;
         .FetchPageFaultM(1'b0), .DataPageFaultM(1'b0),
         .FetchAccessFaultM(fetch_access_fault),
         .DataAccessFaultM(data_access_fault),
-        .PCM(pc_m), .InstrM(32'h0000_0013), .MemAddrM(mem_addr),
+        .PCM(pc_m), .InstrM(instr_m), .MemAddrM(mem_addr),
         .TrapTakenM(trap_taken), .TrapPCM(trap_pc), .CurrentPriv(),
         .Mmu_Enable_Csr(), .Satp_PPN_Csr(), .Mstatus_Sum(),
         .Mstatus_Mxr(), .Mmu_Flush_Csr()
@@ -88,7 +88,7 @@ module tb_csr_access_fault;
     initial begin
         clk=0; rst=1; csr_op=0; funct3=3'b001; csr_addr=0; csr_wdata=0;
         mem_read=0; mem_write=0; fetch_access_fault=0; data_access_fault=0;
-        pc_m=0; mem_addr=0; errors=0;
+        pc_m=0; mem_addr=0; instr_m=32'h0000_0013; errors=0;
         repeat (3) @(posedge clk); #1 rst=0;
         csr_write(12'h305, 32'h0000_0100); // mtvec
 
@@ -98,6 +98,29 @@ module tb_csr_access_fault;
                     "load access fault cause=5");
         raise_fault(0, 1, 32'h0000_2020, 32'hDEAD_2000, 4'd7,
                     "store access fault cause=7");
+
+        // CSRRS x5,mhartid,x0 is a read-only access and must not trap.
+        @(negedge clk);
+        csr_addr=12'hf14; csr_wdata=0; funct3=3'b010;
+        instr_m={12'hf14,5'd0,3'b010,5'd5,7'b1110011}; csr_op=1;
+        #1;
+        if (trap_taken || (csr_rdata !== 32'd3)) begin
+            $display("[FAIL] CSRRS x0 source must read read-only mhartid");
+            errors=errors+1;
+        end
+        @(negedge clk); csr_op=0; instr_m=32'h0000_0013;
+
+        // A nonzero encoded rs1 is a write attempt even if that register's
+        // runtime value happens to be zero, so read-only mhartid must trap.
+        @(negedge clk);
+        csr_addr=12'hf14; csr_wdata=0; funct3=3'b010;
+        instr_m={12'hf14,5'd1,3'b010,5'd5,7'b1110011}; csr_op=1;
+        #1;
+        if (!trap_taken || (trap_pc !== 32'h0000_0100)) begin
+            $display("[FAIL] CSRRS nonzero rs1 must fault on read-only mhartid");
+            errors=errors+1;
+        end
+        @(negedge clk); csr_op=0; instr_m=32'h0000_0013;
 
         if (errors==0) $display("CSR_ACCESS_FAULT_TB: PASS");
         else $display("CSR_ACCESS_FAULT_TB: FAIL (%0d checks)", errors);

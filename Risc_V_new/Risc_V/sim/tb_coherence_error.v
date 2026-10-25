@@ -201,13 +201,20 @@ module tb_coherence_error;
         inject_error = 1'b1; error_addr = A0 + 32'd4;
         issue_d(2'b00, A4, 256'b0, response_error);
         check(response_error, "dirty-victim writeback error returned to requester");
-        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.valid_r[0][12'h800] && dut.u_cache_controller_mmu.g_internal_l2.u_l2.dirty_r[0][12'h800],
+        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.valid_way0_r[12'h800] && dut.u_cache_controller_mmu.g_internal_l2.u_l2.dirty_way0_r[12'h800],
               "failed dirty victim restored valid+dirty in L2");
-        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.tag_r[0][12'h800] == A0[31:17],
+        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.tag_way0_r[12'h800] == A0[31:17],
               "restored victim kept original L2 tag");
-        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_r[0][12'h800] == dirty_line,
+        check({dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word7_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word6_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word5_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word4_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word3_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word2_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word1_r[14'h0800],
+               dut.u_cache_controller_mmu.g_internal_l2.u_l2.data_word0_r[14'h0800]} == dirty_line,
               "restored victim kept authoritative dirty data");
-        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.sharers_r[0][12'h800] == 4'b0,
+        check(dut.u_cache_controller_mmu.g_internal_l2.u_l2.sharers_way0_r[12'h800] == 4'b0,
               "restored victim has no stale sharers");
 
         if (errors == 0) $display("COHERENCE_ERROR_TB: PASS");

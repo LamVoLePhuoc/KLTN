@@ -1,9 +1,14 @@
 # RTL organization
 
-> Current status: the full inventory in [`files.f`](files.f) compiles with
-> QuestaSim 10.2c after the directory reorganization. All 26 self-checking
-> MMU/cache/coherence/CSR/AHB/AXI testbenches pass. Vivado synthesis and board
-> validation still need to be run; see [`../../README.md`](../../README.md).
+> Last verified baseline: the full inventory in [`files.f`](files.f) compiled
+> with QuestaSim 10.2c after the directory reorganization and all 26 then-present
+> self-checking testbenches passed. New RV32IMA legality/execution and DMA tests
+> have since been added and require a fresh regression. The active
+> `quad_core_axi_wrapper_ahb` hierarchy and the complete `soc_4core_trial` Block
+> Design also synthesize successfully in Vivado 2022.2. The full BD uses 248/265
+> BRAM tiles with 0 error/0 critical warning; its 100 MHz post-synthesis timing
+> estimate is not yet met (WNS -5.308 ns). Implementation and board validation remain, see
+> [`../../README.md`](../../README.md).
 
 The active quad-core design is grouped by architectural block. Module names and interfaces are unchanged; only source locations changed.
 
@@ -16,6 +21,7 @@ rtl/
 ├── interconnect/ahb/ AHB-Lite adapters used at the L1/coherence boundary
 ├── soc/              Four-core integration and AXI4-facing wrappers
 ├── boot/             Boot control register block used by bootable wrappers
+├── dma/              Source-level AXI4 memcpy DMA and cache coordinator
 ├── debug/            Optional MMU and cache trace buffers
 └── legacy_2core/     Retained two-core FPGA baseline; not part of the active quad-core hierarchy
 ```
@@ -26,6 +32,8 @@ rtl/
 - `soc/quad_core_soc_ahb.v`: AHB-Lite adapter path.
 - `soc/quad_core_axi_wrapper_ahb.v`: AXI4-facing wrapper for the AHB-Lite quad-core SoC.
 - `soc/quad_core_axi_wrapper_ahb_bootable.v`: bootable AXI4-facing system wrapper.
+- `dma/soc_dma_controller.v`: AXI4-Lite controlled non-coherent AXI4 DMA with
+  automatic pre/post global cache maintenance.
 - `docs/BOOT_DMA_PROTOCOL.md`: AXI4-Lite register map and the required pre/post-DMA cache-maintenance sequence.
 - `files.f`: canonical relative source inventory for static checks and simulator setup.
 
@@ -33,6 +41,14 @@ The Vivado scripts resolve source files recursively below `rtl/`, so adding anot
 
 The Vivado project file has also been updated to the new paths. Add future RTL to
 the appropriate block folder and to `files.f`; do not restore a flat `rtl/` layout.
+
+The L1 cache data/tag/state arrays use synchronous XPM Block RAM. The shared L2
+data store is eight 32-bit banks so its 512 KiB capacity maps to RAMB36 instead
+of one 4,194,304-bit asynchronous variable. D-cache and L2 invalidate metadata
+sequentially for 512 and 4096 cycles after reset respectively; request logic must
+honor their busy/response handshakes rather than assuming immediate reset access.
+The Block Design's 64 KiB AXI BRAM is only a compact stand-in for external DDR;
+it does not change the 512 KiB shared-L2 capacity.
 
 The quad-core SoC and every AXI/bootable wrapper expose
 `Cache_Flush_Busy`, `Cache_Flush_Done`, and sticky `Cache_Flush_Error` beside the
@@ -48,6 +64,7 @@ soc -> cache_controller_mmu (owns arbitration, MSI FSM, snoop and memory transac
 soc -> cache/L2 (peer of cache_controller_mmu)
 soc -> interconnect/ahb -> cache_controller_mmu
 soc -> boot
+soc/external AXI fabric -> dma -> global cache-maintenance handshake
 mmu -> debug (optional generate blocks)
 legacy_2core -> core
 ```

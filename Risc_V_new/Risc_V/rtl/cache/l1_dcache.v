@@ -41,7 +41,7 @@
 // holds line A Modified; core Y requests line A; the coherence
 // manager snoops X to downgrade A -- meanwhile X's own pipeline may,
 // on that very cycle, also be doing a plain write-hit on A. Both
-// would try to update this module's state_r for the same line on
+// would try to update this module's metadata state for the same line on
 // the same clock edge from what would otherwise be two independent
 // paths. Resolved below by `snoop_conflict`: whenever an incoming
 // snoop targets the exact line the core's own access is hitting on
@@ -120,6 +120,7 @@ module l1_dcache #(
     localparam TAG_BITS     = 32 - INDEX_BITS - OFFSET_BITS;
     localparam SETS         = (1 << INDEX_BITS);
     localparam LINE_BITS    = LINE_WORDS * 32;
+    localparam META_BITS    = TAG_BITS + 2;
 
     localparam [1:0] ST_I = 2'b00, ST_S = 2'b01, ST_M = 2'b11;
     localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01,
@@ -138,12 +139,19 @@ module l1_dcache #(
     // ------------------------------------------------------
     // Storage
     // ------------------------------------------------------
-    reg [1:0]              state_r [0:WAYS-1][0:SETS-1]; // 2'b00 = invalid
-    reg [TAG_BITS-1:0]     tag_r   [0:WAYS-1][0:SETS-1];
-    reg [LINE_BITS-1:0]    data_r  [0:WAYS-1][0:SETS-1];
+    // Tag and MSI state are stored beside one another in the same two-port
+    // synchronous memory as the line lookup.  The former asynchronous,
+    // resettable, multi-write arrays expanded into thousands of muxes/FFs
+    // per cache and dominated synthesis time.
+    // One true-dual-port block RAM per way: port A serves the local core
+    // (and all writes), port B serves snoops.  cache_tdp_data_ram uses the
+    // official XPM memory macro during synthesis, avoiding a very expensive
+    // ambiguous RAM-inference pass, and a matching behavioural model in
+    // simulation. Dedicated block RAM has synchronous reads, so cpu_valid
+    // remains low for the added hit-lookup cycle.
     reg                    lru_r   [0:SETS-1];
-
-    integer w, s;
+    reg                    init_active;
+    reg [INDEX_BITS-1:0]   init_index;
 
     // ------------------------------------------------------
     // Core-side lookup (combinational): report a tag match
@@ -156,49 +164,79 @@ module l1_dcache #(
     reg [1:0]             tag_hit_state_v;
     reg [LINE_BITS-1:0]   tag_hit_line_v;
 
+    wire [LINE_BITS-1:0] core_way0_line;
+    wire [LINE_BITS-1:0] core_way1_line;
+    wire [LINE_BITS-1:0] snoop_way0_line;
+    wire [LINE_BITS-1:0] snoop_way1_line;
+    wire [META_BITS-1:0] core_meta_way0;
+    wire [META_BITS-1:0] core_meta_way1;
+    wire [META_BITS-1:0] snoop_meta_way0;
+    wire [META_BITS-1:0] snoop_meta_way1;
+    reg [31:0]          core_lookup_addr;
+    reg                 core_lookup_valid;
+    reg [INDEX_BITS-1:0] core_data_index;
+    reg [31:0]          snoop_lookup_addr;
+    reg                 snoop_lookup_valid;
+    reg                 snoop_lookup_type;
+
+    wire [TAG_BITS-1:0] lookup_tag = core_lookup_addr[31:32-TAG_BITS];
+    wire [INDEX_BITS-1:0] lookup_index =
+        core_lookup_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
+    wire [2:0] lookup_word = core_lookup_addr[4:2];
+    wire core_lookup_ready = core_lookup_valid &&
+                             (core_lookup_addr == cpu_addr) &&
+                             (core_data_index == lookup_index);
+
     always @(*) begin
         tag_hit_v       = 1'b0;
         tag_hit_way_v   = 1'b0;
         tag_hit_state_v = ST_I;
         tag_hit_line_v  = {LINE_BITS{1'b0}};
-        for (w = 0; w < WAYS; w = w + 1) begin
-            if ((state_r[w][addr_index] != ST_I) && (tag_r[w][addr_index] == addr_tag)) begin
-                tag_hit_v       = 1'b1;
-                tag_hit_way_v   = w[0];
-                tag_hit_state_v = state_r[w][addr_index];
-                tag_hit_line_v  = data_r[w][addr_index];
-            end
+        if ((core_meta_way0[1:0] != ST_I) &&
+            (core_meta_way0[META_BITS-1:2] == lookup_tag)) begin
+            tag_hit_v       = 1'b1;
+            tag_hit_way_v   = 1'b0;
+            tag_hit_state_v = core_meta_way0[1:0];
+            tag_hit_line_v  = core_way0_line;
+        end
+        if ((core_meta_way1[1:0] != ST_I) &&
+            (core_meta_way1[META_BITS-1:2] == lookup_tag)) begin
+            tag_hit_v       = 1'b1;
+            tag_hit_way_v   = 1'b1;
+            tag_hit_state_v = core_meta_way1[1:0];
+            tag_hit_line_v  = core_way1_line;
         end
     end
 
-    wire snoop_conflict = snoop_valid && (snoop_index == addr_index) &&
-                          tag_hit_v && (snoop_tag == addr_tag);
+    wire snoop_conflict_now = snoop_valid && (snoop_index == addr_index) &&
+                              tag_hit_v && (snoop_tag == addr_tag);
+    wire [TAG_BITS-1:0] snoop_lookup_tag =
+        snoop_lookup_addr[31:32-TAG_BITS];
+    wire [INDEX_BITS-1:0] snoop_lookup_index =
+        snoop_lookup_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
+    wire snoop_conflict_pending = snoop_lookup_valid &&
+        (snoop_lookup_index == addr_index) && tag_hit_v &&
+        (snoop_lookup_tag == addr_tag);
+    wire snoop_conflict = snoop_conflict_now | snoop_conflict_pending;
 
     // Forward declarations used by the read-data mux below; the
     // miss/AMO FSM owns both registers later in the module.
     reg miss_done_pulse;
     reg miss_error_pulse;
+    reg hit_write_done_pulse;
+    reg hit_read_done_pulse;
     reg fsm_amo;
-    reg fsm_uncached;
 
     wire access_ok = tag_hit_v & ~snoop_conflict &
                       (cpu_we ? (tag_hit_state_v == ST_M)
                                : (tag_hit_state_v == ST_S || tag_hit_state_v == ST_M));
 
-    wire [31:0] hit_word_raw = tag_hit_line_v[addr_word*32 +: 32];
-    reg  [31:0] miss_amo_old_word;
-    reg  [31:0] uncached_read_word;
-    wire [31:0] cpu_word_raw = (miss_done_pulse && fsm_uncached) ?
-                               uncached_read_word :
-                               (miss_done_pulse && fsm_amo) ?
-                               miss_amo_old_word : hit_word_raw;
-
-    load_unit u_load_unit (
-        .raw_data    (cpu_word_raw),
-        .addr_offset (cpu_addr[1:0]),
-        .mem_op      (cpu_memop),
-        .load_data   (cpu_rdata)
-    );
+    // Data is registered in its final, architecturally formatted form before
+    // cpu_valid is asserted.  In particular, live cpu_addr/cpu_memop signals
+    // no longer form a combinational path from the dTLB through load
+    // forwarding and back into a following store/uncached request.
+    reg [31:0] cpu_response_data;
+    assign cpu_rdata = cpu_response_data;
 
     // Reuse the architectural store formatter for the device path.
     // Cached stores still merge locally in merge_line(); only uncached
@@ -227,13 +265,19 @@ module l1_dcache #(
         snoop_hit_way_v   = 1'b0;
         snoop_hit_state_v = ST_I;
         snoop_hit_line_v  = {LINE_BITS{1'b0}};
-        for (w = 0; w < WAYS; w = w + 1) begin
-            if ((state_r[w][snoop_index] != ST_I) && (tag_r[w][snoop_index] == snoop_tag)) begin
-                snoop_hit_v       = 1'b1;
-                snoop_hit_way_v   = w[0];
-                snoop_hit_state_v = state_r[w][snoop_index];
-                snoop_hit_line_v  = data_r[w][snoop_index];
-            end
+        if ((snoop_meta_way0[1:0] != ST_I) &&
+            (snoop_meta_way0[META_BITS-1:2] == snoop_lookup_tag)) begin
+            snoop_hit_v       = 1'b1;
+            snoop_hit_way_v   = 1'b0;
+            snoop_hit_state_v = snoop_meta_way0[1:0];
+            snoop_hit_line_v  = snoop_way0_line;
+        end
+        if ((snoop_meta_way1[1:0] != ST_I) &&
+            (snoop_meta_way1[META_BITS-1:2] == snoop_lookup_tag)) begin
+            snoop_hit_v       = 1'b1;
+            snoop_hit_way_v   = 1'b1;
+            snoop_hit_state_v = snoop_meta_way1[1:0];
+            snoop_hit_line_v  = snoop_way1_line;
         end
     end
 
@@ -317,14 +361,41 @@ module l1_dcache #(
         end
     endfunction
 
+    function [31:0] format_load;
+        input [31:0] raw_data;
+        input [1:0]  byte_off;
+        input [2:0]  memop;
+        reg [7:0]    selected_byte;
+        reg [15:0]   selected_half;
+        begin
+            case (byte_off)
+                2'b00: selected_byte = raw_data[7:0];
+                2'b01: selected_byte = raw_data[15:8];
+                2'b10: selected_byte = raw_data[23:16];
+                default: selected_byte = raw_data[31:24];
+            endcase
+            selected_half = byte_off[1] ? raw_data[31:16] : raw_data[15:0];
+            case (memop)
+                3'b000: format_load = {{24{selected_byte[7]}}, selected_byte};
+                3'b001: format_load = {{16{selected_half[15]}}, selected_half};
+                3'b010: format_load = raw_data;
+                3'b100: format_load = {24'b0, selected_byte};
+                3'b101: format_load = {16'b0, selected_half};
+                default: format_load = raw_data;
+            endcase
+        end
+    endfunction
+
     // ------------------------------------------------------
     // Core-side miss/eviction FSM
     // ------------------------------------------------------
-    localparam [2:0] S_IDLE = 3'd0, S_EVICT = 3'd1,
-                     S_MISS_REQ = 3'd2, S_AFTER_EVICT = 3'd3,
-                     S_FLUSH_SCAN = 3'd4, S_FLUSH_WB = 3'd5,
-                     S_FLUSH_GAP = 3'd6, S_UNCACHED_REQ = 3'd7;
-    reg [2:0] state;
+    localparam [3:0] S_IDLE = 4'd0, S_EVICT = 4'd1,
+                     S_MISS_REQ = 4'd2, S_AFTER_EVICT = 4'd3,
+                     S_FLUSH_SCAN = 4'd4, S_FLUSH_WB = 4'd5,
+                     S_FLUSH_GAP = 4'd6, S_UNCACHED_REQ = 4'd7,
+                     S_CACHE_WRITE = 4'd8, S_HIT_MERGE = 4'd9,
+                     S_HIT_READ = 4'd10;
+    reg [3:0] state;
 
     reg                   fsm_way;
     reg [INDEX_BITS-1:0]  fsm_index;
@@ -336,6 +407,37 @@ module l1_dcache #(
     reg [4:0]              fsm_amo_op;
     reg [31:0]             fsm_amo_operand;
 
+    // Every data/tag mutation is committed from these registers.  The old
+    // direct write-hit path ran from ALU_ResultM through the combinational
+    // dTLB, hit/AMO/store merge logic and the XPM input mux to RAMB36 in one
+    // cycle.  Apart from missing 100 MHz by more than 5 ns, that also made
+    // placement extremely sensitive.  S_CACHE_WRITE deliberately adds one
+    // blocking cycle and presents registered address/data/control to BRAM.
+    reg [LINE_BITS-1:0]    cache_write_line;
+    reg                    cache_write_way;
+    reg [INDEX_BITS-1:0]   cache_write_set;
+    reg [TAG_BITS-1:0]     cache_write_tag;
+    reg [1:0]              cache_write_state;
+    reg                    cache_write_from_hit;
+
+    // Write hits use an additional register boundary before the byte/AMO
+    // merge.  Both BRAM way outputs are captured independently so the
+    // translated address and tag-hit mux cannot be folded back into the
+    // cache_write_line D path.  The core is already held by the blocking
+    // cache handshake, therefore the extra cycle changes latency only, not
+    // architectural ordering or the external interface.
+    reg [LINE_BITS-1:0]    hit_stage_way0_line;
+    reg [LINE_BITS-1:0]    hit_stage_way1_line;
+    reg                    hit_stage_way;
+    reg [INDEX_BITS-1:0]   hit_stage_set;
+    reg [TAG_BITS-1:0]     hit_stage_tag;
+    reg [4:0]              hit_stage_word_off;
+    reg [2:0]              hit_stage_memop;
+    reg [31:0]             hit_stage_wdata;
+    reg                    hit_stage_amo;
+    reg [4:0]              hit_stage_amo_op;
+    reg [31:0]             hit_stage_amo_operand;
+
     // A flush is deliberately a small blocking walker instead of a
     // one-cycle valid-bit clear.  Dropping an M line would lose the
     // only up-to-date copy in an MSI system.  The request is latched
@@ -346,10 +448,227 @@ module l1_dcache #(
     reg [INDEX_BITS-1:0]  flush_set;
     reg                   flush_way;
 
-    assign flush_busy = flush | flush_pending |
+    assign flush_busy = init_active | flush | flush_pending |
                         (state == S_FLUSH_SCAN) |
                         (state == S_FLUSH_WB) |
                         (state == S_FLUSH_GAP);
+
+    wire [LINE_BITS-1:0] victim_line = lru_r[lookup_index] ?
+                                      core_way1_line : core_way0_line;
+    wire [META_BITS-1:0] victim_meta = lru_r[lookup_index] ?
+                                      core_meta_way1 : core_meta_way0;
+    wire [1:0] victim_state = victim_meta[1:0];
+    wire [TAG_BITS-1:0] victim_tag = victim_meta[META_BITS-1:2];
+    wire [LINE_BITS-1:0] flush_line = flush_way ?
+                                      core_way1_line : core_way0_line;
+    wire [META_BITS-1:0] flush_meta = flush_way ?
+                                      core_meta_way1 : core_meta_way0;
+    wire [1:0] flush_state = flush_meta[1:0];
+    wire [TAG_BITS-1:0] flush_tag = flush_meta[META_BITS-1:2];
+    wire [INDEX_BITS-1:0] core_read_index =
+        ((state == S_FLUSH_SCAN) || (state == S_FLUSH_WB) ||
+         (state == S_FLUSH_GAP)) ? flush_set : addr_index;
+    // A snoop for the line being committed wins.  Aborting the local commit
+    // (without producing cpu_valid) makes the held CPU request retry after
+    // the snoop, at which point it follows the normal miss/RFO path.  This
+    // preserves the local-hit-vs-snoop ordering guarantee despite the new
+    // pipeline cycle.
+    wire cache_write_snoop_conflict_now = snoop_valid &&
+        (snoop_index == cache_write_set) && (snoop_tag == cache_write_tag);
+    wire cache_write_snoop_conflict_pending = snoop_lookup_valid &&
+        (snoop_lookup_index == cache_write_set) &&
+        (snoop_lookup_tag == cache_write_tag);
+    wire cache_write_snoop_conflict = (state == S_CACHE_WRITE) &&
+        (cache_write_snoop_conflict_now | cache_write_snoop_conflict_pending);
+    wire hit_stage_snoop_conflict_now = snoop_valid &&
+        (snoop_index == hit_stage_set) && (snoop_tag == hit_stage_tag);
+    wire hit_stage_snoop_conflict_pending = snoop_lookup_valid &&
+        (snoop_lookup_index == hit_stage_set) &&
+        (snoop_lookup_tag == hit_stage_tag);
+    wire hit_stage_snoop_conflict =
+        ((state == S_HIT_MERGE) || (state == S_HIT_READ)) &&
+        (hit_stage_snoop_conflict_now | hit_stage_snoop_conflict_pending);
+
+    // All data mutations share one registered write command.  Keeping writes
+    // on port A gives each bank one unambiguous write port.
+    wire data_write_en = (state == S_CACHE_WRITE) &&
+                         !cache_write_snoop_conflict;
+    wire data_write_way = cache_write_way;
+    wire [INDEX_BITS-1:0] data_write_set = cache_write_set;
+    wire [INDEX_BITS-1:0] data_port_a_index = data_write_en ?
+                                                 data_write_set : core_read_index;
+    wire [LINE_BITS-1:0] hit_stage_line = hit_stage_way ?
+        hit_stage_way1_line : hit_stage_way0_line;
+    wire [LINE_BITS-1:0] hit_stage_write_line = hit_stage_amo ?
+        merge_amo_line(hit_stage_line, hit_stage_word_off[4:2],
+                       hit_stage_amo_op, hit_stage_amo_operand) :
+        merge_line(hit_stage_line, hit_stage_word_off[4:2],
+                   hit_stage_memop, hit_stage_wdata,
+                   hit_stage_word_off[1:0]);
+    wire [LINE_BITS-1:0] fill_write_line = fsm_we ?
+        (fsm_amo ? merge_amo_line(bus_resp_line, fsm_word_off[4:2],
+                                  fsm_amo_op, fsm_amo_operand) :
+                   merge_line(bus_resp_line, fsm_word_off[4:2], fsm_memop,
+                              fsm_wdata, fsm_word_off[1:0])) :
+        bus_resp_line;
+    wire [LINE_BITS-1:0] data_write_line = cache_write_line;
+
+    // Metadata port A follows the core/flush lookup; port B follows the
+    // independent snoop lookup.  A snoop has priority if both ports attempt
+    // to update the same way/set on one edge, matching the old sequential
+    // assignment order.
+    wire flush_scan_invalidate = (state == S_FLUSH_SCAN) &&
+                                 (core_data_index == flush_set) &&
+                                 (flush_state != ST_M);
+    wire flush_wb_invalidate = (state == S_FLUSH_WB) &&
+                               bus_resp_valid && !bus_resp_error;
+    wire meta_core_write = data_write_en |
+                           flush_scan_invalidate | flush_wb_invalidate;
+    wire meta_core_way = data_write_en ? cache_write_way : flush_way;
+    wire [INDEX_BITS-1:0] meta_core_set = data_write_en ?
+                                             cache_write_set : flush_set;
+    wire [META_BITS-1:0] meta_core_din = data_write_en ?
+        {cache_write_tag, cache_write_state} : {flush_tag, ST_I};
+
+    wire snoop_flush_wins =
+        ((state == S_FLUSH_SCAN) && (core_data_index == flush_set) &&
+         (snoop_lookup_index == flush_set) &&
+         (snoop_hit_way_v == flush_way) && (flush_state != ST_M)) ||
+        ((state == S_FLUSH_WB) && bus_resp_valid && !bus_resp_error &&
+         (snoop_lookup_index == flush_set) &&
+         (snoop_hit_way_v == flush_way));
+    wire [1:0] snoop_next_state = snoop_flush_wins ? ST_I :
+                                  (snoop_lookup_type ? ST_S : ST_I);
+    wire snoop_meta_write = !init_active && snoop_lookup_valid && snoop_hit_v;
+    wire snoop_meta_we_way0 = snoop_meta_write && !snoop_hit_way_v;
+    wire snoop_meta_we_way1 = snoop_meta_write &&  snoop_hit_way_v;
+    wire [META_BITS-1:0] snoop_meta_din =
+        {snoop_lookup_tag, snoop_next_state};
+
+    wire [INDEX_BITS-1:0] meta_port_a_index = init_active ? init_index :
+                                              meta_core_write ? meta_core_set :
+                                                                core_read_index;
+    wire meta_collision = meta_core_write && snoop_meta_write &&
+                          (meta_core_way == snoop_hit_way_v) &&
+                          (meta_core_set == snoop_lookup_index);
+    wire meta_a_we_way0 = init_active ||
+                          (meta_core_write && !meta_core_way && !meta_collision);
+    wire meta_a_we_way1 = init_active ||
+                          (meta_core_write &&  meta_core_way && !meta_collision);
+    wire [META_BITS-1:0] meta_a_din = init_active ? {META_BITS{1'b0}} :
+                                                   meta_core_din;
+
+    cache_tdp_data_ram #(
+        .WIDTH     (LINE_BITS),
+        .ADDR_WIDTH(INDEX_BITS)
+    ) u_data_way0 (
+        .clk   (clk),
+        .we_a  (data_write_en && (data_write_way == 1'b0)),
+        .addr_a(data_port_a_index),
+        .din_a (data_write_line),
+        .dout_a(core_way0_line),
+        .we_b  (1'b0),
+        .addr_b(snoop_index),
+        .din_b ({LINE_BITS{1'b0}}),
+        .dout_b(snoop_way0_line)
+    );
+
+    cache_tdp_data_ram #(
+        .WIDTH     (LINE_BITS),
+        .ADDR_WIDTH(INDEX_BITS)
+    ) u_data_way1 (
+        .clk   (clk),
+        .we_a  (data_write_en && (data_write_way == 1'b1)),
+        .addr_a(data_port_a_index),
+        .din_a (data_write_line),
+        .dout_a(core_way1_line),
+        .we_b  (1'b0),
+        .addr_b(snoop_index),
+        .din_b ({LINE_BITS{1'b0}}),
+        .dout_b(snoop_way1_line)
+    );
+
+    cache_tdp_data_ram #(
+        .WIDTH     (META_BITS),
+        .ADDR_WIDTH(INDEX_BITS)
+    ) u_meta_way0 (
+        .clk   (clk),
+        .we_a  (meta_a_we_way0),
+        .addr_a(meta_port_a_index),
+        .din_a (meta_a_din),
+        .dout_a(core_meta_way0),
+        .we_b  (snoop_meta_we_way0),
+        .addr_b(snoop_index),
+        .din_b (snoop_meta_din),
+        .dout_b(snoop_meta_way0)
+    );
+
+    cache_tdp_data_ram #(
+        .WIDTH     (META_BITS),
+        .ADDR_WIDTH(INDEX_BITS)
+    ) u_meta_way1 (
+        .clk   (clk),
+        .we_a  (meta_a_we_way1),
+        .addr_a(meta_port_a_index),
+        .din_a (meta_a_din),
+        .dout_a(core_meta_way1),
+        .we_b  (snoop_meta_we_way1),
+        .addr_b(snoop_index),
+        .din_b (snoop_meta_din),
+        .dout_b(snoop_meta_way1)
+    );
+
+    // Track the address associated with synchronous RAM port A.
+    always @(posedge clk) begin
+        core_data_index <= data_port_a_index;
+        if (rst || init_active) begin
+            core_lookup_addr  <= 32'b0;
+            core_lookup_valid <= 1'b0;
+            hit_stage_way0_line <= {LINE_BITS{1'b0}};
+            hit_stage_way1_line <= {LINE_BITS{1'b0}};
+            hit_stage_way        <= 1'b0;
+            hit_stage_set        <= {INDEX_BITS{1'b0}};
+            hit_stage_tag        <= {TAG_BITS{1'b0}};
+            hit_stage_word_off   <= 5'b0;
+            hit_stage_memop      <= 3'b0;
+            hit_stage_wdata      <= 32'b0;
+            hit_stage_amo        <= 1'b0;
+            hit_stage_amo_op     <= 5'b0;
+            hit_stage_amo_operand <= 32'b0;
+        end
+        else begin
+            core_lookup_addr  <= cpu_addr;
+            core_lookup_valid <= 1'b1;
+            // Capture unconditionally.  Conditional enables here would put
+            // the dTLB/tag-hit decision on the CE pin of 512 line registers
+            // and recreate the long path this stage is intended to cut.
+            hit_stage_way0_line <= core_way0_line;
+            hit_stage_way1_line <= core_way1_line;
+            hit_stage_way        <= tag_hit_way_v;
+            hit_stage_set        <= lookup_index;
+            hit_stage_tag        <= lookup_tag;
+            hit_stage_word_off   <= {lookup_word, core_lookup_addr[1:0]};
+            hit_stage_memop      <= cpu_memop;
+            hit_stage_wdata      <= cpu_wdata;
+            hit_stage_amo        <= cpu_amo;
+            hit_stage_amo_op     <= cpu_amo_op;
+            hit_stage_amo_operand <= cpu_amo_operand;
+        end
+    end
+
+    // Track the request associated with synchronous RAM port B.
+    always @(posedge clk) begin
+        if (rst || init_active) begin
+            snoop_lookup_addr  <= 32'b0;
+            snoop_lookup_valid <= 1'b0;
+            snoop_lookup_type  <= 1'b0;
+        end
+        else begin
+            snoop_lookup_addr  <= snoop_addr;
+            snoop_lookup_valid <= snoop_valid;
+            snoop_lookup_type  <= snoop_type;
+        end
+    end
 
     // cpu_valid is driven once, below (after the FSM always block),
     // as the OR of a same-cycle hit and a miss-just-resolved pulse.
@@ -359,6 +678,8 @@ module l1_dcache #(
             bus_req_valid   <= 1'b0;
             miss_done_pulse <= 1'b0;
             miss_error_pulse <= 1'b0;
+            hit_write_done_pulse <= 1'b0;
+            hit_read_done_pulse <= 1'b0;
             flush_pending   <= 1'b0;
             flush_seen      <= 1'b0;
             flush_done      <= 1'b0;
@@ -366,37 +687,55 @@ module l1_dcache #(
             flush_set       <= {INDEX_BITS{1'b0}};
             flush_way       <= 1'b0;
             fsm_amo         <= 1'b0;
-            fsm_uncached    <= 1'b0;
             fsm_amo_op      <= 5'b0;
             fsm_amo_operand <= 32'b0;
-            miss_amo_old_word <= 32'b0;
-            uncached_read_word <= 32'b0;
+            cache_write_line <= {LINE_BITS{1'b0}};
+            cache_write_way  <= 1'b0;
+            cache_write_set  <= {INDEX_BITS{1'b0}};
+            cache_write_tag  <= {TAG_BITS{1'b0}};
+            cache_write_state <= ST_I;
+            cache_write_from_hit <= 1'b0;
+            cpu_response_data <= 32'b0;
             snoop_ack_valid <= 1'b0;
             snoop_ack_hit   <= 1'b0;
             snoop_ack_dirty <= 1'b0;
             snoop_ack_line  <= {LINE_BITS{1'b0}};
-            for (s = 0; s < SETS; s = s + 1) begin
-                lru_r[s] <= 1'b0;
-                for (w = 0; w < WAYS; w = w + 1) begin
-                    state_r[w][s] <= ST_I;
-                end
-            end
+            init_active     <= 1'b1;
+            init_index      <= {INDEX_BITS{1'b0}};
         end
         else begin
             miss_done_pulse <= 1'b0;
             miss_error_pulse <= 1'b0;
+            hit_write_done_pulse <= 1'b0;
+            hit_read_done_pulse <= 1'b0;
             flush_done      <= 1'b0;
             flush_error     <= 1'b0;
             flush_seen      <= flush;
+            snoop_ack_valid <= 1'b0;
+
+            if (flush && !flush_seen)
+                flush_pending <= 1'b1;
+
+            if (init_active) begin
+                // Invalidate one set in each way per cycle.  This keeps the
+                // metadata and LRU stores as real RAMs instead of a resettable
+                // bank of thousands of flops and muxes.
+                bus_req_valid    <= 1'b0;
+                lru_r[init_index] <= 1'b0;
+                if (init_index == SETS-1) begin
+                    init_active <= 1'b0;
+                end
+                else begin
+                    init_index <= init_index + {{(INDEX_BITS-1){1'b0}}, 1'b1};
+                end
+            end
+            else begin
 
             // Once accepted, request payload is owned by the shared
             // controller.  This cache may therefore drop valid while it
             // remains in the same blocking state waiting for the response.
             if (bus_req_valid && bus_req_ready)
                 bus_req_valid <= 1'b0;
-
-            if (flush && !flush_seen)
-                flush_pending <= 1'b1;
 
             case (state)
                 // ------------------------------------------------
@@ -415,14 +754,15 @@ module l1_dcache #(
                     // This is essential for non-idempotent AMOs: otherwise
                     // a cold AMO would apply its RMW twice.
                     else if (!miss_done_pulse && !miss_error_pulse &&
+                             !hit_write_done_pulse && !hit_read_done_pulse &&
                              (cpu_re | cpu_we) && uncached_access) begin
                         // Device accesses are strongly ordered by this
                         // blocking cache and bypass both tag/data arrays.
                         // AMOs require an atomic-capable system bus, which
                         // this AXI/AHB boundary does not advertise; fail them
                         // instead of silently degrading atomicity.
-                        fsm_uncached <= 1'b1;
                         fsm_amo      <= 1'b0;
+                        fsm_we       <= cpu_we;
                         fsm_memop    <= cpu_memop;
                         fsm_word_off <= {addr_word, cpu_addr[1:0]};
                         if (cpu_amo) begin
@@ -439,39 +779,48 @@ module l1_dcache #(
                         end
                     end
                     else if (!miss_done_pulse && !miss_error_pulse &&
-                             (cpu_re | cpu_we) && access_ok && cpu_we) begin
-                        // Write hit on M: ownership was already obtained
-                        // by an earlier RFO, so the update stays local.
-                        data_r[tag_hit_way_v][addr_index]  <= cpu_amo ?
-                            merge_amo_line(tag_hit_line_v, addr_word, cpu_amo_op, cpu_amo_operand) :
-                            merge_line(tag_hit_line_v, addr_word, cpu_memop, cpu_wdata, cpu_addr[1:0]);
-                        state_r[tag_hit_way_v][addr_index] <= ST_M;
+                             !hit_write_done_pulse && !hit_read_done_pulse &&
+                             (cpu_re | cpu_we) && core_lookup_ready &&
+                             access_ok && cpu_we) begin
+                        // Request operands and both candidate BRAM lines were
+                        // captured by the lookup pipeline above.  Perform the
+                        // byte/AMO merge only after that register boundary.
+                        state <= S_HIT_MERGE;
                     end
                     else if (!miss_done_pulse && !miss_error_pulse &&
-                             (cpu_re | cpu_we) && !access_ok) begin
+                             !hit_write_done_pulse && !hit_read_done_pulse &&
+                             cpu_re && !cpu_we && core_lookup_ready &&
+                             access_ok) begin
+                        // As with write hits, do not expose a combinational
+                        // dTLB/tag-hit path as the cache completion signal.
+                        // The already captured way lines supply S_HIT_READ.
+                        state <= S_HIT_READ;
+                    end
+                    else if (!miss_done_pulse && !miss_error_pulse &&
+                             !hit_write_done_pulse && !hit_read_done_pulse &&
+                             (cpu_re | cpu_we) && core_lookup_ready &&
+                             !access_ok) begin
                         // Need the bus. Decide the fill way and
                         // whether its current occupant (if any, and
                         // if it's actually a DIFFERENT line) needs a
                         // writeback first.
-                        fsm_way   <= tag_hit_v ? tag_hit_way_v : lru_r[addr_index];
-                        fsm_index <= addr_index;
-                        fsm_tag   <= addr_tag;
+                        fsm_way   <= tag_hit_v ? tag_hit_way_v : lru_r[lookup_index];
+                        fsm_index <= lookup_index;
+                        fsm_tag   <= lookup_tag;
                         fsm_we    <= cpu_we;
                         fsm_memop <= cpu_memop;
                         fsm_wdata <= cpu_wdata;
-                        fsm_word_off <= {addr_word, cpu_addr[1:0]};
+                        fsm_word_off <= {lookup_word, core_lookup_addr[1:0]};
                         fsm_amo         <= cpu_amo;
-                        fsm_uncached    <= 1'b0;
                         fsm_amo_op      <= cpu_amo_op;
                         fsm_amo_operand <= cpu_amo_operand;
 
-                        if (!tag_hit_v &&
-                            (state_r[lru_r[addr_index]][addr_index] == ST_M)) begin
+                        if (!tag_hit_v && (victim_state == ST_M)) begin
                             // Genuine miss, LRU victim is dirty: writeback first.
                             bus_req_valid <= 1'b1;
                             bus_req_type  <= REQ_WRITEBACK;
-                            bus_req_addr  <= {tag_r[lru_r[addr_index]][addr_index], addr_index, {OFFSET_BITS{1'b0}}};
-                            bus_req_line  <= data_r[lru_r[addr_index]][addr_index];
+                            bus_req_addr  <= {victim_tag, lookup_index, {OFFSET_BITS{1'b0}}};
+                            bus_req_line  <= victim_line;
                             state         <= S_EVICT;
                         end
                         else begin
@@ -480,9 +829,49 @@ module l1_dcache #(
                             // clean/invalid (silently droppable).
                             bus_req_valid <= 1'b1;
                             bus_req_type  <= cpu_we ? REQ_RFO : REQ_READ;
-                            bus_req_addr  <= {addr_tag, addr_index, {OFFSET_BITS{1'b0}}};
+                            bus_req_addr  <= {lookup_tag, lookup_index, {OFFSET_BITS{1'b0}}};
                             state         <= S_MISS_REQ;
                         end
+                    end
+                end
+
+                // ------------------------------------------------
+                // Registered write-hit merge. A snoop that reaches this line
+                // before the commit wins; leave the held CPU request
+                // unacknowledged so it is re-evaluated against the new MSI
+                // state after returning to S_IDLE.
+                S_HIT_MERGE: begin
+                    if (hit_stage_snoop_conflict) begin
+                        state <= S_IDLE;
+                    end
+                    else begin
+                        cache_write_line     <= hit_stage_write_line;
+                        cache_write_way      <= hit_stage_way;
+                        cache_write_set      <= hit_stage_set;
+                        cache_write_tag      <= hit_stage_tag;
+                        cache_write_state    <= ST_M;
+                        cache_write_from_hit <= 1'b1;
+                        if (hit_stage_amo)
+                            cpu_response_data <=
+                                hit_stage_line[hit_stage_word_off[4:2]*32 +: 32];
+                        state                <= S_CACHE_WRITE;
+                    end
+                end
+
+                // ------------------------------------------------
+                // Registered read-hit response.  Registering both the raw
+                // word and completion removes the previous combinational
+                // dTLB -> D-cache hit -> access-fault/CSR timing path.
+                S_HIT_READ: begin
+                    if (hit_stage_snoop_conflict) begin
+                        state <= S_IDLE;
+                    end
+                    else begin
+                        cpu_response_data <= format_load(
+                            hit_stage_line[hit_stage_word_off[4:2]*32 +: 32],
+                            hit_stage_word_off[1:0], hit_stage_memop);
+                        hit_read_done_pulse <= 1'b1;
+                        state <= S_IDLE;
                     end
                 end
 
@@ -521,36 +910,48 @@ module l1_dcache #(
                             // held load/store/AMO as an access fault.
                             miss_error_pulse <= 1'b1;
                         end
-                        else if (fsm_we) begin
-                            // Read-for-ownership done: apply the
-                            // pending store on top of the fetched
-                            // (pre-store) line before committing it.
-                            if (fsm_amo) begin
-                                miss_amo_old_word <= bus_resp_line[fsm_word_off[4:2]*32 +: 32];
-                                data_r[fsm_way][fsm_index] <= merge_amo_line(
-                                    bus_resp_line, fsm_word_off[4:2], fsm_amo_op, fsm_amo_operand);
-                            end
-                            else begin
-                                data_r[fsm_way][fsm_index] <= merge_line(
-                                    bus_resp_line, fsm_word_off[4:2], fsm_memop,
-                                    fsm_wdata, fsm_word_off[1:0]);
-                            end
-                            state_r[fsm_way][fsm_index] <= ST_M;
-                        end
                         else begin
-                            data_r[fsm_way][fsm_index]  <= bus_resp_line;
-                            // MSI has no Exclusive state: every read fill
-                            // is Shared, even when this is the only copy.
-                            // bus_resp_state is retained on the interface
-                            // for compatibility and checked by the CM tests.
-                            state_r[fsm_way][fsm_index] <= ST_S;
+                            // Register both data and metadata before driving
+                            // the XPM write port. For an AMO, keep the old word
+                            // for the architectural return value.
+                            cache_write_line     <= fill_write_line;
+                            cache_write_way      <= fsm_way;
+                            cache_write_set      <= fsm_index;
+                            cache_write_tag      <= fsm_tag;
+                            cache_write_state    <= fsm_we ? ST_M : ST_S;
+                            cache_write_from_hit <= 1'b0;
+                            if (fsm_we && fsm_amo)
+                                cpu_response_data <=
+                                    bus_resp_line[fsm_word_off[4:2]*32 +: 32];
+                            else if (!fsm_we)
+                                cpu_response_data <= format_load(
+                                    bus_resp_line[fsm_word_off[4:2]*32 +: 32],
+                                    fsm_word_off[1:0], fsm_memop);
+                            // MSI has no Exclusive state: every read fill is
+                            // Shared even when this is the only copy.
+                            state <= S_CACHE_WRITE;
                         end
-                        if (!bus_resp_error) begin
-                            tag_r[fsm_way][fsm_index] <= fsm_tag;
-                            lru_r[fsm_index]          <= ~fsm_way;
-                            miss_done_pulse           <= 1'b1;
+                        if (bus_resp_error)
+                            state <= S_IDLE;
+                    end
+                end
+
+                // ------------------------------------------------
+                // Registered cache-array commit.  A same-line snoop aborts
+                // the commit and leaves the CPU request unacknowledged so it
+                // retries against the snoop-updated MSI state.
+                S_CACHE_WRITE: begin
+                    if (cache_write_snoop_conflict) begin
+                        state <= S_IDLE;
+                    end
+                    else begin
+                        if (cache_write_from_hit)
+                            hit_write_done_pulse <= 1'b1;
+                        else begin
+                            lru_r[cache_write_set] <= ~cache_write_way;
+                            miss_done_pulse        <= 1'b1;
                         end
-                        state           <= S_IDLE;
+                        state <= S_IDLE;
                     end
                 end
 
@@ -566,7 +967,10 @@ module l1_dcache #(
                             miss_error_pulse <= 1'b1;
                         end
                         else begin
-                            uncached_read_word <= bus_resp_line[31:0];
+                            if (!fsm_we)
+                                cpu_response_data <= format_load(
+                                    bus_resp_line[31:0],
+                                    fsm_word_off[1:0], fsm_memop);
                             miss_done_pulse    <= 1'b1;
                         end
                         state <= S_IDLE;
@@ -581,16 +985,22 @@ module l1_dcache #(
                 // low-valid cycle between consecutive writebacks.
                 S_FLUSH_SCAN: begin
                     bus_req_valid <= 1'b0;
-                    if (state_r[flush_way][flush_set] == ST_M) begin
+                    // The BRAM output belongs to the address sampled on the
+                    // preceding clock.  After advancing flush_set, wait until
+                    // port A has actually returned that set before deciding
+                    // whether the line needs a writeback.
+                    if (core_data_index != flush_set) begin
+                        // wait for the synchronous RAM lookup
+                    end
+                    else if (flush_state == ST_M) begin
                         bus_req_valid <= 1'b1;
                         bus_req_type  <= REQ_WRITEBACK;
-                        bus_req_addr  <= {tag_r[flush_way][flush_set], flush_set,
+                        bus_req_addr  <= {flush_tag, flush_set,
                                           {OFFSET_BITS{1'b0}}};
-                        bus_req_line  <= data_r[flush_way][flush_set];
+                        bus_req_line  <= flush_line;
                         state         <= S_FLUSH_WB;
                     end
                     else begin
-                        state_r[flush_way][flush_set] <= ST_I;
                         if ((flush_set == SETS-1) && (flush_way == 1'b1)) begin
                             flush_done <= 1'b1;
                             state      <= S_IDLE;
@@ -615,7 +1025,6 @@ module l1_dcache #(
                             state       <= S_IDLE;
                         end
                         else begin
-                            state_r[flush_way][flush_set] <= ST_I;
                             if ((flush_set == SETS-1) && (flush_way == 1'b1)) begin
                                 flush_done <= 1'b1;
                                 state      <= S_IDLE;
@@ -643,51 +1052,123 @@ module l1_dcache #(
             endcase
 
             // ---- Snoop response (runs every cycle, independent of `state` above) ----
-            snoop_ack_valid <= snoop_valid;
-            if (snoop_valid) begin
+            snoop_ack_valid <= snoop_lookup_valid;
+            if (snoop_lookup_valid) begin
                 snoop_ack_hit   <= snoop_hit_v;
                 snoop_ack_dirty <= snoop_hit_v && (snoop_hit_state_v == ST_M);
                 snoop_ack_line  <= snoop_hit_line_v;
-                if (snoop_hit_v) begin
-                    // A flush invalidation completing on this same
-                    // edge wins over a DOWNGRADE, otherwise the latter
-                    // could accidentally resurrect the just-flushed S
-                    // line.  The snoop still receives the pre-edge hit
-                    // and data above, so coherence is preserved.
-                    if (((state == S_FLUSH_SCAN) &&
-                         (snoop_index == flush_set) &&
-                         (snoop_hit_way_v == flush_way) &&
-                         (state_r[flush_way][flush_set] != ST_M)) ||
-                        ((state == S_FLUSH_WB) && bus_resp_valid && !bus_resp_error &&
-                         (snoop_index == flush_set) &&
-                         (snoop_hit_way_v == flush_way))) begin
-                        state_r[snoop_hit_way_v][snoop_index] <= ST_I;
-                    end
-                    else if (snoop_type == 1'b0) begin
-                        // INVALIDATE
-                        state_r[snoop_hit_way_v][snoop_index] <= ST_I;
-                    end
-                    else begin
-                        // DOWNGRADE (M -> S); dirty data already
-                        // captured into snoop_ack_line above for the
-                        // coherence manager to write back / forward.
-                        state_r[snoop_hit_way_v][snoop_index] <= ST_S;
-                    end
-                end
+            end
             end
         end
     end
 
-    // Registered miss-resolve pulse doubles as the other half of
-    // cpu_valid (see the wire assign above, which only covers hits).
-    // Both cannot be true the same cycle (miss_done_pulse only fires
-    // from S_MISS_REQ, at which point state==S_IDLE only starts the
-    // *next* cycle, and cpu_valid's hit term requires state==S_IDLE
-    // this cycle) -- combined with a plain OR below.
-    wire cpu_valid_hit  = (state == S_IDLE) && !miss_error_pulse &&
-                          !flush_pending && !flush &&
-                          !uncached_access && access_ok && (cpu_re | cpu_we);
-    assign cpu_valid = cpu_valid_hit | miss_done_pulse | miss_error_pulse;
+    // Every cached hit completion is registered.  This avoids exposing tag,
+    // translation, snoop-conflict and load formatting logic as a same-cycle
+    // path back into the core's stall/fault/CSR controls.
+    assign cpu_valid = hit_read_done_pulse | hit_write_done_pulse |
+                       miss_done_pulse | miss_error_pulse;
     assign cpu_error = miss_error_pulse;
 
+endmodule
+
+// --------------------------------------------------------------------------
+// Cache-line true-dual-port RAM
+//
+// Vivado's XPM removes inference ambiguity for the wide two-read/one-write
+// cache array.  The behavioural branch keeps ordinary RTL simulators and the
+// existing self-checking testbenches independent of vendor simulation libs.
+// --------------------------------------------------------------------------
+// Common synchronous true-dual-port Block RAM wrapper used by both cache-line
+// data and compact tag/MSI metadata arrays.
+module cache_tdp_data_ram #(
+    parameter integer WIDTH = 256,
+    parameter integer ADDR_WIDTH = 6
+) (
+    input  wire                  clk,
+    input  wire                  we_a,
+    input  wire [ADDR_WIDTH-1:0] addr_a,
+    input  wire [WIDTH-1:0]      din_a,
+    output wire [WIDTH-1:0]      dout_a,
+    input  wire                  we_b,
+    input  wire [ADDR_WIDTH-1:0] addr_b,
+    input  wire [WIDTH-1:0]      din_b,
+    output wire [WIDTH-1:0]      dout_b
+);
+`ifdef SYNTHESIS
+    xpm_memory_tdpram #(
+        .ADDR_WIDTH_A       (ADDR_WIDTH),
+        .ADDR_WIDTH_B       (ADDR_WIDTH),
+        .AUTO_SLEEP_TIME    (0),
+        .BYTE_WRITE_WIDTH_A (WIDTH),
+        .BYTE_WRITE_WIDTH_B (WIDTH),
+        .CASCADE_HEIGHT     (0),
+        .CLOCKING_MODE      ("common_clock"),
+        .ECC_MODE           ("no_ecc"),
+        .MEMORY_INIT_FILE   ("none"),
+        .MEMORY_INIT_PARAM  ("0"),
+        .MEMORY_OPTIMIZATION("true"),
+        .MEMORY_PRIMITIVE   ("block"),
+        .MEMORY_SIZE        (WIDTH * (1 << ADDR_WIDTH)),
+        .MESSAGE_CONTROL    (0),
+        .READ_DATA_WIDTH_A  (WIDTH),
+        .READ_DATA_WIDTH_B  (WIDTH),
+        .READ_LATENCY_A     (1),
+        .READ_LATENCY_B     (1),
+        .READ_RESET_VALUE_A ("0"),
+        .READ_RESET_VALUE_B ("0"),
+        .RST_MODE_A         ("SYNC"),
+        .RST_MODE_B         ("SYNC"),
+        .SIM_ASSERT_CHK     (0),
+        .USE_EMBEDDED_CONSTRAINT(0),
+        .USE_MEM_INIT       (0),
+        .WAKEUP_TIME        ("disable_sleep"),
+        .WRITE_DATA_WIDTH_A (WIDTH),
+        .WRITE_DATA_WIDTH_B (WIDTH),
+        .WRITE_MODE_A       ("read_first"),
+        .WRITE_MODE_B       ("read_first"),
+        .WRITE_PROTECT      (1)
+    ) u_xpm (
+        .sleep          (1'b0),
+        .clka           (clk),
+        .rsta           (1'b0),
+        .ena            (1'b1),
+        .regcea         (1'b1),
+        .wea            (we_a),
+        .addra          (addr_a),
+        .dina           (din_a),
+        .injectsbiterra (1'b0),
+        .injectdbiterra (1'b0),
+        .douta          (dout_a),
+        .sbiterra       (),
+        .dbiterra       (),
+        .clkb           (clk),
+        .rstb           (1'b0),
+        .enb            (1'b1),
+        .regceb         (1'b1),
+        .web            (we_b),
+        .addrb          (addr_b),
+        .dinb           (din_b),
+        .injectsbiterrb (1'b0),
+        .injectdbiterrb (1'b0),
+        .doutb          (dout_b),
+        .sbiterrb       (),
+        .dbiterrb       ()
+    );
+`else
+    reg [WIDTH-1:0] mem [0:(1 << ADDR_WIDTH)-1];
+    reg [WIDTH-1:0] dout_a_r;
+    reg [WIDTH-1:0] dout_b_r;
+
+    assign dout_a = dout_a_r;
+    assign dout_b = dout_b_r;
+
+    always @(posedge clk) begin
+        if (we_a)
+            mem[addr_a] <= din_a;
+        if (we_b)
+            mem[addr_b] <= din_b;
+        dout_a_r <= mem[addr_a];
+        dout_b_r <= mem[addr_b];
+    end
+`endif
 endmodule

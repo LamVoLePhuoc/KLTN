@@ -141,7 +141,9 @@ module tb_cache_amo;
         repeat (5) @(posedge clk);
         rst = 1'b0;
 
-        while (!(saw_amo_old_value && saw_load_new_value) && cycles < 300) begin
+        // D$ metadata is scrubbed sequentially for 512 cycles after reset so
+        // that it can live in Block RAM.  Leave margin for the program itself.
+        while (!(saw_amo_old_value && saw_load_new_value) && cycles < 1200) begin
             @(posedge clk);
             cycles = cycles + 1;
         end
@@ -185,7 +187,7 @@ module tb_cache_amo;
     end
 
     initial begin
-        #(CLK_PERIOD * 500);
+        #(CLK_PERIOD * 1600);
         $display("CACHE_AMO_TB: FAIL (global timeout)");
         $finish;
     end

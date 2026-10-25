@@ -1,7 +1,11 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_cache_lrsc.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_cache_lrsc 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_cache_lrsc.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_cache_lrsc 
 # ** Note: (vsim-3812) Design is being optimized...
 # 
-# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v(44): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 33, found 30.
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v(44): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 35, found 30.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v(44): (vopt-2718) [TFMPC] - Missing connection for port 'dbus_req_ready'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v(44): (vopt-2718) [TFMPC] - Missing connection for port 'ibus_req_ready'.
 # 
 # ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v(44): (vopt-2718) [TFMPC] - Missing connection for port 'Cache_Flush_Error'.
 # 
@@ -25,5 +29,5 @@
 # [PASS] following LW observed SC.W value 7
 # [PASS] LR cold fill and SC upgrade issued exactly BusRd then RFO
 # CACHE_LRSC_TB: PASS
-# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_lrsc.v(195)
-#    Time: 255 ns  Iteration: 1  Instance: /tb_cache_lrsc
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_lrsc.v(196)
+#    Time: 5325 ns  Iteration: 1  Instance: /tb_cache_lrsc

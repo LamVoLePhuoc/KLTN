@@ -228,7 +228,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     // Core 0
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0)) core0 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0), .HART_ID(32'd0)) core0 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
         .Cache_Flush_Busy(cache_flush_core_busy[0]), .Cache_Flush_Done(cache_flush_core_done[0]), .Cache_Flush_Error(cache_flush_core_error[0]),
@@ -283,7 +283,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     // Core 1
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR1)) core1 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR1), .HART_ID(32'd1)) core1 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
         .Cache_Flush_Busy(cache_flush_core_busy[1]), .Cache_Flush_Done(cache_flush_core_done[1]), .Cache_Flush_Error(cache_flush_core_error[1]),
@@ -338,7 +338,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     // Core 2
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR2)) core2 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR2), .HART_ID(32'd2)) core2 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
         .Cache_Flush_Busy(cache_flush_core_busy[2]), .Cache_Flush_Done(cache_flush_core_done[2]), .Cache_Flush_Error(cache_flush_core_error[2]),
@@ -393,7 +393,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     // Core 3
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR3)) core3 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR3), .HART_ID(32'd3)) core3 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
         .Cache_Flush_Busy(cache_flush_core_busy[3]), .Cache_Flush_Done(cache_flush_core_done[3]), .Cache_Flush_Error(cache_flush_core_error[3]),

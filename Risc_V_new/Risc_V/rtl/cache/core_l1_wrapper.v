@@ -54,6 +54,7 @@
 // ============================================================
 module core_l1_wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_1000,
+    parameter [31:0] HART_ID    = 32'd0,
     parameter        MMU_REGION_POLICY_ENABLE = 1,
     parameter        MMU_DEBUG_TRACE_ENABLE   = 0,
     parameter integer MMU_PTW_WATCHDOG_CYCLES = 4096
@@ -138,9 +139,12 @@ module core_l1_wrapper #(
     reg         cache_flush_queued;
     reg         dcache_flush_pulse;
     reg         icache_flush_pulse;
+    reg         icache_flush_waiting;
     wire        dcache_flush_busy;
     wire        dcache_flush_done;
     wire        dcache_flush_error;
+    wire        icache_flush_busy;
+    wire        icache_flush_done;
     (* mark_debug = "true" *) reg cache_maintenance_error;
 
     wire cache_flush_trigger = (Cache_Flush && !cache_flush_seen) ||
@@ -149,7 +153,7 @@ module core_l1_wrapper #(
     // invalidate pulse; otherwise it could retire one stale fetch on
     // the same edge that the valid bits are being cleared.
     wire cache_maintenance_stall = cache_flush_active | cache_flush_trigger |
-                                   icache_flush_pulse;
+                                   icache_flush_pulse | icache_flush_busy;
 
     assign Cache_Flush_Busy  = cache_maintenance_stall;
     assign Cache_Flush_Error = cache_maintenance_error;
@@ -166,6 +170,7 @@ module core_l1_wrapper #(
             cache_flush_queued <= 1'b0;
             dcache_flush_pulse <= 1'b0;
             icache_flush_pulse <= 1'b0;
+            icache_flush_waiting <= 1'b0;
             cache_maintenance_error <= 1'b0;
             Cache_Flush_Done <= 1'b0;
         end
@@ -174,7 +179,7 @@ module core_l1_wrapper #(
             fence_i_seen       <= fence_i_m;
             dcache_flush_pulse <= 1'b0;
             icache_flush_pulse <= 1'b0;
-            Cache_Flush_Done   <= icache_flush_pulse;
+            Cache_Flush_Done   <= 1'b0;
 
             if (!cache_flush_active) begin
                 if (cache_flush_trigger) begin
@@ -186,7 +191,20 @@ module core_l1_wrapper #(
                 if (cache_flush_trigger)
                     cache_flush_queued <= 1'b1;
 
-                if (dcache_flush_error) begin
+                if (icache_flush_waiting) begin
+                    if (icache_flush_done) begin
+                        icache_flush_waiting <= 1'b0;
+                        Cache_Flush_Done <= 1'b1;
+                        if (cache_flush_queued || cache_flush_trigger) begin
+                            cache_flush_queued <= 1'b0;
+                            dcache_flush_pulse <= 1'b1;
+                        end
+                        else begin
+                            cache_flush_active <= 1'b0;
+                        end
+                    end
+                end
+                else if (dcache_flush_error) begin
                     // Do not invalidate I$ after a failed D$ clean: that
                     // would falsely claim FENCE.I/maintenance completed.
                     // The dirty D$ line is retained; expose a sticky ILA
@@ -194,17 +212,12 @@ module core_l1_wrapper #(
                     cache_maintenance_error <= 1'b1;
                     cache_flush_active <= 1'b0;
                     cache_flush_queued <= 1'b0;
+                    icache_flush_waiting <= 1'b0;
                     Cache_Flush_Done <= 1'b1;
                 end
                 else if (dcache_flush_done) begin
                     icache_flush_pulse <= 1'b1;
-                    if (cache_flush_queued || cache_flush_trigger) begin
-                        cache_flush_queued <= 1'b0;
-                        dcache_flush_pulse <= 1'b1;
-                    end
-                    else begin
-                        cache_flush_active <= 1'b0;
-                    end
+                    icache_flush_waiting <= 1'b1;
                 end
             end
         end
@@ -212,6 +225,7 @@ module core_l1_wrapper #(
 
     mmu_core_wrapper #(
         .RESET_ADDR(RESET_ADDR),
+        .HART_ID(HART_ID),
         .MMU_CTRL_FROM_CSR(1),
         .MMU_REGION_POLICY_ENABLE(MMU_REGION_POLICY_ENABLE),
         .MMU_DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE),
@@ -276,6 +290,8 @@ module core_l1_wrapper #(
         .clk            (clk),
         .rst            (rst),
         .flush          (icache_flush_pulse),
+        .flush_busy     (icache_flush_busy),
+        .flush_done     (icache_flush_done),
 
         .cpu_addr       (PCF),
         .cpu_rdata      (InstrF),

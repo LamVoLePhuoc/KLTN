@@ -42,6 +42,10 @@ mmu/cache_controller_mmu.v
 interconnect/ahb/ahb_lite_l1_adapter.v
 interconnect/ahb/ahb_lite_l1_slave_adapter.v
 boot/boot_ctrl.v
+dma/axi_memcpy_dma.v
+dma/dma_cache_coordinator.v
+dma/axi_lite_dma_regs.v
+dma/soc_dma_controller.v
 soc/quad_core_soc.v
 soc/quad_core_soc_ahb.v
 soc/quad_core_axi_wrapper.v

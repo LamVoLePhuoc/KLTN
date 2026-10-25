@@ -1,4 +1,4 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_boot_ctrl.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_boot_ctrl 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_boot_ctrl.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_boot_ctrl 
 # ** Note: (vsim-3812) Design is being optimized...
 # 
 # //  Questa Sim-64

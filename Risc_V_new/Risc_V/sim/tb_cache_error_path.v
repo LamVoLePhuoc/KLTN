@@ -19,6 +19,7 @@ module tb_cache_error_path;
 
     l1_icache u_icache (
         .clk(clk), .rst(rst), .flush(1'b0),
+        .flush_busy(), .flush_done(),
         .cpu_addr(i_cpu_addr), .cpu_rdata(i_cpu_rdata),
         .cpu_valid(i_cpu_valid), .cpu_error(i_cpu_error),
         .bus_req_valid(i_req_valid), .bus_req_ready(1'b0), .bus_req_addr(i_req_addr),
@@ -124,11 +125,15 @@ module tb_cache_error_path;
         @(negedge clk);
         d_resp_valid = 1'b1; d_resp_error = 1'b0;
         d_resp_line[31:0] = 32'h89AB_CDEF;
-        @(posedge clk); #1;
-        check(d_cpu_valid && !d_cpu_error && d_cpu_rdata == 32'h89AB_CDEF,
+        @(posedge clk); #1; d_resp_valid = 1'b0;
+        // A successful fill is intentionally committed from a registered
+        // cache-write stage before the requester is acknowledged.  Wait for
+        // that handshake instead of assuming the old zero-extra-cycle path.
+        wait (d_cpu_valid); #1;
+        check(!d_cpu_error && d_cpu_rdata == 32'h89AB_CDEF,
               "D-cache can refill successfully after an error");
         @(negedge clk);
-        d_resp_valid = 1'b0; d_cpu_re = 1'b0;
+        d_cpu_re = 1'b0;
 
         if (errors == 0) $display("CACHE_ERROR_PATH_TB: PASS");
         else             $display("CACHE_ERROR_PATH_TB: FAIL (%0d)", errors);

@@ -1,9 +1,15 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_coherence.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_coherence 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_coherence.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_coherence 
 # ** Note: (vsim-3812) Design is being optimized...
 # 
-# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(202): (vopt-2685) [TFMPC] - Too few port connections for 'u_cm'.  Expected 109, found 108.
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(232): (vopt-2685) [TFMPC] - Too few port connections for 'u_cm'.  Expected 134, found 130.
 # 
-# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(202): (vopt-2718) [TFMPC] - Missing connection for port 'mem_wstrb'.
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(232): (vopt-2718) [TFMPC] - Missing connection for port 'c3_ireq_ready'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(232): (vopt-2718) [TFMPC] - Missing connection for port 'c2_ireq_ready'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(232): (vopt-2718) [TFMPC] - Missing connection for port 'c1_ireq_ready'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v(232): (vopt-2718) [TFMPC] - Missing connection for port 'c0_ireq_ready'.
 # 
 # //  Questa Sim-64
 # //  Version 10.2c Unknown Platform Jul 19 2013
@@ -27,6 +33,7 @@
 # [PASS] C: downgraded core0 still reads shared value: 0xaaaa0001
 # MSI D: four readers, then one writer invalidates all sharers
 # [PASS] D: shared writer generated one RFO
+# [PASS] D: all three remote sharers were snooped in parallel
 # [PASS] D: core0 re-fetches writer value: 0xbbbb0002
 # [PASS] D: core1 re-fetches writer value: 0xbbbb0002
 # [PASS] D: core3 re-fetches writer value: 0xbbbb0002
@@ -81,5 +88,5 @@
 # ---------------------------------------------
 # MSI_COHERENCE_TB: PASS
 # ---------------------------------------------
-# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence.v(630)
-#    Time: 107255 ns  Iteration: 1  Instance: /tb_coherence
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence.v(742)
+#    Time: 187140 ns  Iteration: 1  Instance: /tb_coherence

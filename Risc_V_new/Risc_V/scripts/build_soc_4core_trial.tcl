@@ -102,8 +102,25 @@ if {[llength [get_projects -quiet]] == 0} {
     error "No open Vivado project. Open Risc_V_new/Risc_V/Risc_V.xpr first, then re-source this script."
 }
 
+# Module-reference cells are ignored when the project is in manual
+# (DisplayOnly) compile-order mode.  Force Vivado's automatic source
+# management before registering RTL or creating the block design.
+if {[get_property SOURCE_MGMT_MODE [current_project]] ne "All"} {
+    puts "--> Switching Source Management to automatic compile order"
+    set_property SOURCE_MGMT_MODE All [current_project]
+}
+
+# The L1 caches instantiate XPM_MEMORY primitives under synthesis.  Project
+# mode normally detects them automatically, but recording the library here
+# also makes regenerated module-reference output products deterministic.
+set_property XPM_LIBRARIES {XPM_MEMORY} [current_project]
+
 set BD_NAME       "soc_4core_trial"
-set MEM_SIZE_BYTES 262144 ;# 256KB -- trial-fit size, not the real target DRAM size
+# This BRAM is only a synthesizable stand-in for external DDR. 64 KiB keeps
+# the complete xc7z030 trial below the device's BRAM limit after the 4x L1 and
+# shared L2 caches are included. The final DDR-backed platform is not limited
+# to this value.
+set MEM_SIZE_BYTES 65536
 
 #---------------------------------------------------------------
 # 0. Register the new RTL sources this trial needs (all files added
@@ -136,7 +153,9 @@ set new_sources {
     core_l1_wrapper.v
     l2_cache.v
     cache_debug_buffer.v
+    cache_maintenance_tracker.v
     coherence_manager.v
+    cache_controller_mmu.v
     ahb_lite_l1_adapter.v
     ahb_lite_l1_slave_adapter.v
     quad_core_soc_ahb.v
@@ -304,12 +323,13 @@ puts "--> [7] Assigning addresses"
 
 catch {assign_bd_address} ; # auto-assign everything first
 
-foreach {space_pin} {cpu0/M_AXI dma0/M_AXI} {
+foreach {space_name} {cpu0/M_AXI dma0/Data} {
     if {[catch {
-        set seg [get_bd_addr_segs -of_objects [get_bd_addr_spaces $space_pin] -filter {NAME =~ "*mem_ctrl*"}]
-        assign_bd_address -offset 0x00000000 -range ${MEM_SIZE_BYTES} -target_address_space [get_bd_addr_spaces $space_pin] $seg -force
+        set addr_space [get_bd_addr_spaces $space_name]
+        set seg [get_bd_addr_segs -of_objects $addr_space -filter {NAME =~ "*mem_ctrl*"}]
+        assign_bd_address -offset 0x00000000 -range ${MEM_SIZE_BYTES} -target_address_space $addr_space $seg -force
     } err]} {
-        puts "    WARNING: could not pin mem_ctrl address for $space_pin ($err) -- fix by hand in the Address Editor."
+        puts "    WARNING: could not pin mem_ctrl address for $space_name ($err) -- fix by hand in the Address Editor."
     }
 }
 
@@ -329,6 +349,14 @@ if {[catch {validate_bd_design} verr]} {
 save_bd_design
 
 set bd_file [get_files "${BD_NAME}.bd"]
+# Materialize the HDL/IP products here so a project created by this script is
+# immediately ready for synthesis.  This is also why the BD itself does not
+# show a separate "Generate Output Products" item in some Vivado versions.
+if {[catch {generate_target -force all $bd_file} gen_err]} {
+    puts "    WARNING: output-product generation reported: $gen_err"
+} else {
+    puts "    output products: generated"
+}
 if {[catch {make_wrapper -files $bd_file -top} wrap_err]} {
     puts "    NOTE: make_wrapper reported: $wrap_err (a wrapper may already exist -- check sources)"
 } else {

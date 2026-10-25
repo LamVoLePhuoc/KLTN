@@ -121,7 +121,11 @@ module tb_cache_fence_i;
         else begin
             $display("[PASS] FENCE.I reached wrapper and stalled for maintenance");
             cycles = 0;
-            while (dut.cache_flush_active && cycles < 1500) begin
+            // Synchronous D$ metadata RAM needs up to 512 startup-clear
+            // cycles plus roughly three cycles/set for a clean two-way
+            // flush.  Keep this a bounded watchdog, but size it for that
+            // intentional BRAM latency rather than the former async arrays.
+            while (dut.cache_flush_active && cycles < 2400) begin
                 @(posedge clk);
                 cycles = cycles + 1;
                 if (dbus_req_valid)
@@ -174,7 +178,7 @@ module tb_cache_fence_i;
     end
 
     initial begin
-        #(CLK_PERIOD * 2500);
+        #(CLK_PERIOD * 4000);
         $display("CACHE_FENCE_I_TB: FAIL (global timeout)");
         $finish;
     end

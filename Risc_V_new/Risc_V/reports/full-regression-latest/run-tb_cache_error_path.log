@@ -1,4 +1,4 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_cache_error_path.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_cache_error_path 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_cache_error_path.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_cache_error_path 
 # ** Note: (vsim-3812) Design is being optimized...
 # 
 # //  Questa Sim-64
@@ -19,5 +19,5 @@
 # [PASS] D-cache error response was not installed as a hit
 # [PASS] D-cache can refill successfully after an error
 # CACHE_ERROR_PATH_TB: PASS
-# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_error_path.v(135)
-#    Time: 130 ns  Iteration: 1  Instance: /tb_cache_error_path
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_error_path.v(140)
+#    Time: 5230 ns  Iteration: 1  Instance: /tb_cache_error_path

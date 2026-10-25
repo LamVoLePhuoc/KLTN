@@ -1,5 +1,11 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_csr_trap.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_csr_trap 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_csr_trap.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_csr_trap 
 # ** Note: (vsim-3812) Design is being optimized...
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_trap.v(145): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 32, found 30.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_trap.v(145): (vopt-2718) [TFMPC] - Missing connection for port 'Mem_StoreIntentM'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_trap.v(145): (vopt-2718) [TFMPC] - Missing connection for port 'Mem_RequestM'.
 # 
 # //  Questa Sim-64
 # //  Version 10.2c Unknown Platform Jul 19 2013

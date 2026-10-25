@@ -76,7 +76,10 @@ module cache_controller_mmu #(
     parameter LINE_WORDS = 8,
     parameter PERF_COUNTER_ENABLE = 1,
     parameter DEBUG_TRACE_ENABLE = 0,
-    parameter integer WATCHDOG_LIMIT = 1024,
+    // L2 invalidates one set per cycle after reset so its metadata can be
+    // inferred as RAM instead of tens of thousands of flip-flops.  Allow
+    // the first blocked lookup to wait through all 4096 default L2 sets.
+    parameter integer WATCHDOG_LIMIT = 8192,
     parameter EXTERNAL_L2 = 1,
     parameter REQUEST_QUEUE_ENABLE = 0
 )(

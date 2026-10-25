@@ -37,6 +37,8 @@ module l1_icache #(
     input  wire         clk,
     input  wire         rst,
     input  wire         flush,     // pulse: invalidate the whole cache
+    output wire         flush_busy,
+    output reg          flush_done,
 
     // ---- Core side (PIPT, always-active fetch, matches fetch_stage.v) ----
     input  wire [31:0]  cpu_addr,
@@ -64,104 +66,223 @@ module l1_icache #(
     wire [2:0]            addr_word   = cpu_addr[4:2]; // word within the 8-word line
 
     // ------------------------------------------------------
-    // Storage: WAYS x SETS tag/valid, WAYS x SETS x LINE_BITS data
+    // Synchronous single-port BRAMs, one data and one metadata RAM per way.
+    // This adds one lookup cycle but prevents Vivado from expanding the
+    // former asynchronous 32-KB array into a very large LUT network.
     // ------------------------------------------------------
-    reg                    valid_r [0:WAYS-1][0:SETS-1];
-    reg [TAG_BITS-1:0]     tag_r   [0:WAYS-1][0:SETS-1];
-    reg [LINE_BITS-1:0]    data_r  [0:WAYS-1][0:SETS-1];
-    reg                    lru_r   [0:SETS-1]; // 1 bit/set: which way to evict next (round-robin/PLRU-1)
+    wire [LINE_BITS-1:0] way0_line;
+    wire [LINE_BITS-1:0] way1_line;
+    wire [TAG_BITS-1:0] way0_tag;
+    wire [TAG_BITS-1:0] way1_tag;
+    reg [SETS-1:0] valid_way0_r;
+    reg [SETS-1:0] valid_way1_r;
+    (* ram_style = "distributed" *) reg lru_r [0:SETS-1];
 
-    integer w, s;
+    reg [31:0] lookup_addr;
+    reg        lookup_valid;
+    wire [TAG_BITS-1:0] lookup_tag = lookup_addr[31:32-TAG_BITS];
+    wire [INDEX_BITS-1:0] lookup_index =
+        lookup_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
+    wire [2:0] lookup_word = lookup_addr[4:2];
+    wire lookup_ready = lookup_valid && (lookup_addr == cpu_addr);
 
-    // ------------------------------------------------------
-    // Lookup (combinational)
-    // ------------------------------------------------------
-    reg        hit_v;
+    reg flush_pending;
+
+    assign flush_busy = flush_pending | flush;
+
+    reg hit_v;
     reg [LINE_BITS-1:0] hit_line_v;
-
     always @(*) begin
         hit_v      = 1'b0;
         hit_line_v = {LINE_BITS{1'b0}};
-        for (w = 0; w < WAYS; w = w + 1) begin
-            if (valid_r[w][addr_index] && (tag_r[w][addr_index] == addr_tag)) begin
-                hit_v      = 1'b1;
-                hit_line_v = data_r[w][addr_index];
-            end
+        if (valid_way0_r[lookup_index] && (way0_tag == lookup_tag)) begin
+            hit_v      = 1'b1;
+            hit_line_v = way0_line;
+        end
+        if (valid_way1_r[lookup_index] && (way1_tag == lookup_tag)) begin
+            hit_v      = 1'b1;
+            hit_line_v = way1_line;
         end
     end
 
-    wire [31:0] hit_word = hit_line_v[addr_word*32 +: 32];
+    wire [31:0] hit_word = hit_line_v[lookup_word*32 +: 32];
 
     // ------------------------------------------------------
     // Miss FSM (blocking, single outstanding request)
     // ------------------------------------------------------
     localparam S_IDLE = 1'b0, S_MISS = 1'b1;
-    reg  state;
-    reg  [INDEX_BITS-1:0] miss_index;
-    reg  [TAG_BITS-1:0]   miss_tag;
-    reg                   miss_way; // which way we are about to fill
+    reg state;
+    reg [INDEX_BITS-1:0] miss_index;
+    reg [TAG_BITS-1:0]   miss_tag;
+    reg                  miss_way;
+    reg [2:0]            miss_word;
+    reg                  fill_done_pulse;
+    reg [31:0]           fill_return_word;
 
-    // A failed fill completes the held fetch without installing a cache
-    // line.  Keeping the error combinational with the response lets the
-    // core capture the access-fault tag on the same edge that terminates
-    // the miss; the following trap redirect prevents a retry of the old PC.
-    wire miss_error = (state == S_MISS) && bus_resp_valid && bus_resp_error;
-    assign cpu_valid = ((state == S_IDLE) && hit_v) | miss_error;
+    wire miss_error = (state == S_MISS) && bus_resp_valid &&
+                      bus_resp_error && !flush_busy;
+    assign cpu_valid = !flush_busy &&
+                       (((state == S_IDLE) && lookup_ready && hit_v) |
+                        fill_done_pulse | miss_error);
     assign cpu_error = miss_error;
-    assign cpu_rdata = hit_word;
+    assign cpu_rdata = fill_done_pulse ? fill_return_word : hit_word;
+
+    wire fill_write_en = (state == S_MISS) && bus_resp_valid &&
+                         !bus_resp_error && !flush_pending && !flush;
+    wire victim_way = !valid_way0_r[lookup_index] ? 1'b0 :
+                      !valid_way1_r[lookup_index] ? 1'b1 : lru_r[lookup_index];
+    wire [INDEX_BITS-1:0] ram_index = fill_write_en ? miss_index : addr_index;
+
+    cache_sp_ram #(.WIDTH(LINE_BITS), .ADDR_WIDTH(INDEX_BITS)) u_data_way0 (
+        .clk(clk), .we(fill_write_en && !miss_way), .addr(ram_index),
+        .din(bus_resp_line), .dout(way0_line)
+    );
+    cache_sp_ram #(.WIDTH(LINE_BITS), .ADDR_WIDTH(INDEX_BITS)) u_data_way1 (
+        .clk(clk), .we(fill_write_en && miss_way), .addr(ram_index),
+        .din(bus_resp_line), .dout(way1_line)
+    );
+    cache_sp_ram #(.WIDTH(TAG_BITS), .ADDR_WIDTH(INDEX_BITS)) u_meta_way0 (
+        .clk(clk), .we(fill_write_en && !miss_way),
+        .addr(ram_index), .din(miss_tag), .dout(way0_tag)
+    );
+    cache_sp_ram #(.WIDTH(TAG_BITS), .ADDR_WIDTH(INDEX_BITS)) u_meta_way1 (
+        .clk(clk), .we(fill_write_en && miss_way),
+        .addr(ram_index), .din(miss_tag), .dout(way1_tag)
+    );
+
+    // Associate the registered BRAM outputs with the fetch address sampled
+    // on the same edge.  During initialization no lookup may complete.
+    always @(posedge clk) begin
+        if (rst || flush) begin
+            lookup_addr  <= 32'b0;
+            lookup_valid <= 1'b0;
+        end
+        else begin
+            lookup_addr  <= cpu_addr;
+            lookup_valid <= 1'b1;
+        end
+    end
 
     always @(posedge clk) begin
         if (rst) begin
             state         <= S_IDLE;
             bus_req_valid <= 1'b0;
             bus_req_addr  <= 32'b0;
-            for (s = 0; s < SETS; s = s + 1) begin
-                lru_r[s] <= 1'b0;
-                for (w = 0; w < WAYS; w = w + 1) begin
-                    valid_r[w][s] <= 1'b0;
-                end
-            end
-        end
-        else if (flush) begin
-            state         <= S_IDLE;
-            bus_req_valid <= 1'b0;
-            for (s = 0; s < SETS; s = s + 1) begin
-                for (w = 0; w < WAYS; w = w + 1) begin
-                    valid_r[w][s] <= 1'b0;
-                end
-            end
+            flush_pending <= 1'b0;
+            flush_done    <= 1'b0;
+            fill_done_pulse <= 1'b0;
+            fill_return_word <= 32'b0;
+            valid_way0_r  <= {SETS{1'b0}};
+            valid_way1_r  <= {SETS{1'b0}};
         end
         else begin
+            flush_done <= 1'b0;
+            fill_done_pulse <= 1'b0;
             if (bus_req_valid && bus_req_ready)
                 bus_req_valid <= 1'b0;
+
             case (state)
-                S_IDLE: begin
-                    if (!hit_v) begin
-                        miss_index    <= addr_index;
-                        miss_tag      <= addr_tag;
-                        miss_way      <= lru_r[addr_index];
-                        bus_req_valid <= 1'b1;
-                        bus_req_addr  <= {addr_tag, addr_index, {OFFSET_BITS{1'b0}}};
-                        state         <= S_MISS;
-                    end
-                end
-
-                S_MISS: begin
-                    if (bus_resp_valid) begin
-                        bus_req_valid <= 1'b0;
-                        if (!bus_resp_error) begin
-                            valid_r[miss_way][miss_index] <= 1'b1;
-                            tag_r[miss_way][miss_index]   <= miss_tag;
-                            data_r[miss_way][miss_index]  <= bus_resp_line;
-                            lru_r[miss_index]             <= ~miss_way; // evict the other way next time
+                    S_IDLE: begin
+                        if (flush_pending || flush) begin
+                            flush_pending <= 1'b0;
+                            valid_way0_r  <= {SETS{1'b0}};
+                            valid_way1_r  <= {SETS{1'b0}};
+                            bus_req_valid <= 1'b0;
+                            flush_done    <= 1'b1;
                         end
-                        state <= S_IDLE;
+                        else if (!fill_done_pulse && lookup_ready && !hit_v) begin
+                            miss_index    <= lookup_index;
+                            miss_tag      <= lookup_tag;
+                            miss_way      <= victim_way;
+                            miss_word     <= lookup_word;
+                            bus_req_valid <= 1'b1;
+                            bus_req_addr  <= {lookup_tag, lookup_index,
+                                              {OFFSET_BITS{1'b0}}};
+                            state         <= S_MISS;
+                        end
                     end
-                end
 
-                default: state <= S_IDLE;
+                    S_MISS: begin
+                        if (flush)
+                            flush_pending <= 1'b1;
+                        if (bus_resp_valid) begin
+                            bus_req_valid <= 1'b0;
+                            if (fill_write_en) begin
+                                lru_r[miss_index] <= ~miss_way;
+                                if (miss_way)
+                                    valid_way1_r[miss_index] <= 1'b1;
+                                else
+                                    valid_way0_r[miss_index] <= 1'b1;
+                                fill_return_word <= bus_resp_line[miss_word*32 +: 32];
+                                fill_done_pulse  <= 1'b1;
+                            end
+                            if (flush_pending || flush) begin
+                                valid_way0_r <= {SETS{1'b0}};
+                                valid_way1_r <= {SETS{1'b0}};
+                                flush_pending <= 1'b0;
+                                flush_done <= 1'b1;
+                            end
+                            state <= S_IDLE;
+                        end
+                    end
+
+                    default: state <= S_IDLE;
             endcase
         end
     end
 
+endmodule
+
+// Single-port cache RAM. Vivado synthesis uses the official XPM so the
+// intended BRAM implementation is explicit; simulation uses an equivalent
+// read-first behavioural model and needs no vendor library.
+module cache_sp_ram #(
+    parameter integer WIDTH = 256,
+    parameter integer ADDR_WIDTH = 9
+) (
+    input  wire                  clk,
+    input  wire                  we,
+    input  wire [ADDR_WIDTH-1:0] addr,
+    input  wire [WIDTH-1:0]      din,
+    output wire [WIDTH-1:0]      dout
+);
+`ifdef SYNTHESIS
+    xpm_memory_spram #(
+        .ADDR_WIDTH_A       (ADDR_WIDTH),
+        .AUTO_SLEEP_TIME    (0),
+        .BYTE_WRITE_WIDTH_A (WIDTH),
+        .CASCADE_HEIGHT     (0),
+        .ECC_MODE           ("no_ecc"),
+        .MEMORY_INIT_FILE   ("none"),
+        .MEMORY_INIT_PARAM  ("0"),
+        .MEMORY_OPTIMIZATION("true"),
+        .MEMORY_PRIMITIVE   ("block"),
+        .MEMORY_SIZE        (WIDTH * (1 << ADDR_WIDTH)),
+        .MESSAGE_CONTROL    (0),
+        .READ_DATA_WIDTH_A  (WIDTH),
+        .READ_LATENCY_A     (1),
+        .READ_RESET_VALUE_A ("0"),
+        .RST_MODE_A         ("SYNC"),
+        .SIM_ASSERT_CHK     (0),
+        .USE_MEM_INIT       (0),
+        .WAKEUP_TIME        ("disable_sleep"),
+        .WRITE_DATA_WIDTH_A (WIDTH),
+        .WRITE_MODE_A       ("read_first"),
+        .WRITE_PROTECT      (1)
+    ) u_xpm (
+        .sleep(1'b0), .clka(clk), .rsta(1'b0), .ena(1'b1),
+        .regcea(1'b1), .wea(we), .addra(addr), .dina(din),
+        .injectsbiterra(1'b0), .injectdbiterra(1'b0),
+        .douta(dout), .sbiterra(), .dbiterra()
+    );
+`else
+    reg [WIDTH-1:0] mem [0:(1 << ADDR_WIDTH)-1];
+    reg [WIDTH-1:0] dout_r;
+    assign dout = dout_r;
+    always @(posedge clk) begin
+        if (we)
+            mem[addr] <= din;
+        dout_r <= mem[addr];
+    end
+`endif
 endmodule

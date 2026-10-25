@@ -45,14 +45,10 @@
 //     before, unchanged. The new real top-level (core_l1_wrapper.v)
 //     instantiates mmu_core_wrapper with MMU_CTRL_FROM_CSR=1 to make
 //     satp the one real source of truth. See Risc_V_new/README.md.
-//   - CSR read-only/write-only/privilege-level enforcement uses the
-//     standard address-bit convention (addr[11:10]==2'b11 -> read-
-//     only, addr[9:8] -> minimum privilege) EXCEPT it does not special
-//     -case "CSRRS/CSRRC with rs1==x0 targeting a read-only CSR"
-//     (spec says that specific case must NOT fault since it performs
-//     no write; this implementation faults it anyway, a minor,
-//     rarely-hit conservative deviation -- no real software does a
-//     pointless CSRRS x0 on a WARL-read-only CSR).
+//   - CSR read-only/privilege-level enforcement uses the standard
+//     address-bit convention. CSRRS/CSRRC (and immediate forms) with
+//     a zero rs1/uimm field perform a read without a write attempt, so
+//     they may legally read a read-only CSR such as mhartid.
 //   - Only ONE trap target computed per commit cycle (no attempt to
 //     encode a full priority list beyond what's naturally mutually
 //     exclusive by construction -- see the priority mux below and
@@ -236,8 +232,20 @@ module csr_trap_unit #(
     wire       csr_priv_ok    = (priv >= csr_min_priv);   // PRIV_U=0 < PRIV_S=1 < PRIV_M=3 (2'b11); the
                                                             // gap at 2'b10 (Hypervisor) is never used as
                                                             // csr_min_priv by any address implemented here
-    wire       csr_write_ok   = ~csr_readonly;             // see header: rs1==x0 special-case not modelled
+    // CSRRW[I] always attempts a write. CSRRS/CSRRC and their immediate
+    // forms suppress the write only when the encoded rs1/uimm field is zero;
+    // the runtime value contained in a nonzero rs1 is deliberately irrelevant.
+    wire       csr_write_attempt = (CsrFunct3M[1:0] == 2'b01) ||
+                                   (((CsrFunct3M[1:0] == 2'b10) ||
+                                     (CsrFunct3M[1:0] == 2'b11)) &&
+                                    (InstrM[19:15] != 5'd0));
+    wire       csr_write_ok   = ~csr_readonly | ~csr_write_attempt;
     wire       csr_access_bad = CsrOpM & (~csr_known | ~csr_priv_ok | ~csr_write_ok);
+    // MRET is M-mode only. SRET and SFENCE.VMA require at least S-mode
+    // (mstatus.TSR/TVM are hard-wired zero in this implementation).
+    wire       priv_instr_bad = (IsMretM && (priv != PRIV_M)) ||
+                                (IsSretM && (priv == PRIV_U)) ||
+                                (IsSfenceVmaM && (priv == PRIV_U));
 
     // ------------------------------------------------------
     // Trap cause selection (priority chain -- see header: in
@@ -259,7 +267,8 @@ module csr_trap_unit #(
         else if (FetchPageFaultM) begin
             exc_cause = 4'd12; exc_tval = PCM;
         end
-        else if (IsIllegalOpM || IsPrivIllegalM || csr_access_bad) begin
+        else if (IsIllegalOpM || IsPrivIllegalM || csr_access_bad ||
+                 priv_instr_bad) begin
             exc_cause = 4'd2;  exc_tval = InstrM;
         end
         else if (IsEbreakM) begin
@@ -280,10 +289,11 @@ module csr_trap_unit #(
     end
 
     wire do_trap  = exc_valid & ~Stall_Core_External;
-    wire do_mret  = IsMretM   & ~Stall_Core_External;
-    wire do_sret  = IsSretM   & ~Stall_Core_External;
-    wire do_sfence= IsSfenceVmaM & ~Stall_Core_External;
-    wire do_csr_write = CsrOpM & ~Stall_Core_External & ~csr_access_bad;
+    wire do_mret  = IsMretM   & ~priv_instr_bad & ~Stall_Core_External;
+    wire do_sret  = IsSretM   & ~priv_instr_bad & ~Stall_Core_External;
+    wire do_sfence= IsSfenceVmaM & ~priv_instr_bad & ~Stall_Core_External;
+    wire do_csr_write = CsrOpM & csr_write_attempt &
+                        ~Stall_Core_External & ~csr_access_bad;
 
     // delegate to S-mode only if: currently at or below S, and the
     // cause bit is set in medeleg

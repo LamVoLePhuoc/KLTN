@@ -1,7 +1,11 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_cache_amo.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_cache_amo 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_cache_amo.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_cache_amo 
 # ** Note: (vsim-3812) Design is being optimized...
 # 
-# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v(47): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 33, found 30.
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v(47): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 35, found 30.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v(47): (vopt-2718) [TFMPC] - Missing connection for port 'dbus_req_ready'.
+# 
+# ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v(47): (vopt-2718) [TFMPC] - Missing connection for port 'ibus_req_ready'.
 # 
 # ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v(47): (vopt-2718) [TFMPC] - Missing connection for port 'Cache_Flush_Error'.
 # 
@@ -24,5 +28,5 @@
 # [PASS] following LW observed AMO result 15 in D$
 # [PASS] cold AMO issued exactly one RFO
 # CACHE_AMO_TB: PASS
-# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_amo.v(184)
-#    Time: 245 ns  Iteration: 1  Instance: /tb_cache_amo
+# ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_amo.v(186)
+#    Time: 5295 ns  Iteration: 1  Instance: /tb_cache_amo

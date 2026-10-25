@@ -28,6 +28,10 @@ subsystem, including L1/L2 state, is held in reset while the image is copied.
 
 ## DMA sequence after the RISC-V cores are running
 
+There are two supported control paths. Use exactly one for a transfer.
+
+### External/PS DMA with manual maintenance
+
 1. Software must quiesce every core that can access the DMA buffer, using a lock,
    barrier, or ownership protocol appropriate to the workload.
 2. The PS writes `1` to `CACHE` and polls it.
@@ -45,6 +49,23 @@ pass invalidates clean CPU copies that may be stale after DMA writes. This is a
 safe global, coarse-grained protocol; it does not turn the DMA into a line-level
 MSI coherence master and software must not access the buffer during the transfer.
 
+### Source-level `soc_dma_controller`
+
+The RTL DMA in `rtl/dma/` automates the same ordering:
+
+1. Software establishes exclusive buffer ownership and the integration logic
+   asserts `buffer_quiesced`.
+2. Program source (`0x08`), destination (`0x0c`) and aligned byte length
+   (`0x10`), then write `CONTROL.START` at `0x00`.
+3. The coordinator completes pre-maintenance, runs the AXI4 copy, and completes
+   post-maintenance. Poll `STATUS` at `0x04`: bit 0 `BUSY`, bit 1 sticky `DONE`,
+   bit 2 `ERROR`, bits 10:8 error code.
+4. Release buffer ownership only after `DONE=1`, `BUSY=0`, and `ERROR=0`.
+
+`software/ps_loader/soc_dma.h` provides the register definition and polling
+helper. This controller is a non-coherent AXI master; it is not a line-level MSI
+snoop agent.
+
 ## Failure semantics
 
 - A writeback error retains the dirty D-cache line and sets `ERROR`.
@@ -52,3 +73,6 @@ MSI coherence master and software must not access the buffer during the transfer
   would be unsafe because the memory interface has no cancel/drain mechanism.
 - `ERROR` is sticky until subsystem reset. Software must not start DMA merely
   because `DONE` was observed if `ERROR` is also set.
+- A source read error aborts before any destination burst for that buffered
+  chunk. A write response error still executes post-maintenance because earlier
+  destination beats may already have reached memory.

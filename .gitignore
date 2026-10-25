@@ -13,6 +13,10 @@
 !/output/*.pptx
 **/.questa-work-*/
 **/xsim.dir/
+**/.cache_synth_check/
+**/.xsim_cache_opt/
+**/.xsim_sync_cache/
+/xvlog.log
 *.wdb
 *.jou
 *.pb

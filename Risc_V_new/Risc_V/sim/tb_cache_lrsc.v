@@ -144,7 +144,8 @@ module tb_cache_lrsc;
         repeat (5) @(posedge clk);
         rst = 1'b0;
 
-        while (!(saw_lr_value && saw_sc_success && saw_sc_store) && cycles < 300) begin
+        // Allow the 512-cycle synchronous D$ metadata scrub to complete.
+        while (!(saw_lr_value && saw_sc_success && saw_sc_store) && cycles < 1200) begin
             @(posedge clk);
             cycles = cycles + 1;
         end
@@ -196,7 +197,7 @@ module tb_cache_lrsc;
     end
 
     initial begin
-        #(CLK_PERIOD * 500);
+        #(CLK_PERIOD * 1600);
         $display("CACHE_LRSC_TB: FAIL (global timeout)");
         $finish;
     end

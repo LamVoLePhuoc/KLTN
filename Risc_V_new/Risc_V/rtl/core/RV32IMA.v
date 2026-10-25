@@ -1,7 +1,8 @@
 `timescale 1ns / 1ps
 
 module RV32IMA #(
-    parameter [31:0] RESET_ADDR = 32'h0000_1000
+    parameter [31:0] RESET_ADDR = 32'h0000_1000,
+    parameter [31:0] HART_ID    = 32'd0
 )(
     input  wire        clk,
     input  wire        rst,                  // active-high
@@ -31,6 +32,11 @@ module RV32IMA #(
     output wire        Mem_AmoRmwM,
     output wire [4:0]  Mem_AmoOpM,
     output wire [31:0] Mem_AmoOperandM,
+    // Raw M-stage intent, before LR/SC result gating.  The MMU must use
+    // these signals for translation so pa_mem cannot feed back through
+    // SC success -> Mem_WriteEnM -> TLB lookup -> pa_mem.
+    output wire        Mem_RequestM,
+    output wire        Mem_StoreIntentM,
     input  wire [31:0] Mem_ReadDataM,
 
     // Trap/exception unit inputs -- page and physical-access faults from whatever
@@ -157,6 +163,11 @@ module RV32IMA #(
                              (AmoOpM != 5'b00011);
     assign Mem_AmoOpM      = AmoOpM;
     assign Mem_AmoOperandM = WriteDataM;
+    assign Mem_RequestM    = MemWriteM | MemReadM | AtomicM;
+    // LR.W is read-only; SC.W and all other AMOs require store permission
+    // even when an SC ultimately fails its reservation check.
+    assign Mem_StoreIntentM = MemWriteM |
+                              (AtomicM && (AmoOpM != 5'b00010));
 
     // MEM / WB outputs
     wire        RegWriteW;
@@ -557,14 +568,7 @@ module RV32IMA #(
     assign PCM = PCPlus4M - 32'd4;
 
     csr_trap_unit #(
-        .HART_ID(32'd0)   // NOTE: quad_core_soc.v does not yet thread a
-                           // distinct per-core hart ID down to here -- all
-                           // 4 cores currently read mhartid as 0. A small,
-                           // well-defined follow-up (add a HART_ID parameter
-                           // to mmu_core_wrapper.v/core_l1_wrapper.v and
-                           // pass 0/1/2/3 from quad_core_soc.v), not done in
-                           // this pass for the same reason satp isn't wired
-                           // to the MMU yet -- see this file's other NOTEs.
+        .HART_ID(HART_ID)
     ) csr_trap (
         .clk(clk), .rst(rst),
         .Stall_Core_External(Stall_Core_External),

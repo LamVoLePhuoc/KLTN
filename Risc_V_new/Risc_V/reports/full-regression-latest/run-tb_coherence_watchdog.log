@@ -1,4 +1,4 @@
-# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_coherence_watchdog.log} -lib ../reports/.questa-work-7c35156ea3fd4dc9b37d856c44854b89 -c -quiet tb_coherence_watchdog 
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-latest\run-tb_coherence_watchdog.log} -lib ../reports/.questa-work-e5ce61e3d7c94f59955957fd88217dc4 -c -quiet tb_coherence_watchdog 
 # ** Note: (vsim-3812) Design is being optimized...
 # 
 # ** Warning: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_watchdog.v(57): (vopt-2685) [TFMPC] - Too few port connections for 'dut'.  Expected 109, found 108.
@@ -18,4 +18,4 @@
 # run -all 
 # CACHE_WATCHDOG_TB: PASS
 # ** Note: $finish    : C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_watchdog.v(78)
-#    Time: 165 ns  Iteration: 1  Instance: /tb_coherence_watchdog
+#    Time: 155 ns  Iteration: 1  Instance: /tb_coherence_watchdog
