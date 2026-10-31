@@ -32,20 +32,20 @@ module RV32IMA #(
     output wire        Mem_AmoRmwM,
     output wire [4:0]  Mem_AmoOpM,
     output wire [31:0] Mem_AmoOperandM,
-    // Raw M-stage intent, before LR/SC result gating.  The MMU must use
-    // these signals for translation so pa_mem cannot feed back through
-    // SC success -> Mem_WriteEnM -> TLB lookup -> pa_mem.
+    // Raw M-stage intent, before LR/SC result gating. Retained because
+    // cache wrappers and the optional legacy translation wrapper need
+    // the request before SC success suppresses an actual store.
     output wire        Mem_RequestM,
     output wire        Mem_StoreIntentM,
     input  wire [31:0] Mem_ReadDataM,
 
-    // Trap/exception unit inputs -- page and physical-access faults from whatever
-    // MMU sits between this core and Mem_*/PCF/InstrF (mmu_core_wrapper.v
-    // today). Fetch_PageFault_In feeds if_id_registers.v so the fault
+    // Trap/exception inputs from the surrounding memory wrapper. In the
+    // active physical-address hierarchy, page-fault inputs are tied low
+    // and only cache/bus access faults are generated. Fetch_PageFault_In feeds
+    // if_id_registers.v so a legacy translation fault
     // tags travel D->E->M in lockstep with the (already NOP-forced)
     // instruction they belong to; data faults are consumed directly
-    // at M-stage timing since mmu_core_wrapper.v pulses them exactly
-    // when the faulting access resolves at the memory-stage boundary.
+    // at M-stage timing when the faulting access resolves.
     input  wire         Fetch_PageFault_In,
     input  wire         Data_PageFault_In,
     input  wire         Fetch_AccessFault_In,
@@ -55,9 +55,8 @@ module RV32IMA #(
     output wire [31:0] ResultW,
     output wire [31:0] ALU_ResultE_Debug,
 
-    // csr_trap_unit.v observability and MMU integration hooks.
-    // mmu_core_wrapper can select these as the real translation
-    // controls with MMU_CTRL_FROM_CSR=1 (the integrated SoC does).
+    // CSR observability / legacy Sv32 integration hooks. The active
+    // physical_core_wrapper leaves these outputs unconnected.
     output wire [1:0]  CurrentPriv,
     output wire        Mmu_Enable_Csr,
     output wire [19:0] Satp_PPN_Csr,

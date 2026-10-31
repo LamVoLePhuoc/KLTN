@@ -1,0 +1,23 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_quad_core_soc_ahb_behavior_behav/xsim_script.tcl
+# xsim {tb_quad_core_soc_ahb_behavior_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] TC-SOC-001 all four physical-address programs completed
+[PASS] TC-SOC-002 deprecated Mmu_Flush is a no-op
+[PASS] TC-SOC-003 Mmu_Flush causes no translation exception
+[PASS] TC-SOC-004 aggregate cache maintenance completes without error
+[FAIL] TC-SOC-005 core0 word survived shared-line ownership transfers got=00000000 expected=00000111
+[FAIL] TC-SOC-005 core1 word survived shared-line ownership transfers got=00000000 expected=00000222
+[FAIL] TC-SOC-005 core2 word survived shared-line ownership transfers got=00000000 expected=00000333
+[PASS] TC-SOC-005 core3 word survived shared-line ownership transfers = 00000444
+[PASS] TC-SOC-006 physical-only system reports no page faults
+QUAD_CORE_SOC_AHB_BEHAVIOR_TB: FAIL (3 errors)
+$finish called at time : 225265 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_quad_core_soc_ahb_behavior.v" Line 270
+exit
+INFO: [Common 17-206] Exiting xsim at Mon Oct 26 14:44:31 2026...

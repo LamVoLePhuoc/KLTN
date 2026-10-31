@@ -164,6 +164,16 @@ module quad_core_soc_ahb #(
     wire [3:0]   l2_resp_victim_sharers;
     wire [255:0] l2_resp_line;
     wire [3:0]   l2_resp_sharers;
+    wire         l2_maint_valid;
+    wire [11:0]  l2_maint_set;
+    wire [1:0]   l2_maint_way;
+    wire         l2_maint_invalidate;
+    wire         l2_maint_ready;
+    wire         l2_maint_resp_valid;
+    wire         l2_maint_line_valid;
+    wire         l2_maint_line_dirty;
+    wire [14:0]  l2_maint_line_tag;
+    wire [255:0] l2_maint_line_data;
 
     // ------------------------------------------------------
     // AHB-Lite link wires, per core, I$ and D$ each -- point-to-point
@@ -181,6 +191,7 @@ module quad_core_soc_ahb #(
     wire        i_hmastlock [0:3];
     wire [2:0]  i_hsize   [0:3];
     wire [3:0]  i_hprot   [0:3];
+    wire        i_req_active [0:3];
 
     wire [31:0] d_haddr   [0:3];
     wire        d_hwrite  [0:3];
@@ -192,6 +203,7 @@ module quad_core_soc_ahb #(
     wire        d_hmastlock [0:3];
     wire [2:0]  d_hsize   [0:3];
     wire [3:0]  d_hprot   [0:3];
+    wire        d_req_active [0:3];
 
     // ------------------------------------------------------
     // Post-bridge request/response wires (cache-controller side --
@@ -215,12 +227,30 @@ module quad_core_soc_ahb #(
     wire [3:0]   cache_flush_core_busy;
     wire [3:0]   cache_flush_core_done;
     wire [3:0]   cache_flush_core_error;
+    wire         l1_flush_request;
+    wire         l1_flush_busy;
+    wire         l1_flush_done;
+    wire         l1_flush_error;
+    wire         l2_flush_request;
+    wire         l2_flush_busy;
+    wire         l2_flush_done;
+    wire         l2_flush_error;
 
     cache_maintenance_tracker u_cache_maintenance_tracker (
-        .clk(clk), .rst(rst), .request(Cache_Flush),
+        .clk(clk), .rst(rst), .request(l1_flush_request),
         .core_busy(cache_flush_core_busy),
         .core_done(cache_flush_core_done),
         .core_error(cache_flush_core_error),
+        .busy(l1_flush_busy), .done(l1_flush_done),
+        .error(l1_flush_error)
+    );
+
+    system_cache_maintenance u_system_cache_maintenance (
+        .clk(clk), .rst(rst), .request(Cache_Flush),
+        .l1_request(l1_flush_request), .l1_busy(l1_flush_busy),
+        .l1_done(l1_flush_done), .l1_error(l1_flush_error),
+        .l2_request(l2_flush_request), .l2_busy(l2_flush_busy),
+        .l2_done(l2_flush_done), .l2_error(l2_flush_error),
         .busy(Cache_Flush_Busy), .done(Cache_Flush_Done),
         .error(Cache_Flush_Error)
     );
@@ -230,7 +260,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0), .HART_ID(32'd0)) core0 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[0]), .Cache_Flush_Done(cache_flush_core_done[0]), .Cache_Flush_Error(cache_flush_core_error[0]),
         .ResultW(ResultW0), .ALU_ResultE_Debug(alu_dbg_unused0),
         .Fetch_PageFault(Fetch_PageFault0), .Data_PageFault(Data_PageFault0),
@@ -252,11 +282,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(ibus_resp_valid[0]), .bus_resp_error(ibus_resp_error[0]), .bus_resp_line(ibus_resp_line[0]), .bus_resp_state(),
         .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HSIZE(i_hsize[0]), .HTRANS(i_htrans[0]),
         .HWDATA(i_hwdata[0]), .HBURST(), .HPROT(i_hprot[0]), .HMASTLOCK(i_hmastlock[0]),
-        .HRDATA(i_hrdata[0]), .HREADY(i_hready[0]), .HRESP(i_hresp[0])
+        .HRDATA(i_hrdata[0]), .HREADY(i_hready[0]), .HRESP(i_hresp[0]),
+        .REQ_ACTIVE(i_req_active[0])
     );
     ahb_lite_l1_slave_adapter u0_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HTRANS(i_htrans[0]), .HWDATA(i_hwdata[0]), .HMASTLOCK(i_hmastlock[0]), .HSIZE(i_hsize[0]), .HPROT(i_hprot[0]),
+        .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HTRANS(i_htrans[0]), .HWDATA(i_hwdata[0]), .HMASTLOCK(i_hmastlock[0]), .HSIZE(i_hsize[0]), .HPROT(i_hprot[0]), .REQ_ACTIVE(i_req_active[0]),
         .HREADYOUT(i_hready[0]), .HRDATA(i_hrdata[0]), .HRESP(i_hresp[0]),
         .dreq_valid(ireq_valid_w[0]), .dreq_type(), .dreq_addr(ireq_addr_w[0]), .dreq_line(),
         .dresp_valid(iresp_valid_w[0]), .dresp_error(iresp_error_w[0]), .dresp_line(iresp_line_w[0]), .dresp_state(2'b00)
@@ -269,11 +300,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(dbus_resp_valid[0]), .bus_resp_error(dbus_resp_error[0]), .bus_resp_line(dbus_resp_line[0]), .bus_resp_state(dbus_resp_state[0]),
         .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HSIZE(d_hsize[0]), .HTRANS(d_htrans[0]),
         .HWDATA(d_hwdata[0]), .HBURST(), .HPROT(d_hprot[0]), .HMASTLOCK(d_hmastlock[0]),
-        .HRDATA(d_hrdata[0]), .HREADY(d_hready[0]), .HRESP(d_hresp[0])
+        .HRDATA(d_hrdata[0]), .HREADY(d_hready[0]), .HRESP(d_hresp[0]),
+        .REQ_ACTIVE(d_req_active[0])
     );
     ahb_lite_l1_slave_adapter u0_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HTRANS(d_htrans[0]), .HWDATA(d_hwdata[0]), .HMASTLOCK(d_hmastlock[0]), .HSIZE(d_hsize[0]), .HPROT(d_hprot[0]),
+        .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HTRANS(d_htrans[0]), .HWDATA(d_hwdata[0]), .HMASTLOCK(d_hmastlock[0]), .HSIZE(d_hsize[0]), .HPROT(d_hprot[0]), .REQ_ACTIVE(d_req_active[0]),
         .HREADYOUT(d_hready[0]), .HRDATA(d_hrdata[0]), .HRESP(d_hresp[0]),
         .dreq_valid(dreq_valid_w[0]), .dreq_type(dreq_type_w[0]),
         .dreq_addr(dreq_addr_w[0]), .dreq_line(dreq_line_w[0]),
@@ -285,7 +317,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR1), .HART_ID(32'd1)) core1 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[1]), .Cache_Flush_Done(cache_flush_core_done[1]), .Cache_Flush_Error(cache_flush_core_error[1]),
         .ResultW(ResultW1), .ALU_ResultE_Debug(alu_dbg_unused1),
         .Fetch_PageFault(Fetch_PageFault1), .Data_PageFault(Data_PageFault1),
@@ -307,11 +339,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(ibus_resp_valid[1]), .bus_resp_error(ibus_resp_error[1]), .bus_resp_line(ibus_resp_line[1]), .bus_resp_state(),
         .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HSIZE(i_hsize[1]), .HTRANS(i_htrans[1]),
         .HWDATA(i_hwdata[1]), .HBURST(), .HPROT(i_hprot[1]), .HMASTLOCK(i_hmastlock[1]),
-        .HRDATA(i_hrdata[1]), .HREADY(i_hready[1]), .HRESP(i_hresp[1])
+        .HRDATA(i_hrdata[1]), .HREADY(i_hready[1]), .HRESP(i_hresp[1]),
+        .REQ_ACTIVE(i_req_active[1])
     );
     ahb_lite_l1_slave_adapter u1_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HTRANS(i_htrans[1]), .HWDATA(i_hwdata[1]), .HMASTLOCK(i_hmastlock[1]), .HSIZE(i_hsize[1]), .HPROT(i_hprot[1]),
+        .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HTRANS(i_htrans[1]), .HWDATA(i_hwdata[1]), .HMASTLOCK(i_hmastlock[1]), .HSIZE(i_hsize[1]), .HPROT(i_hprot[1]), .REQ_ACTIVE(i_req_active[1]),
         .HREADYOUT(i_hready[1]), .HRDATA(i_hrdata[1]), .HRESP(i_hresp[1]),
         .dreq_valid(ireq_valid_w[1]), .dreq_type(), .dreq_addr(ireq_addr_w[1]), .dreq_line(),
         .dresp_valid(iresp_valid_w[1]), .dresp_error(iresp_error_w[1]), .dresp_line(iresp_line_w[1]), .dresp_state(2'b00)
@@ -324,11 +357,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(dbus_resp_valid[1]), .bus_resp_error(dbus_resp_error[1]), .bus_resp_line(dbus_resp_line[1]), .bus_resp_state(dbus_resp_state[1]),
         .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HSIZE(d_hsize[1]), .HTRANS(d_htrans[1]),
         .HWDATA(d_hwdata[1]), .HBURST(), .HPROT(d_hprot[1]), .HMASTLOCK(d_hmastlock[1]),
-        .HRDATA(d_hrdata[1]), .HREADY(d_hready[1]), .HRESP(d_hresp[1])
+        .HRDATA(d_hrdata[1]), .HREADY(d_hready[1]), .HRESP(d_hresp[1]),
+        .REQ_ACTIVE(d_req_active[1])
     );
     ahb_lite_l1_slave_adapter u1_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HTRANS(d_htrans[1]), .HWDATA(d_hwdata[1]), .HMASTLOCK(d_hmastlock[1]), .HSIZE(d_hsize[1]), .HPROT(d_hprot[1]),
+        .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HTRANS(d_htrans[1]), .HWDATA(d_hwdata[1]), .HMASTLOCK(d_hmastlock[1]), .HSIZE(d_hsize[1]), .HPROT(d_hprot[1]), .REQ_ACTIVE(d_req_active[1]),
         .HREADYOUT(d_hready[1]), .HRDATA(d_hrdata[1]), .HRESP(d_hresp[1]),
         .dreq_valid(dreq_valid_w[1]), .dreq_type(dreq_type_w[1]),
         .dreq_addr(dreq_addr_w[1]), .dreq_line(dreq_line_w[1]),
@@ -340,7 +374,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR2), .HART_ID(32'd2)) core2 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[2]), .Cache_Flush_Done(cache_flush_core_done[2]), .Cache_Flush_Error(cache_flush_core_error[2]),
         .ResultW(ResultW2), .ALU_ResultE_Debug(alu_dbg_unused2),
         .Fetch_PageFault(Fetch_PageFault2), .Data_PageFault(Data_PageFault2),
@@ -362,11 +396,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(ibus_resp_valid[2]), .bus_resp_error(ibus_resp_error[2]), .bus_resp_line(ibus_resp_line[2]), .bus_resp_state(),
         .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HSIZE(i_hsize[2]), .HTRANS(i_htrans[2]),
         .HWDATA(i_hwdata[2]), .HBURST(), .HPROT(i_hprot[2]), .HMASTLOCK(i_hmastlock[2]),
-        .HRDATA(i_hrdata[2]), .HREADY(i_hready[2]), .HRESP(i_hresp[2])
+        .HRDATA(i_hrdata[2]), .HREADY(i_hready[2]), .HRESP(i_hresp[2]),
+        .REQ_ACTIVE(i_req_active[2])
     );
     ahb_lite_l1_slave_adapter u2_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HTRANS(i_htrans[2]), .HWDATA(i_hwdata[2]), .HMASTLOCK(i_hmastlock[2]), .HSIZE(i_hsize[2]), .HPROT(i_hprot[2]),
+        .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HTRANS(i_htrans[2]), .HWDATA(i_hwdata[2]), .HMASTLOCK(i_hmastlock[2]), .HSIZE(i_hsize[2]), .HPROT(i_hprot[2]), .REQ_ACTIVE(i_req_active[2]),
         .HREADYOUT(i_hready[2]), .HRDATA(i_hrdata[2]), .HRESP(i_hresp[2]),
         .dreq_valid(ireq_valid_w[2]), .dreq_type(), .dreq_addr(ireq_addr_w[2]), .dreq_line(),
         .dresp_valid(iresp_valid_w[2]), .dresp_error(iresp_error_w[2]), .dresp_line(iresp_line_w[2]), .dresp_state(2'b00)
@@ -379,11 +414,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(dbus_resp_valid[2]), .bus_resp_error(dbus_resp_error[2]), .bus_resp_line(dbus_resp_line[2]), .bus_resp_state(dbus_resp_state[2]),
         .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HSIZE(d_hsize[2]), .HTRANS(d_htrans[2]),
         .HWDATA(d_hwdata[2]), .HBURST(), .HPROT(d_hprot[2]), .HMASTLOCK(d_hmastlock[2]),
-        .HRDATA(d_hrdata[2]), .HREADY(d_hready[2]), .HRESP(d_hresp[2])
+        .HRDATA(d_hrdata[2]), .HREADY(d_hready[2]), .HRESP(d_hresp[2]),
+        .REQ_ACTIVE(d_req_active[2])
     );
     ahb_lite_l1_slave_adapter u2_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HTRANS(d_htrans[2]), .HWDATA(d_hwdata[2]), .HMASTLOCK(d_hmastlock[2]), .HSIZE(d_hsize[2]), .HPROT(d_hprot[2]),
+        .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HTRANS(d_htrans[2]), .HWDATA(d_hwdata[2]), .HMASTLOCK(d_hmastlock[2]), .HSIZE(d_hsize[2]), .HPROT(d_hprot[2]), .REQ_ACTIVE(d_req_active[2]),
         .HREADYOUT(d_hready[2]), .HRDATA(d_hrdata[2]), .HRESP(d_hresp[2]),
         .dreq_valid(dreq_valid_w[2]), .dreq_type(dreq_type_w[2]),
         .dreq_addr(dreq_addr_w[2]), .dreq_line(dreq_line_w[2]),
@@ -395,7 +431,7 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR3), .HART_ID(32'd3)) core3 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[3]), .Cache_Flush_Done(cache_flush_core_done[3]), .Cache_Flush_Error(cache_flush_core_error[3]),
         .ResultW(ResultW3), .ALU_ResultE_Debug(alu_dbg_unused3),
         .Fetch_PageFault(Fetch_PageFault3), .Data_PageFault(Data_PageFault3),
@@ -417,11 +453,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(ibus_resp_valid[3]), .bus_resp_error(ibus_resp_error[3]), .bus_resp_line(ibus_resp_line[3]), .bus_resp_state(),
         .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HSIZE(i_hsize[3]), .HTRANS(i_htrans[3]),
         .HWDATA(i_hwdata[3]), .HBURST(), .HPROT(i_hprot[3]), .HMASTLOCK(i_hmastlock[3]),
-        .HRDATA(i_hrdata[3]), .HREADY(i_hready[3]), .HRESP(i_hresp[3])
+        .HRDATA(i_hrdata[3]), .HREADY(i_hready[3]), .HRESP(i_hresp[3]),
+        .REQ_ACTIVE(i_req_active[3])
     );
     ahb_lite_l1_slave_adapter u3_i_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HTRANS(i_htrans[3]), .HWDATA(i_hwdata[3]), .HMASTLOCK(i_hmastlock[3]), .HSIZE(i_hsize[3]), .HPROT(i_hprot[3]),
+        .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HTRANS(i_htrans[3]), .HWDATA(i_hwdata[3]), .HMASTLOCK(i_hmastlock[3]), .HSIZE(i_hsize[3]), .HPROT(i_hprot[3]), .REQ_ACTIVE(i_req_active[3]),
         .HREADYOUT(i_hready[3]), .HRDATA(i_hrdata[3]), .HRESP(i_hresp[3]),
         .dreq_valid(ireq_valid_w[3]), .dreq_type(), .dreq_addr(ireq_addr_w[3]), .dreq_line(),
         .dresp_valid(iresp_valid_w[3]), .dresp_error(iresp_error_w[3]), .dresp_line(iresp_line_w[3]), .dresp_state(2'b00)
@@ -434,11 +471,12 @@ module quad_core_soc_ahb #(
         .bus_resp_valid(dbus_resp_valid[3]), .bus_resp_error(dbus_resp_error[3]), .bus_resp_line(dbus_resp_line[3]), .bus_resp_state(dbus_resp_state[3]),
         .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HSIZE(d_hsize[3]), .HTRANS(d_htrans[3]),
         .HWDATA(d_hwdata[3]), .HBURST(), .HPROT(d_hprot[3]), .HMASTLOCK(d_hmastlock[3]),
-        .HRDATA(d_hrdata[3]), .HREADY(d_hready[3]), .HRESP(d_hresp[3])
+        .HRDATA(d_hrdata[3]), .HREADY(d_hready[3]), .HRESP(d_hresp[3]),
+        .REQ_ACTIVE(d_req_active[3])
     );
     ahb_lite_l1_slave_adapter u3_d_ahb_s (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HTRANS(d_htrans[3]), .HWDATA(d_hwdata[3]), .HMASTLOCK(d_hmastlock[3]), .HSIZE(d_hsize[3]), .HPROT(d_hprot[3]),
+        .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HTRANS(d_htrans[3]), .HWDATA(d_hwdata[3]), .HMASTLOCK(d_hmastlock[3]), .HSIZE(d_hsize[3]), .HPROT(d_hprot[3]), .REQ_ACTIVE(d_req_active[3]),
         .HREADYOUT(d_hready[3]), .HRDATA(d_hrdata[3]), .HRESP(d_hresp[3]),
         .dreq_valid(dreq_valid_w[3]), .dreq_type(dreq_type_w[3]),
         .dreq_addr(dreq_addr_w[3]), .dreq_line(dreq_line_w[3]),
@@ -503,6 +541,8 @@ module quad_core_soc_ahb #(
         .debug_trace_count(cache_debug_trace_count),
         .debug_trace_write_index(cache_debug_trace_write_index),
         .debug_controller_state(cache_debug_controller_state),
+        .cache_flush_req(l2_flush_request), .cache_flush_busy(l2_flush_busy),
+        .cache_flush_done(l2_flush_done), .cache_flush_error(l2_flush_error),
         .l2_cmd_valid_o(l2_cmd_valid), .l2_cmd_we_o(l2_cmd_we),
         .l2_cmd_addr_o(l2_cmd_addr), .l2_cmd_way_o(l2_cmd_way),
         .l2_cmd_wdata_o(l2_cmd_wdata), .l2_cmd_w_valid_o(l2_cmd_w_valid),
@@ -512,7 +552,13 @@ module quad_core_soc_ahb #(
         .l2_resp_victim_valid_i(l2_resp_victim_valid),
         .l2_resp_victim_dirty_i(l2_resp_victim_dirty),
         .l2_resp_victim_sharers_i(l2_resp_victim_sharers),
-        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers)
+        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers),
+        .l2_maint_valid_o(l2_maint_valid), .l2_maint_set_o(l2_maint_set),
+        .l2_maint_way_o(l2_maint_way), .l2_maint_invalidate_o(l2_maint_invalidate),
+        .l2_maint_ready_i(l2_maint_ready), .l2_maint_resp_valid_i(l2_maint_resp_valid),
+        .l2_maint_line_valid_i(l2_maint_line_valid),
+        .l2_maint_line_dirty_i(l2_maint_line_dirty), .l2_maint_line_tag_i(l2_maint_line_tag),
+        .l2_maint_line_data_i(l2_maint_line_data)
     );
 
     l2_cache u_shared_l2 (
@@ -521,6 +567,12 @@ module quad_core_soc_ahb #(
         .cmd_addr(l2_cmd_addr), .cmd_way(l2_cmd_way),
         .cmd_wdata(l2_cmd_wdata), .cmd_w_valid(l2_cmd_w_valid),
         .cmd_w_dirty(l2_cmd_w_dirty), .cmd_w_sharers(l2_cmd_w_sharers),
+        .maint_valid(l2_maint_valid), .maint_set(l2_maint_set),
+        .maint_way(l2_maint_way), .maint_invalidate(l2_maint_invalidate),
+        .maint_ready(l2_maint_ready), .maint_resp_valid(l2_maint_resp_valid),
+        .maint_line_valid(l2_maint_line_valid),
+        .maint_line_dirty(l2_maint_line_dirty), .maint_line_tag(l2_maint_line_tag),
+        .maint_line_data(l2_maint_line_data),
         .resp_valid(l2_resp_valid), .resp_hit(l2_resp_hit),
         .resp_way(l2_resp_way), .resp_victim_tag(l2_resp_victim_tag),
         .resp_victim_valid(l2_resp_victim_valid),

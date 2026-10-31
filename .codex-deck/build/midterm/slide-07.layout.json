@@ -1,0 +1,1083 @@
+{
+  "schema": "openai.presentation.layout/v5",
+  "unit": "px",
+  "slide": {
+    "id": "sl/gnmp4jqx",
+    "index": 6,
+    "layout": {
+      "id": "ly/4v2ps7ql",
+      "name": "1_Title and Content"
+    },
+    "masterLayoutId": "ly/atofqts7",
+    "backgroundColor": "rgba(255,255,255,1)",
+    "position": {
+      "left": 0,
+      "top": 0,
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "ly/4v2ps7ql",
+      "name": "1_Title and Content",
+      "type": "obj",
+      "parentLayoutId": "ly/atofqts7",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/6p0v6tsz",
+          "editable": false,
+          "name": "Title 1",
+          "position": {
+            "left": 95.43,
+            "top": 163.27,
+            "width": 1729.13,
+            "height": 140.26
+          },
+          "text": "Click to edit Master title style",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/7q9cfytk",
+          "editable": false,
+          "name": "Content Placeholder 2",
+          "position": {
+            "left": 95.43,
+            "top": 318.15,
+            "width": 1729.13,
+            "height": 654.6
+          },
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles"
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level"
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level"
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level"
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/gv2dc3a1",
+          "editable": false,
+          "name": "Date Placeholder 3",
+          "position": {
+            "left": 162.7,
+            "top": 1001,
+            "width": 432,
+            "height": 57.5
+          },
+          "text": "23 April 2026",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "23 April 2026",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "23 April 2026"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/hwbul8bm",
+          "editable": false,
+          "name": "Footer Placeholder 4",
+          "position": {
+            "left": 666.7,
+            "top": 1001,
+            "width": 648,
+            "height": 57.5
+          },
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 5,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/futcjytg",
+          "editable": false,
+          "name": "Rectangle 6",
+          "position": {
+            "left": 910.08,
+            "top": -910.24,
+            "width": 99.46,
+            "height": 1920.39
+          },
+          "rotation": 90,
+          "geometry": "rect",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 6,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/4j2dgnad",
+          "editable": false,
+          "name": "Rectangle 7",
+          "position": {
+            "left": 910.27,
+            "top": -910.47,
+            "width": 99.46,
+            "height": 1920.39
+          },
+          "rotation": 90,
+          "verticalFlip": true,
+          "geometry": "rect",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          },
+          "fillImage": {
+            "contentType": "image/png",
+            "byteLength": 101119
+          }
+        },
+        {
+          "order": 7,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/pkbupsbi",
+          "editable": false,
+          "name": "TextBox 8",
+          "position": {
+            "left": 37.84,
+            "top": 22.27,
+            "width": 652.85,
+            "height": 48.47
+          },
+          "geometry": "rect",
+          "text": "FACULTY OF COMPUTER ENGINEERING",
+          "style": {
+            "fontSize": 32,
+            "color": "#FFFFFF",
+            "bold": true,
+            "wrap": "none",
+            "autoFit": "resizeShapeToFitText"
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "FACULTY OF COMPUTER ENGINEERING",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "FACULTY OF COMPUTER ENGINEERING",
+                  "fontSize": 32,
+                  "color": "#FFFFFF",
+                  "bold": true,
+                  "wrap": "none",
+                  "autoFit": "resizeShapeToFitText"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 8,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/sbmlwv6t",
+          "editable": false,
+          "name": "Rounded Rectangle 10",
+          "position": {
+            "left": 705.51,
+            "top": 48.08,
+            "width": 508.98,
+            "height": 100.57
+          },
+          "rotation": 0,
+          "geometry": "roundRect",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 9,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/7ad4nqp8",
+          "editable": false,
+          "name": "Rounded Rectangle 11",
+          "position": {
+            "left": 714.69,
+            "top": 56.27,
+            "width": 490.61,
+            "height": 84.19
+          },
+          "rotation": 0,
+          "geometry": "roundRect",
+          "fillColor": "#FFFFFF",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 10,
+          "kind": "image",
+          "scope": "layout",
+          "id": "im/ve5ozm50",
+          "editable": false,
+          "name": "Picture 12",
+          "position": {
+            "left": 990.7,
+            "top": 38.06,
+            "width": 122.13,
+            "height": 121.01
+          },
+          "rotation": 0,
+          "contentType": "image/png",
+          "asset": {
+            "contentType": "image/png",
+            "byteLength": 15315
+          },
+          "fillImage": {
+            "contentType": "image/png",
+            "byteLength": 15315
+          }
+        },
+        {
+          "order": 11,
+          "kind": "image",
+          "scope": "layout",
+          "id": "im/8bup47m9",
+          "editable": false,
+          "name": "Picture 13",
+          "position": {
+            "left": 807.17,
+            "top": 41.79,
+            "width": 137.27,
+            "height": 113.55
+          },
+          "rotation": 0,
+          "contentType": "image/png",
+          "asset": {
+            "contentType": "image/png",
+            "byteLength": 15432
+          },
+          "fillImage": {
+            "contentType": "image/png",
+            "byteLength": 15432
+          }
+        },
+        {
+          "order": 12,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/on6l4byh",
+          "editable": false,
+          "name": "Oval 19",
+          "position": {
+            "left": 1812.32,
+            "top": 987.44,
+            "width": 86.01,
+            "height": 86.01
+          },
+          "rotation": 0,
+          "geometry": "ellipse",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 13,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/9ofmdgfm",
+          "editable": false,
+          "name": "Oval 20",
+          "position": {
+            "left": 1835.85,
+            "top": 1010.97,
+            "width": 38.95,
+            "height": 38.95
+          },
+          "rotation": 0,
+          "geometry": "ellipse",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 14,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/ut0vadsv",
+          "editable": false,
+          "name": "Slide Number Placeholder 5",
+          "position": {
+            "left": 1641.41,
+            "top": 1001,
+            "width": 432,
+            "height": 57.5
+          },
+          "text": "7",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "7",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "7"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 15,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/wr658ved",
+          "editable": false,
+          "name": "Freeform 23",
+          "position": {
+            "left": 0,
+            "top": 0.22,
+            "width": 1920.39,
+            "height": 1080.89
+          },
+          "geometry": "custom",
+          "fillColor": "#000000",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle",
+            "wrap": "square",
+            "autoFit": "none"
+          }
+        }
+      ]
+    },
+    {
+      "scope": "master",
+      "id": "ly/atofqts7",
+      "type": "master",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/618ru54n",
+          "editable": false,
+          "name": "9Slide.vn - 2019",
+          "position": {
+            "left": 0,
+            "top": -243.01,
+            "width": 1920,
+            "height": 58.16
+          },
+          "geometry": "rect",
+          "text": "www.9slide.vn",
+          "style": {
+            "vertical": 1,
+            "fontSize": 40,
+            "color": "#C3C3C3",
+            "alignment": "center",
+            "autoFit": "resizeShapeToFitText"
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "www.9slide.vn",
+              "style": {
+                "alignment": "center"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "www.9slide.vn",
+                  "vertical": 1,
+                  "fontSize": 40,
+                  "color": "#C3C3C3",
+                  "alignment": "center",
+                  "autoFit": "resizeShapeToFitText"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/4va94z21",
+          "editable": false,
+          "name": "Title Placeholder 1",
+          "position": {
+            "left": 132,
+            "top": 57.5,
+            "width": 1656,
+            "height": 208.75
+          },
+          "geometry": "rect",
+          "text": "Click to edit Master title style",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/pwjax436",
+          "editable": false,
+          "name": "Text Placeholder 2",
+          "position": {
+            "left": 132,
+            "top": 287.5,
+            "width": 1656,
+            "height": 685.25
+          },
+          "geometry": "rect",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "style": {
+            "vertical": 1,
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/qxsr69kr",
+          "editable": false,
+          "name": "Date Placeholder 3",
+          "position": {
+            "left": 132,
+            "top": 1001,
+            "width": 432,
+            "height": 57.5
+          },
+          "geometry": "rect",
+          "text": "23 April 2026",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "23 April 2026",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "23 April 2026",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 5,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/ry1szulc",
+          "editable": false,
+          "name": "Footer Placeholder 4",
+          "position": {
+            "left": 636,
+            "top": 1001,
+            "width": 648,
+            "height": 57.5
+          },
+          "geometry": "rect",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 6,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/czu98z2x",
+          "editable": false,
+          "name": "Slide Number Placeholder 5",
+          "position": {
+            "left": 1356,
+            "top": 1001,
+            "width": 432,
+            "height": 57.5
+          },
+          "geometry": "rect",
+          "text": "7",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "7",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "7",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 7,
+          "kind": "shape",
+          "scope": "master",
+          "id": "sh/yd8batgr",
+          "editable": false,
+          "name": "Freeform 18",
+          "position": {
+            "left": 0,
+            "top": 0.22,
+            "width": 1920.39,
+            "height": 1080.89
+          },
+          "geometry": "custom",
+          "fillColor": "#000000",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle",
+            "wrap": "square",
+            "autoFit": "none"
+          }
+        }
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "textbox",
+      "scope": "slide",
+      "id": "sh/cb2tkvap",
+      "editable": true,
+      "name": "Title 1",
+      "position": {
+        "left": 92.23,
+        "top": 131.27,
+        "width": 1729.13,
+        "height": 140.26
+      },
+      "text": "Kết luận và hướng phát triển",
+      "style": {
+        "anchor": 2,
+        "vertical": 1,
+        "fontSize": 72,
+        "typeface": "Times New Roman",
+        "color": "#000000",
+        "bold": true,
+        "italic": false,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Kết luận và hướng phát triển",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Kết luận và hướng phát triển",
+              "anchor": 2,
+              "fontSize": 72,
+              "verticalAlignment": "middle",
+              "autoFit": "shrinkText"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0,
+          "indent": 0,
+          "lineSpacingPercent": 90000
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "textbox",
+      "scope": "slide",
+      "id": "sh/a9ojq5kz",
+      "editable": true,
+      "name": "Content Placeholder 2",
+      "position": {
+        "left": 95.43,
+        "top": 253.93,
+        "width": 1650.17,
+        "height": 723.67
+      },
+      "text": "Kết luận\nXây dựng mô hình tham chiếu CNN-LSTM\nHiện thực bộ tăng tốc ở mức RTL và tích hợp vào SoC KV260\nHoàn thành kiểm chứng mô phỏng theo từng lớp và toàn hệ thống\nHướng phát triển\nKiểm chứng kết quả thực tế trên KV260\nTối ưu timing, latency và mức sử dụng tài nguyên\nHoàn thiện đánh giá và báo cáo khóa luận",
+      "style": {
+        "vertical": 1,
+        "fontSize": 53.33,
+        "typeface": "Arial",
+        "color": "#000000",
+        "bold": true,
+        "italic": false,
+        "alignment": "left",
+        "autoFit": "shrinkText",
+        "autoFitLineSpaceReduction": 10000,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Kết luận",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Kết",
+              "fontSize": 53.33,
+              "bold": true,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            },
+            {
+              "index": 2,
+              "text": " luận",
+              "fontSize": 53.33,
+              "bold": true,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 2,
+          "text": "Xây dựng mô hình tham chiếu CNN-LSTM",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Xây dựng mô hình tham chiếu CNN-LSTM",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 3,
+          "text": "Hiện thực bộ tăng tốc ở mức RTL và tích hợp vào SoC KV260",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Hiện thực bộ tăng tốc ",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            },
+            {
+              "index": 2,
+              "text": "ở mức RTL ",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            },
+            {
+              "index": 3,
+              "text": "và tích hợp vào SoC KV260",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 4,
+          "text": "Hoàn thành kiểm chứng mô phỏng theo từng lớp và toàn hệ thống",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Hoàn thành kiểm chứng mô phỏng theo từng lớp và toàn hệ thống",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 5,
+          "text": "Hướng phát triển",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Hướng phát triển",
+              "fontSize": 53.33,
+              "bold": true,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 6,
+          "text": "Kiểm chứng kết quả thực tế trên KV260",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Kiểm chứng kết quả thực tế trên KV260",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 7,
+          "text": "Tối ưu timing, latency và mức sử dụng tài nguyên",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Tối ưu timing, latency và mức sử dụng tài nguyên",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        },
+        {
+          "index": 8,
+          "text": "Hoàn thiện đánh giá và báo cáo khóa luận",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Hoàn thiện đánh giá và báo cáo khóa luận",
+              "fontSize": 53.33,
+              "autoFit": "shrinkText",
+              "autoFitLineSpaceReduction": 10000
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 130000
+        }
+      ]
+    }
+  ]
+}

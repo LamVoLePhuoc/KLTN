@@ -1,5 +1,6 @@
 param(
-    [string]$ReportDirectory = ""
+    [string]$ReportDirectory = "",
+    [switch]$IncludeLegacySv32
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,7 +18,19 @@ elseif (-not [IO.Path]::IsPathRooted($ReportDirectory)) {
 $vlog = Get-Command vlog -ErrorAction Stop
 $vsim = Get-Command vsim -ErrorAction Stop
 $vlib = Get-Command vlib -ErrorAction Stop
-$testFiles = @(Get-ChildItem -LiteralPath $simDirectory -Filter "tb_*.v" | Sort-Object Name)
+$legacySv32Tests = @(
+    "tb_csr_mmu_bits.v",
+    "tb_mmu_advanced.v",
+    "tb_mmu_bus_error.v",
+    "tb_mmu_context.v",
+    "tb_mmu_core.v",
+    "tb_mmu_policy.v",
+    "tb_mmu_sfence.v",
+    "tb_mmu_upgrade.v"
+)
+$testFiles = @(Get-ChildItem -LiteralPath $simDirectory -Filter "tb_*.v" |
+    Where-Object { $IncludeLegacySv32 -or ($legacySv32Tests -notcontains $_.Name) } |
+    Sort-Object Name)
 if ($testFiles.Count -eq 0) {
     throw "No self-checking testbenches found in $simDirectory"
 }
@@ -37,7 +50,12 @@ try {
         # Questa 10.2c on Windows cannot load an absolute path through
         # vsim -lib reliably. Both tools run from rtl/, so use the same
         # short relative library path for compile and simulation.
-        & $vlog.Source -work $questaWorkArgument -l $compileLog -f files.f $testFiles.FullName
+        $compileArguments = @("-work", $questaWorkArgument, "-l", $compileLog, "-f", "files.f")
+        if ($IncludeLegacySv32) {
+            $compileArguments += @("-f", "files_sv32_legacy.f")
+        }
+        $compileArguments += $testFiles.FullName
+        & $vlog.Source @compileArguments
         if ($LASTEXITCODE -ne 0) {
             throw "RTL/testbench compilation failed; see $compileLog"
         }
@@ -66,7 +84,8 @@ try {
     $results | Export-Csv -LiteralPath (Join-Path $ReportDirectory "summary.csv") -NoTypeInformation
     $passCount = @($results | Where-Object Result -eq "PASS").Count
     $summary = @(
-        "# Full RTL regression",
+        $(if ($IncludeLegacySv32) { "# Full RTL regression including legacy Sv32" }
+          else { "# Active cache-controller architecture regression" }),
         "",
         "Result: **$passCount/$($results.Count) PASS**",
         "",

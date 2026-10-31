@@ -1,0 +1,1202 @@
+{
+  "schema": "openai.presentation.layout/v5",
+  "unit": "px",
+  "slide": {
+    "id": "sl/y90nupkv",
+    "index": 0,
+    "layout": {
+      "id": "ly/ux4ruhcv",
+      "name": "Title Slide"
+    },
+    "masterLayoutId": "ly/atofqts7",
+    "backgroundColor": "rgba(255,255,255,1)",
+    "position": {
+      "left": 0,
+      "top": 0,
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "ly/ux4ruhcv",
+      "name": "Title Slide",
+      "parentLayoutId": "ly/atofqts7",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/fmdgju1g",
+          "editable": false,
+          "name": "Rectangle 9",
+          "position": {
+            "left": -3.8,
+            "top": 0,
+            "width": 99.8,
+            "height": 1080
+          },
+          "geometry": "rect",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 2,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/tojm9cfq",
+          "editable": false,
+          "name": "Rectangle 6",
+          "position": {
+            "left": -4.92,
+            "top": 0,
+            "width": 99.8,
+            "height": 1080
+          },
+          "verticalFlip": true,
+          "geometry": "rect",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          },
+          "fillImage": {
+            "contentType": "image/png",
+            "byteLength": 103280
+          }
+        },
+        {
+          "order": 3,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/el4fapkv",
+          "editable": false,
+          "name": "TextBox 10",
+          "position": {
+            "left": -281.44,
+            "top": 705.68,
+            "width": 652.85,
+            "height": 48.47
+          },
+          "rotation": 270,
+          "geometry": "rect",
+          "text": "FACULTY OF COMPUTER ENGINEERING",
+          "style": {
+            "fontSize": 32,
+            "color": "#FFFFFF",
+            "bold": true,
+            "wrap": "none",
+            "autoFit": "resizeShapeToFitText"
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "FACULTY OF COMPUTER ENGINEERING",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "FACULTY OF COMPUTER ENGINEERING",
+                  "fontSize": 32,
+                  "color": "#FFFFFF",
+                  "bold": true,
+                  "wrap": "none",
+                  "autoFit": "resizeShapeToFitText"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/gral4reh",
+          "editable": false,
+          "name": "Title 1",
+          "position": {
+            "left": 240,
+            "top": 302.93,
+            "width": 1440,
+            "height": 376
+          },
+          "geometry": "roundRect",
+          "lineWidth": 2.67,
+          "text": "Click to edit Master title style",
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style",
+                  "anchor": 2,
+                  "verticalAlignment": "middle"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 5,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/61s3yhwf",
+          "editable": false,
+          "name": "Date Placeholder 3",
+          "position": {
+            "left": 0,
+            "top": 0,
+            "width": 0,
+            "height": 0
+          },
+          "text": "23 April 2026",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "23 April 2026",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "23 April 2026"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 6,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/721472xk",
+          "editable": false,
+          "name": "Footer Placeholder 4",
+          "position": {
+            "left": 0,
+            "top": 0,
+            "width": 0,
+            "height": 0
+          },
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 7,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/nqdgne1c",
+          "editable": false,
+          "name": "Oval 13",
+          "position": {
+            "left": 1812.32,
+            "top": 38.28,
+            "width": 86.01,
+            "height": 86.01
+          },
+          "rotation": 0,
+          "geometry": "ellipse",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 8,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/1ovyl4j6",
+          "editable": false,
+          "name": "Oval 11",
+          "position": {
+            "left": 1835.85,
+            "top": 61.81,
+            "width": 38.95,
+            "height": 38.95
+          },
+          "rotation": 0,
+          "geometry": "ellipse",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 9,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/9cjils3m",
+          "editable": false,
+          "name": "Rounded Rectangle 22",
+          "position": {
+            "left": 705.51,
+            "top": 30.79,
+            "width": 508.98,
+            "height": 100.57
+          },
+          "rotation": 0,
+          "geometry": "roundRect",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 10,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/8ba1sn21",
+          "editable": false,
+          "name": "Rounded Rectangle 21",
+          "position": {
+            "left": 714.69,
+            "top": 38.99,
+            "width": 490.61,
+            "height": 84.19
+          },
+          "rotation": 0,
+          "geometry": "roundRect",
+          "fillColor": "#FFFFFF",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle"
+          }
+        },
+        {
+          "order": 11,
+          "kind": "image",
+          "scope": "layout",
+          "id": "im/yh8fql8j",
+          "editable": false,
+          "name": "Picture 17",
+          "position": {
+            "left": 990.7,
+            "top": 20.78,
+            "width": 122.13,
+            "height": 121.01
+          },
+          "rotation": 0,
+          "contentType": "image/png",
+          "asset": {
+            "contentType": "image/png",
+            "byteLength": 15315
+          },
+          "fillImage": {
+            "contentType": "image/png",
+            "byteLength": 15315
+          }
+        },
+        {
+          "order": 12,
+          "kind": "image",
+          "scope": "layout",
+          "id": "im/vm1wnq5w",
+          "editable": false,
+          "name": "Picture 19",
+          "position": {
+            "left": 807.17,
+            "top": 24.51,
+            "width": 137.27,
+            "height": 113.55
+          },
+          "rotation": 0,
+          "contentType": "image/png",
+          "asset": {
+            "contentType": "image/png",
+            "byteLength": 15432
+          },
+          "fillImage": {
+            "contentType": "image/png",
+            "byteLength": 15432
+          }
+        },
+        {
+          "order": 13,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/t0fuxkn2",
+          "editable": false,
+          "name": "Text Placeholder 48",
+          "position": {
+            "left": 240,
+            "top": 872.76,
+            "width": 1440,
+            "height": 81.75
+          },
+          "text": "Địa điểm, Ngày Tháng Năm",
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle",
+            "autoFit": "shrinkText"
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Địa điểm, Ngày Tháng Năm",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Địa điểm, Ngày Tháng Năm",
+                  "anchor": 2,
+                  "verticalAlignment": "middle",
+                  "autoFit": "shrinkText"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 14,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/2t8fe9oj",
+          "editable": false,
+          "name": "Text Placeholder 50",
+          "position": {
+            "left": 587.45,
+            "top": 244.11,
+            "width": 372.55,
+            "height": 60
+          },
+          "geometry": "roundRect",
+          "text": "Loại trình bày",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "autoFit": "none",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Loại trình bày",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Loại trình bày",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "autoFit": "none",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 15,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/pwjyp47a",
+          "editable": false,
+          "name": "Text Placeholder 50",
+          "position": {
+            "left": 960,
+            "top": 678.69,
+            "width": 533.58,
+            "height": 60
+          },
+          "geometry": "roundRect",
+          "text": "Trình bày: …",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "autoFit": "none",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Trình bày: …",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Trình bày: …",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "autoFit": "none",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 16,
+          "kind": "textbox",
+          "scope": "layout",
+          "id": "sh/83al07e5",
+          "editable": false,
+          "name": "Slide Number Placeholder 5",
+          "position": {
+            "left": 1639.32,
+            "top": 52.53,
+            "width": 432,
+            "height": 57.5
+          },
+          "text": "1",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "1",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 17,
+          "kind": "shape",
+          "scope": "layout",
+          "id": "sh/ovqxgj6p",
+          "editable": false,
+          "name": "Freeform 52",
+          "position": {
+            "left": 0,
+            "top": 0.22,
+            "width": 1920.39,
+            "height": 1080.89
+          },
+          "geometry": "custom",
+          "fillColor": "#000000",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle",
+            "wrap": "square",
+            "autoFit": "none"
+          }
+        }
+      ]
+    },
+    {
+      "scope": "master",
+      "id": "ly/atofqts7",
+      "type": "master",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/618ru54n",
+          "editable": false,
+          "name": "9Slide.vn - 2019",
+          "position": {
+            "left": 0,
+            "top": -243.01,
+            "width": 1920,
+            "height": 58.16
+          },
+          "geometry": "rect",
+          "text": "www.9slide.vn",
+          "style": {
+            "vertical": 1,
+            "fontSize": 40,
+            "color": "#C3C3C3",
+            "alignment": "center",
+            "autoFit": "resizeShapeToFitText"
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "www.9slide.vn",
+              "style": {
+                "alignment": "center"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "www.9slide.vn",
+                  "vertical": 1,
+                  "fontSize": 40,
+                  "color": "#C3C3C3",
+                  "alignment": "center",
+                  "autoFit": "resizeShapeToFitText"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/4va94z21",
+          "editable": false,
+          "name": "Title Placeholder 1",
+          "position": {
+            "left": 132,
+            "top": 57.5,
+            "width": 1656,
+            "height": 208.75
+          },
+          "geometry": "rect",
+          "text": "Click to edit Master title style",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/pwjax436",
+          "editable": false,
+          "name": "Text Placeholder 2",
+          "position": {
+            "left": 132,
+            "top": 287.5,
+            "width": 1656,
+            "height": 685.25
+          },
+          "geometry": "rect",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "style": {
+            "vertical": 1,
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level",
+                  "vertical": 1,
+                  "autoFit": "shrinkText",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/qxsr69kr",
+          "editable": false,
+          "name": "Date Placeholder 3",
+          "position": {
+            "left": 132,
+            "top": 1001,
+            "width": 432,
+            "height": 57.5
+          },
+          "geometry": "rect",
+          "text": "23 April 2026",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "23 April 2026",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "23 April 2026",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 5,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/ry1szulc",
+          "editable": false,
+          "name": "Footer Placeholder 4",
+          "position": {
+            "left": 636,
+            "top": 1001,
+            "width": 648,
+            "height": 57.5
+          },
+          "geometry": "rect",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Copyrights 2024 CE-UIT. All Rights Reserved.",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 6,
+          "kind": "textbox",
+          "scope": "master",
+          "id": "sh/czu98z2x",
+          "editable": false,
+          "name": "Slide Number Placeholder 5",
+          "position": {
+            "left": 1356,
+            "top": 1001,
+            "width": 432,
+            "height": 57.5
+          },
+          "geometry": "rect",
+          "text": "1",
+          "style": {
+            "anchor": 2,
+            "vertical": 1,
+            "verticalAlignment": "middle",
+            "insets": {
+              "top": 4.8,
+              "right": 9.6,
+              "bottom": 4.8,
+              "left": 9.6
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "1",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "1",
+                  "anchor": 2,
+                  "vertical": 1,
+                  "verticalAlignment": "middle",
+                  "insets": {
+                    "top": 4.8,
+                    "right": 9.6,
+                    "bottom": 4.8,
+                    "left": 9.6
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 7,
+          "kind": "shape",
+          "scope": "master",
+          "id": "sh/yd8batgr",
+          "editable": false,
+          "name": "Freeform 18",
+          "position": {
+            "left": 0,
+            "top": 0.22,
+            "width": 1920.39,
+            "height": 1080.89
+          },
+          "geometry": "custom",
+          "fillColor": "#000000",
+          "lineWidth": 0,
+          "style": {
+            "anchor": 2,
+            "verticalAlignment": "middle",
+            "wrap": "square",
+            "autoFit": "none"
+          }
+        }
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "textbox",
+      "scope": "slide",
+      "id": "sh/547294r6",
+      "editable": true,
+      "name": "Title 1",
+      "position": {
+        "left": 240,
+        "top": 250.56,
+        "width": 1457.6,
+        "height": 289.44
+      },
+      "text": "Hiện thực hệ thống SoC tích hợp khối tăng tốc CNN–LSTM\nỨng dụng trong ước lượng huyết áp từ tín hiệu PPG",
+      "style": {
+        "anchor": 2,
+        "vertical": 1,
+        "fontSize": 64,
+        "typeface": "Times New Roman",
+        "color": "#000000",
+        "bold": true,
+        "italic": false,
+        "alignment": "center",
+        "verticalAlignment": "middle",
+        "autoFit": "none",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Hiện thực hệ thống SoC tích hợp khối tăng tốc CNN–LSTM\nỨng dụng trong ước lượng huyết áp từ tín hiệu PPG",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Hiện thực hệ thống SoC tích hợp khối tăng tốc CNN–LSTM",
+              "fontSize": 64,
+              "autoFit": "none"
+            },
+            {
+              "index": 2,
+              "text": "\n",
+              "fontSize": 64,
+              "autoFit": "none"
+            },
+            {
+              "index": 3,
+              "text": "Ứng dụng trong ước lượng huyết áp từ tín hiệu PPG",
+              "fontSize": 64,
+              "autoFit": "none"
+            }
+          ],
+          "bulletCharacter": "",
+          "lineSpacingPercent": 90000
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "textbox",
+      "scope": "slide",
+      "id": "sh/k3yl0zql",
+      "editable": true,
+      "name": "Text Placeholder 2",
+      "position": {
+        "left": 240,
+        "top": 945.7,
+        "width": 1457.6,
+        "height": 81.75
+      },
+      "text": "TP. Hồ Chí Minh, năm 2026",
+      "style": {
+        "anchor": 2,
+        "vertical": 1,
+        "fontSize": 37.33,
+        "typeface": "Arial",
+        "color": "#000000",
+        "bold": false,
+        "italic": true,
+        "alignment": "center",
+        "verticalAlignment": "middle",
+        "autoFit": "shrinkText",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "TP. Hồ Chí Minh, năm 2026",
+          "runs": [
+            {
+              "index": 1,
+              "text": "TP. Hồ Chí Minh, năm 2026",
+              "fontSize": 37.33,
+              "typeface": "Arial",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0,
+          "indent": 0,
+          "lineSpacingPercent": 90000
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "textbox",
+      "scope": "slide",
+      "id": "sh/7qp4be9c",
+      "editable": true,
+      "name": "Text Placeholder 3",
+      "position": {
+        "left": 587.45,
+        "top": 191.74,
+        "width": 372.55,
+        "height": 60
+      },
+      "text": "KHÓA LUẬN TỐT NGHIỆP",
+      "style": {
+        "anchor": 2,
+        "vertical": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "italic": false,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "autoFit": "none",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "KHÓA LUẬN TỐT NGHIỆP",
+          "runs": [
+            {
+              "index": 1,
+              "text": "KHÓA LUẬN TỐT NGHIỆP",
+              "fontSize": 24
+            }
+          ],
+          "bulletCharacter": "•",
+          "marginLeft": 342900,
+          "indent": -342900,
+          "lineSpacingPercent": 90000
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "textbox",
+      "scope": "slide",
+      "id": "sh/fu94fe98",
+      "editable": true,
+      "name": "TextBox 7",
+      "position": {
+        "left": 240,
+        "top": 579.74,
+        "width": 1457.6,
+        "height": 255.59
+      },
+      "geometry": "rect",
+      "text": "GVHD: Trần Thị Điểm \nNguyễn Gia Phúc\t22521126\nNguyễn Hải Thành\t22521356",
+      "style": {
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#029676",
+        "bold": true,
+        "italic": false,
+        "alignment": "left",
+        "wrap": "square",
+        "autoFit": "resizeShapeToFitText",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GVHD: Trần Thị Điểm ",
+          "lineSpacingPercent": 130000,
+          "runs": [
+            {
+              "index": 1,
+              "text": "GVHD:",
+              "fontSize": 48,
+              "color": "#029676",
+              "bold": true,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            },
+            {
+              "index": 2,
+              "text": " Trần Thị Điểm",
+              "fontSize": 48,
+              "color": "#029676",
+              "bold": true,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            },
+            {
+              "index": 3,
+              "text": " ",
+              "fontSize": 48,
+              "color": "#029676",
+              "bold": true,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Nguyễn Gia Phúc\t22521126",
+          "lineSpacingPercent": 130000,
+          "runs": [
+            {
+              "index": 1,
+              "text": "Nguyễn Gia Phúc",
+              "fontSize": 48,
+              "bold": true,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            },
+            {
+              "index": 2,
+              "text": "\t",
+              "fontSize": 48,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            },
+            {
+              "index": 3,
+              "text": "22521126",
+              "fontSize": 48,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "Nguyễn Hải Thành\t22521356",
+          "lineSpacingPercent": 130000,
+          "runs": [
+            {
+              "index": 1,
+              "text": "Nguyễn Hải Thành",
+              "fontSize": 48,
+              "bold": true,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            },
+            {
+              "index": 2,
+              "text": "\t",
+              "fontSize": 48,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            },
+            {
+              "index": 3,
+              "text": "22521356",
+              "fontSize": 48,
+              "wrap": "square",
+              "autoFit": "resizeShapeToFitText"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    }
+  ]
+}

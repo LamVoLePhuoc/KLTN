@@ -219,6 +219,8 @@ module tb_coherence;
         .debug_trace_rd_index(debug_trace_rd_index), .debug_trace_rd_data(debug_trace_rd_data),
         .debug_trace_count(debug_trace_count), .debug_trace_write_index(debug_trace_write_index),
         .debug_controller_state(debug_controller_state),
+        .cache_flush_req(1'b0), .cache_flush_busy(),
+        .cache_flush_done(), .cache_flush_error(),
         .l2_cmd_valid_o(l2_cmd_valid), .l2_cmd_we_o(l2_cmd_we),
         .l2_cmd_addr_o(l2_cmd_addr), .l2_cmd_way_o(l2_cmd_way),
         .l2_cmd_wdata_o(l2_cmd_wdata), .l2_cmd_w_valid_o(l2_cmd_w_valid),
@@ -228,7 +230,12 @@ module tb_coherence;
         .l2_resp_victim_valid_i(l2_resp_victim_valid),
         .l2_resp_victim_dirty_i(l2_resp_victim_dirty),
         .l2_resp_victim_sharers_i(l2_resp_victim_sharers),
-        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers)
+        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers),
+        .l2_maint_valid_o(), .l2_maint_set_o(), .l2_maint_way_o(),
+        .l2_maint_invalidate_o(), .l2_maint_ready_i(1'b0),
+        .l2_maint_resp_valid_i(1'b0),
+        .l2_maint_line_valid_i(1'b0), .l2_maint_line_dirty_i(1'b0),
+        .l2_maint_line_tag_i(15'b0), .l2_maint_line_data_i(256'b0)
     );
 
     l2_cache u_shared_l2 (
@@ -237,6 +244,10 @@ module tb_coherence;
         .cmd_addr(l2_cmd_addr), .cmd_way(l2_cmd_way),
         .cmd_wdata(l2_cmd_wdata), .cmd_w_valid(l2_cmd_w_valid),
         .cmd_w_dirty(l2_cmd_w_dirty), .cmd_w_sharers(l2_cmd_w_sharers),
+        .maint_valid(1'b0), .maint_set(12'b0), .maint_way(2'b0),
+        .maint_invalidate(1'b0), .maint_ready(), .maint_resp_valid(),
+        .maint_line_valid(),
+        .maint_line_dirty(), .maint_line_tag(), .maint_line_data(),
         .resp_valid(l2_resp_valid), .resp_hit(l2_resp_hit),
         .resp_way(l2_resp_way), .resp_victim_tag(l2_resp_victim_tag),
         .resp_victim_valid(l2_resp_victim_valid),
@@ -255,9 +266,13 @@ module tb_coherence;
     integer rfo_count;
     integer wb_count;
     integer e_grant_count;
+    integer dirty_owner_forward_count;
+    integer l2_dirty_update_count;
+    reg [3:0] last_dirty_l2_sharers;
     integer max_parallel_snoops;
     integer snoops_this_cycle;
     reg [3:0] accepted_pending;
+    reg [3:0] accepted_since_assert;
     reg [3:0] stalled_prev;
     reg [1:0] stalled_type [0:3];
     reg [31:0] stalled_addr [0:3];
@@ -269,13 +284,27 @@ module tb_coherence;
             rfo_count    <= 0;
             wb_count     <= 0;
             e_grant_count <= 0;
+            dirty_owner_forward_count <= 0;
+            l2_dirty_update_count <= 0;
+            last_dirty_l2_sharers <= 4'b0;
             max_parallel_snoops <= 0;
             accepted_pending <= 4'b0;
+            accepted_since_assert <= 4'b0;
             stalled_prev <= 4'b0;
             for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1)
                 prev_dreq_valid[mon_i] <= 1'b0;
         end
         else begin
+            if ((dsnoop_ack_valid[0] && dsnoop_ack_dirty[0]) ||
+                (dsnoop_ack_valid[1] && dsnoop_ack_dirty[1]) ||
+                (dsnoop_ack_valid[2] && dsnoop_ack_dirty[2]) ||
+                (dsnoop_ack_valid[3] && dsnoop_ack_dirty[3]))
+                dirty_owner_forward_count <= dirty_owner_forward_count + 1;
+            if (l2_cmd_valid && l2_cmd_we && l2_cmd_w_dirty &&
+                (l2_cmd_addr[31:5] == LINE_ADDR[31:5])) begin
+                l2_dirty_update_count <= l2_dirty_update_count + 1;
+                last_dirty_l2_sharers <= l2_cmd_w_sharers;
+            end
             if ((32'd0 + dreq_ready[0] + dreq_ready[1] + dreq_ready[2] + dreq_ready[3]) > 1) begin
                 $display("[FAIL] more than one D request was accepted in one cycle");
                 errors = errors + 1;
@@ -297,13 +326,23 @@ module tb_coherence;
                     $display("[FAIL] core %0d changed request payload while valid && !ready", mon_i);
                     errors = errors + 1;
                 end
-                stalled_prev[mon_i] <= dreq_valid[mon_i] && !dreq_ready[mon_i];
-                if (dreq_valid[mon_i] && !dreq_ready[mon_i]) begin
+                // The cache deliberately keeps valid asserted after the
+                // ready handshake until the returned line is committed.  The
+                // payload-stability rule applies while awaiting acceptance,
+                // not to the post-accept completion barrier.
+                stalled_prev[mon_i] <= dreq_valid[mon_i] &&
+                                       !dreq_ready[mon_i] &&
+                                       !accepted_since_assert[mon_i];
+                if (dreq_valid[mon_i] && !dreq_ready[mon_i] &&
+                    !accepted_since_assert[mon_i]) begin
                     stalled_type[mon_i] <= dreq_type[mon_i];
                     stalled_addr[mon_i] <= dreq_addr[mon_i];
                     stalled_line[mon_i] <= dreq_line[mon_i];
                 end
+                if (!dreq_valid[mon_i])
+                    accepted_since_assert[mon_i] <= 1'b0;
                 if (dreq_valid[mon_i] && dreq_ready[mon_i]) begin
+                    accepted_since_assert[mon_i] <= 1'b1;
                     if (accepted_pending[mon_i]) begin
                         $display("[FAIL] ready/valid accepted a second request from core %0d before response", mon_i);
                         errors = errors + 1;
@@ -478,6 +517,8 @@ module tb_coherence;
     integer snap_reads;
     integer snap_writes;
     integer snap_wb;
+    integer snap_dirty_forwards;
+    integer snap_l2_dirty_updates;
     integer rr_start;
     integer rr_first;
     integer resp_order [0:3];
@@ -517,9 +558,17 @@ module tb_coherence;
 
         $display("MSI C: BusRd snoops M, forwards new data, M->S, no DRAM read");
         snap_reads = dram_read_words;
+        snap_dirty_forwards = dirty_owner_forward_count;
+        snap_l2_dirty_updates = l2_dirty_update_count;
         do_read(1, LINE_ADDR, rd);
         check_eq32("C: core1 sees core0's dirty write", rd, 32'hAAAA_0001);
         check_true("C: value came from owner/L2 without DRAM", dram_read_words == snap_reads);
+        check_true("C: core0 forwarded exactly one dirty owner line",
+                   dirty_owner_forward_count == snap_dirty_forwards + 1);
+        check_true("C: controller wrote latest owner line into L2 as dirty",
+                   l2_dirty_update_count == snap_l2_dirty_updates + 1);
+        check_true("C: L2 directory records core0/core1 as Shared",
+                   last_dirty_l2_sharers == 4'b0011);
         do_read(0, LINE_ADDR, rd);
         check_eq32("C: downgraded core0 still reads shared value", rd, 32'hAAAA_0001);
 

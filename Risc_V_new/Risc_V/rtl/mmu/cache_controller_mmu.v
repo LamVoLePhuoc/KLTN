@@ -12,8 +12,13 @@
 // interface of l2_cache so the active quad-core hierarchy can place
 // the controller and L2 as peer blocks.  That peer topology matches
 // the project adviser terminology: the shared "MMU" is a cache/memory
-// controller, while the per-core Sv32 block remains the architectural
-// address-translation unit.
+// controller. The old per-core Sv32 sources are retained only in the
+// optional legacy manifest and are absent from the active hierarchy.
+//
+// In the active thesis scope this is the only block called "MMU".
+// The name means Cache/Memory Management Unit, not a virtual-memory
+// translation unit.  Cores and caches use one direct 32-bit physical
+// address space; no TLB or page-table walker is instantiated.
 //
 // Why one module for two diagram boxes: the diagram's AHB segment
 // has no Vivado stock IP to plug in anyway (see Risc_V_new/README.md
@@ -153,6 +158,13 @@ module cache_controller_mmu #(
     output wire [3:0]  debug_trace_write_index,
     output wire [3:0]  debug_controller_state,
 
+    // Full shared-L2 clean/invalidate request.  The SoC-level maintenance
+    // sequencer asserts this only after every private L1 has drained.
+    input  wire         cache_flush_req,
+    output wire         cache_flush_busy,
+    output reg          cache_flush_done,
+    output reg          cache_flush_error,
+
     // ---- L2 command/status interface ----
     // Used when EXTERNAL_L2=1.  Command is controller -> L2; response
     // is L2 -> controller.  Keeping data and policy on opposite sides
@@ -174,7 +186,19 @@ module cache_controller_mmu #(
     input  wire         l2_resp_victim_dirty_i,
     input  wire [3:0]   l2_resp_victim_sharers_i,
     input  wire [255:0] l2_resp_line_i,
-    input  wire [3:0]   l2_resp_sharers_i
+    input  wire [3:0]   l2_resp_sharers_i,
+
+    // Explicit L2 entry scan interface used only during full maintenance.
+    output wire         l2_maint_valid_o,
+    output wire [11:0]  l2_maint_set_o,
+    output wire [1:0]   l2_maint_way_o,
+    output wire         l2_maint_invalidate_o,
+    input  wire         l2_maint_ready_i,
+    input  wire         l2_maint_resp_valid_i,
+    input  wire         l2_maint_line_valid_i,
+    input  wire         l2_maint_line_dirty_i,
+    input  wire [14:0]  l2_maint_line_tag_i,
+    input  wire [255:0] l2_maint_line_data_i
 );
 
     localparam LINE_BITS = LINE_WORDS * 32;
@@ -268,6 +292,12 @@ module cache_controller_mmu #(
     wire [3:0]   int_l2_resp_victim_sharers;
     wire [255:0] int_l2_resp_line;
     wire [3:0]   int_l2_resp_sharers;
+    wire         int_l2_maint_ready;
+    wire         int_l2_maint_resp_valid;
+    wire         int_l2_maint_line_valid;
+    wire         int_l2_maint_line_dirty;
+    wire [14:0]  int_l2_maint_line_tag;
+    wire [255:0] int_l2_maint_line_data;
 
     generate
         if (!EXTERNAL_L2) begin : g_internal_l2
@@ -275,6 +305,12 @@ module cache_controller_mmu #(
                 .clk(clk), .rst(rst),
                 .cmd_valid(l2_cmd_valid), .cmd_we(l2_cmd_we), .cmd_addr(l2_cmd_addr), .cmd_way(l2_cmd_way),
                 .cmd_wdata(l2_cmd_wdata), .cmd_w_valid(l2_cmd_w_valid), .cmd_w_dirty(l2_cmd_w_dirty), .cmd_w_sharers(l2_cmd_w_sharers),
+                .maint_valid(l2_maint_valid_o), .maint_set(l2_maint_set_o),
+                .maint_way(l2_maint_way_o), .maint_invalidate(l2_maint_invalidate_o),
+                .maint_ready(int_l2_maint_ready), .maint_resp_valid(int_l2_maint_resp_valid),
+                .maint_line_valid(int_l2_maint_line_valid),
+                .maint_line_dirty(int_l2_maint_line_dirty), .maint_line_tag(int_l2_maint_line_tag),
+                .maint_line_data(int_l2_maint_line_data),
                 .resp_valid(int_l2_resp_valid), .resp_hit(int_l2_resp_hit), .resp_way(int_l2_resp_way),
                 .resp_victim_tag(int_l2_resp_victim_tag), .resp_victim_valid(int_l2_resp_victim_valid),
                 .resp_victim_dirty(int_l2_resp_victim_dirty), .resp_victim_sharers(int_l2_resp_victim_sharers),
@@ -292,6 +328,13 @@ module cache_controller_mmu #(
     assign l2_resp_victim_sharers  = EXTERNAL_L2 ? l2_resp_victim_sharers_i  : int_l2_resp_victim_sharers;
     assign l2_resp_line            = EXTERNAL_L2 ? l2_resp_line_i            : int_l2_resp_line;
     assign l2_resp_sharers         = EXTERNAL_L2 ? l2_resp_sharers_i         : int_l2_resp_sharers;
+
+    wire         l2_maint_ready      = EXTERNAL_L2 ? l2_maint_ready_i      : int_l2_maint_ready;
+    wire         l2_maint_resp_valid = EXTERNAL_L2 ? l2_maint_resp_valid_i : int_l2_maint_resp_valid;
+    wire         l2_maint_line_valid = EXTERNAL_L2 ? l2_maint_line_valid_i : int_l2_maint_line_valid;
+    wire         l2_maint_line_dirty = EXTERNAL_L2 ? l2_maint_line_dirty_i : int_l2_maint_line_dirty;
+    wire [14:0]  l2_maint_line_tag   = EXTERNAL_L2 ? l2_maint_line_tag_i   : int_l2_maint_line_tag;
+    wire [255:0] l2_maint_line_data  = EXTERNAL_L2 ? l2_maint_line_data_i  : int_l2_maint_line_data;
 
     assign l2_cmd_valid_o      = l2_cmd_valid;
     assign l2_cmd_we_o         = l2_cmd_we;
@@ -326,6 +369,35 @@ module cache_controller_mmu #(
     reg [3:0] state;
     reg [3:0] watchdog_state;
     reg [31:0] watchdog_cycles;
+
+    // Shared-L2 maintenance is a separate micro-FSM so the established
+    // coherence-state encoding remains stable for debug/ILA users.
+    localparam [2:0]
+        F_IDLE      = 3'd0,
+        F_SCAN_REQ  = 3'd1,
+        F_SCAN_WAIT = 3'd2,
+        F_WB        = 3'd3,
+        F_CLEAR     = 3'd4;
+    reg [2:0]  flush_state;
+    reg        flush_pending;
+    reg        flush_active;
+    reg [11:0] flush_set;
+    reg [1:0]  flush_way;
+    reg [255:0] flush_line;
+
+    assign cache_flush_busy = flush_pending | flush_active | cache_flush_req;
+    assign l2_maint_valid_o = flush_active &&
+        ((flush_state == F_SCAN_REQ) || (flush_state == F_CLEAR) ||
+         ((flush_state == F_SCAN_WAIT) && l2_maint_resp_valid &&
+          !(l2_maint_line_valid && l2_maint_line_dirty)));
+    assign l2_maint_set_o = flush_set;
+    assign l2_maint_way_o = flush_way;
+    // Clean/invalid entries can be invalidated on the scan edge itself.  A
+    // dirty entry uses F_CLEAR only after all eight memory writes succeed.
+    assign l2_maint_invalidate_o = flush_active &&
+        ((flush_state == F_CLEAR) ||
+         ((flush_state == F_SCAN_WAIT) && l2_maint_resp_valid &&
+          !(l2_maint_line_valid && l2_maint_line_dirty)));
 
     // ---- Latched transaction context ----
     reg [2:0]   req_core;      // 0-3 = D$ of that core, 4-7 = I$ of core (req_core-4)
@@ -414,9 +486,12 @@ module cache_controller_mmu #(
     // that edge; all transaction context is already latched below.
     // Non-selected requesters keep valid asserted and are reconsidered
     // by the starvation-free round-robin arbiter after this transaction.
-    wire accept_direct = (state == S_IDLE) && !pending_valid && arb_valid;
+    wire accept_direct = (state == S_IDLE) && !pending_valid && arb_valid &&
+                         !flush_pending && !flush_active && !cache_flush_req;
     wire accept_queued = REQUEST_QUEUE_ENABLE && (state != S_IDLE) &&
-                         !pending_valid && arb_valid;
+                         !pending_valid && arb_valid &&
+                         (arb_core != req_core) &&
+                         !flush_pending && !flush_active && !cache_flush_req;
     wire request_accept = accept_direct || accept_queued;
     assign c0_dreq_ready = request_accept && (arb_core == 3'd0);
     assign c1_dreq_ready = request_accept && (arb_core == 3'd1);
@@ -588,6 +663,14 @@ module cache_controller_mmu #(
             watchdog_state      <= S_IDLE;
             watchdog_cycles     <= 32'b0;
             trace_cycle         <= 32'b0;
+            flush_state         <= F_IDLE;
+            flush_pending       <= 1'b0;
+            flush_active        <= 1'b0;
+            flush_set           <= 12'b0;
+            flush_way           <= 2'b0;
+            flush_line          <= {LINE_BITS{1'b0}};
+            cache_flush_done    <= 1'b0;
+            cache_flush_error   <= 1'b0;
         end
         else begin
             // Default: all pulses low unless explicitly set below.
@@ -601,6 +684,15 @@ module cache_controller_mmu #(
             mem_req_valid <= 1'b0;
             mem_wstrb     <= 4'b0;
             trace_cycle <= trace_cycle + 32'd1;
+            cache_flush_done <= 1'b0;
+
+            // Latch a maintenance pulse even if the final L1 writeback is
+            // still leaving the normal transaction FSM.  Arbitration is
+            // blocked immediately and the scan starts once S_IDLE is safe.
+            if (cache_flush_req && !flush_pending && !flush_active) begin
+                flush_pending     <= 1'b1;
+                cache_flush_error <= 1'b0;
+            end
 
             if (accept_queued) begin
                 pending_valid <= 1'b1;
@@ -613,7 +705,7 @@ module cache_controller_mmu #(
                 rr_next       <= arb_core + 3'd1;
             end
 
-            if (PERF_COUNTER_ENABLE && (state != S_IDLE))
+            if (PERF_COUNTER_ENABLE && ((state != S_IDLE) || flush_active))
                 perf_busy_cycles <= perf_busy_cycles + 32'd1;
 
             // Detect a bus/snoop/requester handshake that leaves one
@@ -638,6 +730,113 @@ module cache_controller_mmu #(
                 end
             end
 
+            if (flush_active) begin
+                case (flush_state)
+                    F_SCAN_REQ: begin
+                        if (l2_maint_ready)
+                            flush_state <= F_SCAN_WAIT;
+                    end
+
+                    F_SCAN_WAIT: begin
+                        if (l2_maint_resp_valid) begin
+                            if (l2_maint_line_valid && l2_maint_line_dirty) begin
+                                flush_line    <= l2_maint_line_data;
+                                mem_line_addr <= {l2_maint_line_tag, flush_set, 5'b0};
+                                mem_word_idx  <= 3'd0;
+                                mem_waiting   <= 1'b0;
+                                flush_state   <= F_WB;
+                            end
+                            else begin
+                                // Clean and invalid entries need no memory
+                                // access but are still invalidated so a DMA
+                                // update cannot be hidden by a stale L2 hit.
+                                if ((flush_set == 12'hfff) && (flush_way == 2'd3)) begin
+                                    flush_active     <= 1'b0;
+                                    flush_pending    <= 1'b0;
+                                    flush_state      <= F_IDLE;
+                                    cache_flush_done <= 1'b1;
+                                end
+                                else begin
+                                    if (flush_way == 2'd3) begin
+                                        flush_way <= 2'd0;
+                                        flush_set <= flush_set + 12'd1;
+                                    end
+                                    else begin
+                                        flush_way <= flush_way + 2'd1;
+                                    end
+                                    flush_state <= F_SCAN_REQ;
+                                end
+                            end
+                        end
+                    end
+
+                    F_WB: begin
+                        if (!mem_waiting) begin
+                            mem_req_valid <= 1'b1;
+                            mem_we        <= 1'b1;
+                            mem_addr      <= mem_line_addr + (mem_word_idx << 2);
+                            mem_wdata     <= flush_line[mem_word_idx*32 +: 32];
+                            mem_wstrb     <= 4'b1111;
+                            mem_waiting   <= 1'b1;
+                            if (PERF_COUNTER_ENABLE)
+                                perf_mem_write_words <= perf_mem_write_words + 32'd1;
+                        end
+                        else if (mem_valid) begin
+                            mem_waiting <= 1'b0;
+                            if (mem_error) begin
+                                // Do not invalidate the line whose writeback
+                                // failed: it remains the authoritative copy.
+                                memory_error      <= 1'b1;
+                                cache_flush_error <= 1'b1;
+                                cache_flush_done  <= 1'b1;
+                                flush_active      <= 1'b0;
+                                flush_pending     <= 1'b0;
+                                flush_state       <= F_IDLE;
+                            end
+                            else if (mem_word_idx == 3'd7) begin
+                                mem_word_idx <= 3'd0;
+                                flush_state  <= F_CLEAR;
+                            end
+                            else begin
+                                mem_word_idx <= mem_word_idx + 3'd1;
+                            end
+                        end
+                    end
+
+                    F_CLEAR: begin
+                        // l2_maint_invalidate_o is high for this complete
+                        // cycle; the L2 clears the selected entry on this edge.
+                        if ((flush_set == 12'hfff) && (flush_way == 2'd3)) begin
+                            flush_active    <= 1'b0;
+                            flush_pending   <= 1'b0;
+                            flush_state     <= F_IDLE;
+                            cache_flush_done <= 1'b1;
+                        end
+                        else begin
+                            if (flush_way == 2'd3) begin
+                                flush_way <= 2'd0;
+                                flush_set <= flush_set + 12'd1;
+                            end
+                            else begin
+                                flush_way <= flush_way + 2'd1;
+                            end
+                            flush_state <= F_SCAN_REQ;
+                        end
+                    end
+
+                    default: flush_state <= F_SCAN_REQ;
+                endcase
+            end
+            else if (flush_pending && (state == S_IDLE) && !pending_valid) begin
+                flush_active  <= 1'b1;
+                flush_pending <= 1'b0;
+                flush_state   <= F_SCAN_REQ;
+                flush_set     <= 12'b0;
+                flush_way     <= 2'b0;
+                mem_word_idx  <= 3'd0;
+                mem_waiting   <= 1'b0;
+            end
+            else begin
             case (state)
                 // ==================================================
                 S_IDLE: begin
@@ -718,7 +917,9 @@ module cache_controller_mmu #(
                 end
 
                 // ==================================================
-                S_L2_LOOKUP: state <= S_L2_LOOKUP_WAIT; // one cycle for l2_cache's registered response
+                // l2_cache may pipeline its directory/tag lookup.  This FSM
+                // deliberately uses resp_valid rather than a fixed latency.
+                S_L2_LOOKUP: state <= S_L2_LOOKUP_WAIT;
 
                 S_L2_LOOKUP_WAIT: begin
                     if (l2_resp_valid) begin
@@ -1013,7 +1214,11 @@ module cache_controller_mmu #(
                     // response. Waiting for deassertion prevents the
                     // just-completed level request being accepted again
                     // on the following edge.
-                    state <= REQUEST_QUEUE_ENABLE ? S_IDLE : S_WAIT_REQ_DROP;
+                    // Even with a queued request, do not begin it until the
+                    // current L1 has committed the returned line and drops
+                    // valid.  This preserves the transaction-atomic snoop
+                    // boundary; the queue only hides arbitration latency.
+                    state <= S_WAIT_REQ_DROP;
                 end
 
                 S_WAIT_REQ_DROP: begin
@@ -1027,6 +1232,7 @@ module cache_controller_mmu #(
 
                 default: state <= S_IDLE;
             endcase
+            end
         end
     end
 

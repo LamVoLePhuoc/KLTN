@@ -124,12 +124,12 @@ module tb_cache_lrsc;
             saw_sc_success <= 1'b0;
             saw_sc_store   <= 1'b0;
         end
-        else if (dut.mmu_core.core.RegWriteW) begin
-            if ((dut.mmu_core.core.RD_W == 5'd5) && (result_w == 32'd21))
+        else if (dut.physical_core.core.RegWriteW) begin
+            if ((dut.physical_core.core.RD_W == 5'd5) && (result_w == 32'd21))
                 saw_lr_value <= 1'b1;
-            if ((dut.mmu_core.core.RD_W == 5'd6) && (result_w == 32'd0))
+            if ((dut.physical_core.core.RD_W == 5'd6) && (result_w == 32'd0))
                 saw_sc_success <= 1'b1;
-            if ((dut.mmu_core.core.RD_W == 5'd7) && (result_w == 32'd7))
+            if ((dut.physical_core.core.RD_W == 5'd7) && (result_w == 32'd7))
                 saw_sc_store <= 1'b1;
         end
     end

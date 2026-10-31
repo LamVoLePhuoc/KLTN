@@ -1,0 +1,7 @@
+L2 standalone synthesis resource gate
+PART=xc7z030fbv676-1
+RAMB36E1=112
+RAMB18E1=4
+BRAM_BITS=4202496 (required 4194304)
+RAMD64E=11520
+LUT=3538

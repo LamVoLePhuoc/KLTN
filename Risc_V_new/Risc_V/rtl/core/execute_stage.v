@@ -84,8 +84,13 @@ module execute_stage(
     reg         mdu_issued;
     wire        mdu_start_pulse;
 
-    wire        signed_lt;
-    wire        unsigned_lt;
+    // Branch conditions use a dedicated comparator on the already-forwarded
+    // register operands.  Deriving them from ALU flags made a taken-branch
+    // decision traverse the general ALU/subtractor before reaching FlushE,
+    // which was the post-route critical path of every core.
+    wire        branch_equal;
+    wire        branch_signed_lt;
+    wire        branch_unsigned_lt;
     reg         TakeBranchE;
 
     wire [31:0] PCBranchTarget;
@@ -233,17 +238,19 @@ module execute_stage(
     // ==========================================
     // BRANCH/JUMP LOGIC
     // ==========================================
-    assign signed_lt   = NegativeE ^ OverFlowE;
-    assign unsigned_lt = ~CarryE;
+    assign branch_equal       = (SrcA_Forwarded == SrcB_Forwarded);
+    assign branch_signed_lt   = ($signed(SrcA_Forwarded) <
+                                 $signed(SrcB_Forwarded));
+    assign branch_unsigned_lt = (SrcA_Forwarded < SrcB_Forwarded);
 
     always @(*) begin
         case (BranchTypeE)
-            3'b000: TakeBranchE =  ZeroE;        // BEQ
-            3'b001: TakeBranchE = ~ZeroE;        // BNE
-            3'b100: TakeBranchE =  signed_lt;    // BLT
-            3'b101: TakeBranchE = ~signed_lt;    // BGE
-            3'b110: TakeBranchE =  unsigned_lt;  // BLTU
-            3'b111: TakeBranchE = ~unsigned_lt;  // BGEU
+            3'b000: TakeBranchE =  branch_equal;        // BEQ
+            3'b001: TakeBranchE = ~branch_equal;        // BNE
+            3'b100: TakeBranchE =  branch_signed_lt;    // BLT
+            3'b101: TakeBranchE = ~branch_signed_lt;    // BGE
+            3'b110: TakeBranchE =  branch_unsigned_lt;  // BLTU
+            3'b111: TakeBranchE = ~branch_unsigned_lt;  // BGEU
             default: TakeBranchE = 1'b0;
         endcase
     end
@@ -318,17 +325,40 @@ module MDU(
         (op == ALU_REMU);
 
     // ============================================================
-    // MULTIPLICATION
-    // MUL/MULH/MULHU/MULHSU xử lý trong MDU.
-    // MULHSU dùng ép kiểu rõ ràng để tránh lỗi mixed signed/unsigned.
+    // PIPELINED MULTIPLICATION
+    //
+    // The old implementation instantiated three parallel 64-bit products
+    // directly from the forwarded EX operands. Post-route timing therefore
+    // crossed forwarding muxes, two cascaded DSP48s and a long carry chain in
+    // one cycle, while consuming 12 DSP48s per core.
+    //
+    // One signed 33x33 product covers all four RV32M multiply variants. Each
+    // operand is sign- or zero-extended when the request is accepted, then the
+    // product and architectural result are registered on separate cycles. The
+    // no-reset data registers are intentional: busy/cnt qualify their validity
+    // and the coding style lets Vivado absorb the input/output registers into
+    // DSP48 AREG/BREG/PREG stages.
     // ============================================================
-    wire signed [63:0] prod_ss;
-    wire        [63:0] prod_uu;
-    wire signed [64:0] prod_su;
+    reg signed [32:0] mul_a_pipe;
+    reg signed [32:0] mul_b_pipe;
+    (* use_dsp = "yes" *) reg signed [65:0] mul_product_pipe;
+    reg        [4:0]  mul_op_pipe;
+    reg               doing_mul;
 
-    assign prod_ss = $signed(A) * $signed(B);
-    assign prod_uu = $unsigned(A) * $unsigned(B);
-    assign prod_su = $signed({A[31], A}) * $signed({1'b0, B});
+    always @(posedge clk) begin
+        if (start && !busy && is_mul) begin
+            mul_a_pipe <= ((op == ALU_MULH) || (op == ALU_MULHSU)) ?
+                          $signed({A[31], A}) : $signed({1'b0, A});
+            mul_b_pipe <= (op == ALU_MULH) ?
+                          $signed({B[31], B}) : $signed({1'b0, B});
+            mul_op_pipe <= op;
+        end
+
+        // cnt=3 is the dedicated DSP stage. The following cnt=2 cycle
+        // selects low/high 32 bits into the architectural result register.
+        if (busy && doing_mul && (cnt == 6'd3))
+            mul_product_pipe <= mul_a_pipe * mul_b_pipe;
+    end
 
     // ============================================================
     // ABS FUNCTION FOR SIGNED DIV/REM
@@ -375,6 +405,7 @@ module MDU(
             sign_q    <= 1'b0;
             sign_r    <= 1'b0;
             is_rem    <= 1'b0;
+            doing_mul <= 1'b0;
         end
         else begin
             done <= 1'b0;
@@ -385,39 +416,21 @@ module MDU(
             if (start && !busy) begin
 
                 // ------------------------------
-                // MUL group: 1-cycle latency
+                // MUL group: registered input -> DSP product -> result.
+                // Three busy cycles deliberately break the old single-cycle
+                // forwarding-to-product critical path.
                 // ------------------------------
                 if (is_mul) begin
-                    busy <= 1'b1;
-                    cnt  <= 6'd1;
-
-                    case (op)
-                        ALU_MUL: begin
-                            result <= prod_ss[31:0];
-                        end
-
-                        ALU_MULH: begin
-                            result <= prod_ss[63:32];
-                        end
-
-                        ALU_MULHSU: begin
-                            result <= prod_su[63:32];
-                        end
-
-                        ALU_MULHU: begin
-                            result <= prod_uu[63:32];
-                        end
-
-                        default: begin
-                            result <= 32'd0;
-                        end
-                    endcase
+                    busy      <= 1'b1;
+                    cnt       <= 6'd3;
+                    doing_mul <= 1'b1;
                 end
 
                 // ------------------------------
                 // DIV/REM group
                 // ------------------------------
                 else if (is_divrem) begin
+                    doing_mul <= 1'b0;
 
                     // Case 1: divide by zero
                     if (B == 32'd0) begin
@@ -490,6 +503,7 @@ module MDU(
                     done   <= 1'b0;
                     result <= 32'd0;
                     cnt    <= 6'd0;
+                    doing_mul <= 1'b0;
                 end
             end
 
@@ -497,30 +511,49 @@ module MDU(
             // OPERATION RUNNING
             // ====================================================
             else if (busy) begin
-
-                // Last cycle: operation done
-                if (cnt == 6'd1) begin
-                    busy <= 1'b0;
-                    done <= 1'b1;
-                    cnt  <= 6'd0;
+                if (doing_mul) begin
+                    if (cnt == 6'd3) begin
+                        // mul_product_pipe captures on this edge.
+                        cnt <= 6'd2;
+                    end
+                    else if (cnt == 6'd2) begin
+                        result <= (mul_op_pipe == ALU_MUL) ?
+                                  mul_product_pipe[31:0] :
+                                  mul_product_pipe[63:32];
+                        cnt <= 6'd1;
+                    end
+                    else begin
+                        busy      <= 1'b0;
+                        done      <= 1'b1;
+                        cnt       <= 6'd0;
+                        doing_mul <= 1'b0;
+                    end
                 end
-
-                // Division iteration
                 else begin
-                    dividend  <= div_shift;
-                    remainder <= rem_next;
-                    quotient  <= quo_next;
-                    cnt       <= cnt - 6'd1;
+                    // Last division/special-case cycle: operation done.
+                    if (cnt == 6'd1) begin
+                        busy <= 1'b0;
+                        done <= 1'b1;
+                        cnt  <= 6'd0;
+                    end
 
-                    // cnt == 2 means rem_next/quo_next is final result
-                    if (cnt == 6'd2) begin
-                        if (is_rem) begin
-                            result <= sign_r ? (~rem_next[31:0] + 32'd1)
-                                             : rem_next[31:0];
-                        end
-                        else begin
-                            result <= sign_q ? (~quo_next + 32'd1)
-                                             : quo_next;
+                    // Restoring division iteration.
+                    else begin
+                        dividend  <= div_shift;
+                        remainder <= rem_next;
+                        quotient  <= quo_next;
+                        cnt       <= cnt - 6'd1;
+
+                        // cnt == 2 means rem_next/quo_next is final result.
+                        if (cnt == 6'd2) begin
+                            if (is_rem) begin
+                                result <= sign_r ? (~rem_next[31:0] + 32'd1)
+                                                 : rem_next[31:0];
+                            end
+                            else begin
+                                result <= sign_q ? (~quo_next + 32'd1)
+                                                 : quo_next;
+                            end
                         end
                     end
                 end

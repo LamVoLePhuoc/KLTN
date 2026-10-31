@@ -1,0 +1,20 @@
+Active four-core cache-controller implementation
+Generated: Tue Oct 27 11:37:09 +0700 2026
+soc_4core_trial_cpu0_0_synth_1: synth_design Complete!
+synth_1: synth_design Complete!
+impl_1:  route_design Complete, Failed Timing!
+Post-route WNS: -2.353 ns
+Critical startpoint: soc_4core_trial_i/cpu0/inst/soc/u_cache_controller_mmu/state_reg[3]_replica/C
+Critical endpoint:   soc_4core_trial_i/cpu0/inst/soc/u_shared_l2/u_data_word3/u_xpm/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_11/ADDRARDADDR[14]
+Post-route WHS: 0.048 ns
+Detailed reports:
+  resource_gate.txt
+  utilization_synth.rpt
+  utilization_hierarchical_synth.rpt
+  timing_synth.rpt
+  utilization_route.rpt
+  utilization_hierarchical_route.rpt
+  timing_route.rpt
+  drc_route.rpt
+  methodology_route.rpt
+  power_route.rpt

@@ -10,9 +10,8 @@ Thiết kế một SoC 4 lõi RISC-V RV32IMA phục vụ nghiên cứu hệ th�
 
 - pipeline RV32IMA 5 tầng cho từng lõi;
 - CSR, trap và ba mức đặc quyền M/S/U;
-- khối dịch địa chỉ Sv32 theo từng core: iTLB/dTLB, superpage TLB và PTW;
-- cache controller dùng chung ("MMU" theo cách gọi của giảng viên) điều phối L1,
-  L2, MSI và CPU memory port;
+- cache controller dùng chung (Cache/Memory Management Unit, gọi tắt “MMU” theo
+  sơ đồ đề tài) điều phối L1, L2, MSI và CPU memory port;
 - L1 instruction/data cache riêng, L2 cache dùng chung;
 - coherence MSI cho dữ liệu chia sẻ giữa 4 lõi;
 - AHB-Lite ở miền cache/coherence và AXI4 ở miền hệ thống;
@@ -25,7 +24,6 @@ Thiết kế một SoC 4 lõi RISC-V RV32IMA phục vụ nghiên cứu hệ th�
 |---|---|---|
 | RV32IMA pipeline | RTL đã rà soát/bổ sung test | Pipeline 5 tầng, hazard/forwarding, MDU, RV32A, legality decode; `tb_core_rv32ima_isa.v` mới cần chạy regression |
 | CSR/trap/privilege | **PASS hiện tại** | ECALL/EBREAK, M/S/U transition và `medeleg` đã được khóa bằng `tb_csr_priv.v` |
-| MMU/TLB/PTW Sv32 | **PASS hiện tại** | Bộ regression MMU + CSR SUM/MXR/access-fault đã PASS; flush giữa PTW được kiểm chứng |
 | Shared cache controller (MMU) | **PASS hiện tại** | Đồng cấp với L2; round-robin 8 nguồn, block transfer và MSI chạy trong `tb_coherence.v` |
 | L1/L2 cache | **PASS hiện tại** | FENCE.I, AMO, LR/SC, MSI, error sideband và uncached/MMIO đã chạy lại |
 | Coherence MSI | **PASS hiện tại** | `MSI_COHERENCE_TB` và `MSI_COHERENCE_AHB_TB` đã chạy lại bằng QuestaSim |
@@ -35,16 +33,15 @@ Thiết kế một SoC 4 lõi RISC-V RV32IMA phục vụ nghiên cứu hệ th�
 | Vivado synthesis/implementation | **Full-BD synthesis PASS** | Vivado 2022.2, `xc7z030fbv676-1`: 0 error/0 critical warning; post-synthesis timing 100 MHz chưa đạt, implementation/power chưa chạy |
 | FPGA hardware test | Chưa hoàn tất | Chưa chứng minh luồng SD–DRAM–CPU–SD trên board thật |
 
-> **Mốc đã xác nhận gần nhất:** phiên bản nền trước đợt bổ sung legality decode và
-> DMA compile thành công, **26/26** testbench PASS bằng QuestaSim 10.2c. Source hiện
-> có thêm test RV32IMA/DMA; cần chạy lại regression trước khi nâng mốc xác nhận.
+> **Lưu ý đổi phạm vi:** hierarchy active đã bỏ Sv32/TLB/PTW và dùng địa chỉ vật
+> lý trực tiếp. Kết quả 26/26 trước đây thuộc baseline có cả test Sv32. Sau khi đổi
+> wrapper cần chạy lại regression active trước khi công bố một mẫu số mới.
 
 ## 3. Kiến trúc hệ thống
 
 ```text
 Core 0..3
   ├─ RV32IMA pipeline + CSR/trap
-  ├─ Sv32 address translation: iTLB + dTLB + super-TLB + PTW
   └─ L1 I-cache + L1 D-cache
              │
              ▼
@@ -62,11 +59,13 @@ Core 0..3
 Tài liệu và hình kiến trúc chi tiết:
 
 - [`Risc_V/docs/architecture/ARCHITECTURE.md`](Risc_V/docs/architecture/ARCHITECTURE.md)
-- [`Risc_V/docs/architecture/MMU_CACHE_CONTROLLER_REDESIGN.md`](Risc_V/docs/architecture/MMU_CACHE_CONTROLLER_REDESIGN.md): đối chiếu lời thầy, mã tham khảo và ranh giới RTL mới;
+- [`THESIS_SCOPE_CACHE_CONTROLLER.md`](THESIS_SCOPE_CACHE_CONTROLLER.md): phạm vi mới và phần việc còn lại;
+- [`Risc_V/docs/architecture/MMU_CACHE_CONTROLLER_REDESIGN.md`](Risc_V/docs/architecture/MMU_CACHE_CONTROLLER_REDESIGN.md): phương án cũ, chỉ giữ để truy vết;
 - `system_overview.svg`: kiến trúc tổng thể;
 - `core_pipeline.svg`: pipeline RV32IMA;
-- `mmu.svg`: MMU/TLB/PTW;
+- `mmu.svg`: kết quả Sv32 legacy, không thuộc kiến trúc active;
 - `cache_coherence.svg`: L1/L2 và MSI;
+- `cache_controller_fsm.svg`: FSM active của Cache/Memory Management Unit;
 - `bus_domains.svg`: ranh giới AHB-Lite/AXI4;
 - `boot_flow.svg`: luồng boot và DMA;
 - `verification.svg`: chiến lược kiểm chứng;
@@ -78,7 +77,7 @@ Tài liệu và hình kiến trúc chi tiết:
 Risc_V_new/Risc_V/
 ├── rtl/
 │   ├── core/              Pipeline, ALU, register file, CSR và trap
-│   ├── mmu/               Sv32 TLB/PTW và shared cache-controller MMU facade
+│   ├── mmu/               Active cache-controller MMU và source Sv32 legacy
 │   ├── cache/             L1 I/D, L2 và core-L1 wrapper
 │   ├── coherence/         MSI policy engine, round-robin và directory/snoop control
 │   ├── interconnect/ahb/  AHB-Lite master/slave adapters
@@ -86,7 +85,8 @@ Risc_V_new/Risc_V/
 │   ├── boot/              Boot controller
 │   ├── debug/             MMU/cache trace buffers tùy chọn
 │   ├── legacy_2core/      Baseline 2 lõi cũ, không thuộc hierarchy 4 lõi chính
-│   ├── files.f            Danh sách source chuẩn theo thứ tự compile
+│   ├── files.f            Source active, không gồm VA↔PA/TLB/PTW
+│   ├── files_sv32_legacy.f Source tùy chọn để tái lập test Sv32 cũ
 │   └── README.md          Quy tắc tổ chức và dependency
 ├── sim/                   Self-checking testbenches
 ├── scripts/               Vivado build scripts
@@ -106,29 +106,27 @@ lại thư mục phẳng khi thêm block mới.
 - ISA mục tiêu: RV32I + M + A; không triển khai F/D/C.
 - Pipeline 5 tầng: IF, ID, EX, MEM và WB.
 - Forwarding, load-use hazard, branch redirect và stall ngoài.
-- CSR/trap cung cấp `satp`, `SUM`, `MXR`, privilege mode và trap redirect cho MMU.
+- CSR/trap vẫn xử lý exception/privilege; các hook `satp`, SUM và MXR không điều
+  khiển đường memory active sau khi bỏ dịch địa chỉ.
 - RV32A gồm LR/SC và các AMO word; reservation được theo dõi theo địa chỉ vật lý.
 - Decoder kiểm tra cả opcode lẫn các tổ hợp `funct3/funct7/funct5` dành riêng và
   triệt side effect của illegal instruction ngay tại Decode.
 - `mhartid` được tham số hóa xuyên qua wrapper; bốn core nhận giá trị 0, 1, 2, 3.
 
-### 5.2. MMU
+### 5.2. Cache/Memory Management Unit
 
-Trong mục này, "MMU" là MMU chuẩn RISC-V dùng để dịch VA→PA. Nó khác với
-`cache_controller_mmu` dùng chung ở mục 5.3; tài liệu redesign giải thích rõ hai
-cách dùng thuật ngữ để tránh gộp TLB/PTW vào cache controller.
+Trong tài liệu active, “MMU” là `cache_controller_mmu`, tức bộ điều khiển
+cache/memory dùng chung theo sơ đồ của giảng viên. Nó không dịch VA↔PA.
 
-- Sv32 hai cấp, hỗ trợ page 4 KiB và superpage 4 MiB.
-- iTLB/dTLB 16 entry theo cấu trúc 4 set × 4 way; super-TLB tách riêng.
-- Kiểm tra U/S, `SUM`, `MXR`, quyền R/W/X và Accessed/Dirty.
-- PTW dùng chung giữa instruction/data; core bị stall trong lúc walk/refill.
-- Region policy có thể chặn sớm truy cập sai vùng trước khi phát PTW request.
-- Đổi `satp`/mode tự động vô hiệu TLB; thay đổi privilege/SUM/MXR giữa PTW làm kết
-  quả cũ bị discard và kiểm tra lại, không stale-refill/stale-fault.
-- Đường D-cache/coherence cập nhật A/D bằng AMOOR.W; watchdog PTW 4096 chu kỳ được
-  giữ làm sticky diagnostic cho ILA mà không tự abort giao dịch bus.
-- `mmu_ip_wrapper` kiểm tra AXI `RRESP/BRESP`: lỗi fetch/load/store hoặc lỗi trong
-  page walk tạo architectural access fault cause 1/5/7 và không refill TLB.
+- Nhận tám nguồn request từ bốn I-cache và bốn D-cache.
+- Round-robin chống starvation và chốt request bằng `valid/ready`.
+- FSM điều khiển L2 lookup, snoop, dirty forwarding, eviction, refill và response.
+- Directory bốn bit theo dõi sharer; MSI bảo đảm chỉ một owner M.
+- Uncached/MMIO bypass, byte strobe, error routing, watchdog và trace.
+- Performance counters đo request, L2 hit/miss, snoop, memory traffic và busy.
+
+`physical_core_wrapper` nối core trực tiếp tới L1 trong cùng không gian địa chỉ
+vật lý 32 bit. Source Sv32 cũ chỉ có trong `files_sv32_legacy.f`.
 
 ### 5.3. Cache và MSI coherence
 
@@ -195,7 +193,11 @@ Thiết kế không dùng UVM. Bằng chứng được tổ chức theo ba lớp
 3. **FPGA hardware test:** synthesis/implementation và workload tự động trên board,
    không dựa vào thao tác thủ công để xác nhận kết quả.
 
-### 6.1. Đã xác nhận sau khi chia lại thư mục RTL
+### 6.1. Bằng chứng baseline và phạm vi active
+
+Các dòng `tb_mmu_*` và `tb_csr_mmu_bits` bên dưới là bằng chứng lịch sử của
+nhánh Sv32 trước khi đổi phạm vi. Chúng không nằm trong mẫu số regression active
+và không dùng để tuyên bố tính năng của kiến trúc cache-controller-only.
 
 - Toàn bộ source trong `rtl/files.f`: **compile PASS** bằng QuestaSim 10.2c.
 - `sim/tb_mmu_advanced.v`: **`MMU_ADVANCED_TB: PASS`** — U/S, SUM/MXR, A/D,
@@ -249,7 +251,7 @@ xen kẽ flush và kiểm tra 64 word cuối bằng scoreboard độc lập.
 
 ### 6.2. Tổng kết regression
 
-Baseline trước thay đổi core/DMA có 26 testbench tự kiểm compile sạch và đều PASS;
+Baseline trước thay đổi phạm vi có 26 testbench tự kiểm compile sạch và đều PASS;
 log nằm ở `Risc_V/reports/full-regression-latest/`. Source hiện bổ sung
 `tb_core_rv32ima_isa.v`, `tb_core_instruction_legality.v` và
 `tb_dma_end_to_end.v`. Chưa được phép ghi nhận chúng PASS cho tới khi simulator
@@ -275,24 +277,36 @@ Các entry point chính:
 Vivado scripts:
 
 - `scripts/build_soc_4core_trial.tcl`;
-- `scripts/build_soc_mmu_trial.tcl`;
+- `scripts/build_soc_mmu_trial.tcl` (legacy Sv32, không dùng cho build active);
 - `scripts/build_soc_zu5ev_boot.tcl`.
 - `software/ps_loader/boot_ctrl.h`: register map/API độc lập BSP cho PS loader và
   cache maintenance trước/sau DMA.
 - `software/ps_loader/soc_dma.h`: register map/API cho source-level DMA.
 
-Questa full regression (tự compile toàn bộ `rtl/files.f`, tìm mọi `sim/tb_*.v`,
+Questa active regression (compile `rtl/files.f`, tự loại các test Sv32 legacy,
 ghi log và tạo lại `reports/full-regression-latest/summary.{md,csv}`):
 
 ```powershell
 pwsh -File scripts/run_full_regression.ps1
 ```
 
+Tái lập kết quả Sv32 cũ, không thuộc kiến trúc active:
+
+```powershell
+pwsh -File scripts/run_full_regression.ps1 -IncludeLegacySv32
+```
+
+Vivado XSIM cho đúng 21 test active (chạy trong Tcl Console, không trộn Sv32):
+
+```tcl
+source {C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/scripts/run_active_cache_xsim.tcl}
+```
+
 Các script đã được cập nhật để tìm source theo cấu trúc block hiện tại.
 
-### 7.1. Kết quả synthesis cache/quad-core gần nhất
+### 7.1. Kết quả synthesis cache/quad-core baseline
 
-Ngày 18-10-2026, `quad_core_axi_wrapper_ahb` được synthesize trực tiếp bằng
+Ngày 18-10-2026, phiên bản trước khi bỏ Sv32 của `quad_core_axi_wrapper_ahb` được synthesize trực tiếp bằng
 Vivado 2022.2 cho `xc7z030fbv676-1`, dùng `auto_detect_xpm` và
 `flatten_hierarchy=rebuilt`:
 
@@ -310,9 +324,9 @@ BRAM là tài nguyên sát giới hạn nhất. Không tăng dung lượng cache
 khác trước khi chạy lại utilization. Project-flow của Vivado tự nhận XPM; với
 non-project flow phải gọi `auto_detect_xpm` trước `synth_design`.
 
-### 7.2. Kết quả synthesis toàn Block Design `soc_4core_trial`
+### 7.2. Kết quả synthesis baseline của Block Design `soc_4core_trial`
 
-Ngày 19-10-2026, toàn hierarchy `soc_4core_trial_wrapper` được synthesize sạch
+Ngày 19-10-2026, hierarchy trước khi bỏ Sv32 của `soc_4core_trial_wrapper` được synthesize sạch
 bằng Vivado 2022.2 trên cùng part `xc7z030fbv676-1`:
 
 | Chỉ số | Kết quả |
@@ -327,7 +341,8 @@ bằng Vivado 2022.2 trên cùng part `xc7z030fbv676-1`:
 | Lỗi / critical warning | 0 / 0 |
 | Post-synthesis WNS tại 100 MHz | -5.308 ns (**chưa đạt**) |
 
-BRAM 64 KiB trong Block Design chỉ là bộ nhớ thử nghiệm đứng thay DDR ở ngoài
+Các số liệu trên không được dùng như kết quả của hierarchy mới cho đến khi
+regenerate BD và synthesis lại. BRAM 64 KiB trong Block Design chỉ là bộ nhớ thử nghiệm đứng thay DDR ở ngoài
 CPU; thay đổi này không giảm L1 hoặc L2 (L2 vẫn 512 KiB). Cấu hình cũ dùng BRAM
 256 KiB làm bộ nhớ ngoài khiến tổng tài nguyên lên 296/265 tile và không thể đặt
 lên part hiện tại. Nền tảng DDR thật không bị giới hạn bởi dung lượng BRAM thử này.
@@ -375,10 +390,8 @@ compile order về Manual vì `update_module_reference` không hỗ trợ chế 
   để gán cause 5/7: D$ giữ dirty line, không invalidate I$, nhả stall và latch cờ
   `cache_maintenance_error`; lỗi đã tới chân top-level và thanh ghi PS `CACHE`,
   nhưng machine-check chính xác cho chính CPU vẫn là phần mở rộng sau.
-- Watchdog PTW hiện chỉ báo lỗi; chưa thể tự recovery an toàn khi bus treo vì đường
-  memory chưa có cancel/drain cho response đến muộn.
-- A/D atomic đã đóng ở đường L1 D-cache/coherence; `mmu_ip_wrapper` AXI trực tiếp vẫn
-  dùng full-word PTE write cho đến khi AXI atomic/lock được triển khai.
+- Watchdog cache/memory hiện chỉ báo lỗi; chưa thể tự recovery an toàn khi bus treo
+  vì đường memory chưa có cancel/drain cho response đến muộn.
 - DMA chưa là coherence master trực tiếp. `soc_dma_controller` hiện thực protocol
   coarse-grain tự động (quiesce, pre-flush, DMA, post-flush); PS vẫn có thể dùng
   đường thủ công qua `boot_ctrl.CACHE`. Coherent DMA theo từng line và scatter-
@@ -390,13 +403,13 @@ compile order về Manual vì `update_module_reference` không hỗ trợ chế 
 
 ### Tháng 9–10: khóa các block nền tảng
 
-1. Chạy lại bộ MMU trên Vivado XSIM và synthesis để đối chiếu kết quả QuestaSim.
+1. Chạy lại active cache/controller regression trên Questa và Vivado XSIM.
 2. Chạy error path AHB/AXI/MSI trên Vivado XSIM và fault-injection trên FPGA.
 3. Mở rộng AXI4 boundary sang burst/ID nếu kết quả timing cho thấy các beat word
    hiện tại là nút thắt; đường byte strobe và uncached/MMIO cơ bản đã đóng bằng RTL.
-4. Đối chiếu privilege/delegation trên Vivado XSIM và waveform trap redirect.
+4. Regenerate Block Design sau khi bỏ translation và đo lại utilization/timing.
 
-### Sau khi bus và MMU ổn định
+### Sau khi bus và cache controller ổn định
 
 1. Chạy full cache/coherence regression.
 2. Vivado synthesis/implementation và thu report tài nguyên/timing/power.

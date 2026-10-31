@@ -1,0 +1,31 @@
+#-----------------------------------------------------------
+# xsim v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Tue Oct 27 14:46:40 2026
+# Process ID: 390568
+# Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-behavior-hierarchy-20261027-144547
+# Command line: xsim.exe -mode tcl -source {xsim.dir/tb_quad_core_axi_ahb_behavior_behav/xsim_script.tcl}
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-behavior-hierarchy-20261027-144547/xsim.log
+# Journal file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-behavior-hierarchy-20261027-144547\xsim.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_quad_core_axi_ahb_behavior_behav/xsim_script.tcl
+# xsim {tb_quad_core_axi_ahb_behavior_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] TC-AXI-SYS-001 four cores execute through the board AXI boundary
+[PASS] TC-AXI-SYS-002 AXI read traffic completed under backpressure
+[PASS] TC-AXI-SYS-003 deprecated Mmu_Flush is a board-level no-op
+[PASS] TC-AXI-SYS-004 Mmu_Flush causes no translation exception
+[PASS] TC-AXI-SYS-005 cache maintenance completes through AXI
+[PASS] TC-AXI-SYS-005 dirty cache data used AXI write channel
+[PASS] TC-AXI-SYS-006 core0 coherent signature reached AXI memory = 00000155
+[PASS] TC-AXI-SYS-006 core1 coherent signature reached AXI memory = 00000266
+[PASS] TC-AXI-SYS-006 core2 coherent signature reached AXI memory = 00000377
+[PASS] TC-AXI-SYS-006 core3 coherent signature reached AXI memory = 00000488
+[PASS] TC-AXI-SYS-007 no page faults exist after translation removal
+QUAD_CORE_AXI_AHB_BEHAVIOR_TB: PASS
+$finish called at time : 394125 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_quad_core_axi_ahb_behavior.v" Line 374
+exit
+INFO: [Common 17-206] Exiting xsim at Tue Oct 27 14:46:43 2026...

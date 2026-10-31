@@ -157,9 +157,7 @@ proc find_rtl_source {rtl_root filename} {
 }
 
 set new_sources {
-    mmu_region_decode.v
-    mmu_debug_buffer.v
-    mmu_super_tlb.v
+    physical_core_wrapper.v
     l1_icache.v
     l1_dcache.v
     core_l1_wrapper.v

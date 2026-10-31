@@ -6,12 +6,13 @@
       "gen_directory": "../../../../Risc_V.gen/sources_1/bd/soc_4core_trial",
       "name": "soc_4core_trial",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
-      "synth_flow_mode": "None",
-      "tool_version": "2022.2"
+      "synth_flow_mode": "Hierarchical",
+      "tool_version": "2022.2",
+      "validated": "true"
     },
     "design_tree": {
       "proc_sys_reset_0": "",
-      "CONST_MMU_FLUSH": "",
+      "CONST_UNUSED_MMU_FLUSH": "",
       "CONST_CACHE_FLUSH": "",
       "dma0": "",
       "mem_ctrl": "",
@@ -34,8 +35,24 @@
         "type": "clk",
         "direction": "I",
         "parameters": {
+          "CLK_DOMAIN": {
+            "value": "soc_4core_trial_sys_clk",
+            "value_src": "default"
+          },
           "FREQ_HZ": {
             "value": "100000000"
+          },
+          "FREQ_TOLERANCE_HZ": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "INSERT_VIP": {
+            "value": "0",
+            "value_src": "default"
+          },
+          "PHASE": {
+            "value": "0.0",
+            "value_src": "default"
           }
         }
       },
@@ -47,14 +64,14 @@
       "proc_sys_reset_0": {
         "vlnv": "xilinx.com:ip:proc_sys_reset:5.0",
         "xci_name": "soc_4core_trial_proc_sys_reset_0_0",
-        "xci_path": "ip\\soc_4core_trial_proc_sys_reset_0_0_1\\soc_4core_trial_proc_sys_reset_0_0.xci",
+        "xci_path": "ip\\soc_4core_trial_proc_sys_reset_0_0_2\\soc_4core_trial_proc_sys_reset_0_0.xci",
         "inst_hier_path": "proc_sys_reset_0"
       },
-      "CONST_MMU_FLUSH": {
+      "CONST_UNUSED_MMU_FLUSH": {
         "vlnv": "xilinx.com:ip:xlconstant:1.1",
-        "xci_name": "soc_4core_trial_CONST_MMU_FLUSH_0",
-        "xci_path": "ip\\soc_4core_trial_CONST_MMU_FLUSH_0_1\\soc_4core_trial_CONST_MMU_FLUSH_0.xci",
-        "inst_hier_path": "CONST_MMU_FLUSH",
+        "xci_name": "soc_4core_trial_CONST_UNUSED_MMU_FLUSH_0",
+        "xci_path": "ip\\soc_4core_trial_CONST_UNUSED_MMU_FLUSH_0\\soc_4core_trial_CONST_UNUSED_MMU_FLUSH_0.xci",
+        "inst_hier_path": "CONST_UNUSED_MMU_FLUSH",
         "parameters": {
           "CONST_VAL": {
             "value": "0"
@@ -67,7 +84,7 @@
       "CONST_CACHE_FLUSH": {
         "vlnv": "xilinx.com:ip:xlconstant:1.1",
         "xci_name": "soc_4core_trial_CONST_CACHE_FLUSH_0",
-        "xci_path": "ip\\soc_4core_trial_CONST_CACHE_FLUSH_0_1\\soc_4core_trial_CONST_CACHE_FLUSH_0.xci",
+        "xci_path": "ip\\soc_4core_trial_CONST_CACHE_FLUSH_0_2\\soc_4core_trial_CONST_CACHE_FLUSH_0.xci",
         "inst_hier_path": "CONST_CACHE_FLUSH",
         "parameters": {
           "CONST_VAL": {
@@ -81,7 +98,7 @@
       "dma0": {
         "vlnv": "xilinx.com:ip:axi_cdma:4.1",
         "xci_name": "soc_4core_trial_dma0_0",
-        "xci_path": "ip\\soc_4core_trial_dma0_0_1\\soc_4core_trial_dma0_0.xci",
+        "xci_path": "ip\\soc_4core_trial_dma0_0_2\\soc_4core_trial_dma0_0.xci",
         "inst_hier_path": "dma0",
         "parameters": {
           "C_INCLUDE_SG": {
@@ -112,7 +129,7 @@
       "mem_ctrl": {
         "vlnv": "xilinx.com:ip:axi_bram_ctrl:4.1",
         "xci_name": "soc_4core_trial_mem_ctrl_0",
-        "xci_path": "ip\\soc_4core_trial_mem_ctrl_0_1\\soc_4core_trial_mem_ctrl_0.xci",
+        "xci_path": "ip\\soc_4core_trial_mem_ctrl_0_2\\soc_4core_trial_mem_ctrl_0.xci",
         "inst_hier_path": "mem_ctrl",
         "parameters": {
           "PROTOCOL": {
@@ -126,7 +143,7 @@
       "mem_bram": {
         "vlnv": "xilinx.com:ip:blk_mem_gen:8.4",
         "xci_name": "soc_4core_trial_mem_bram_0",
-        "xci_path": "ip\\soc_4core_trial_mem_bram_0_1\\soc_4core_trial_mem_bram_0.xci",
+        "xci_path": "ip\\soc_4core_trial_mem_bram_0_2\\soc_4core_trial_mem_bram_0.xci",
         "inst_hier_path": "mem_bram",
         "parameters": {
           "Memory_Type": {
@@ -139,7 +156,7 @@
       },
       "axi_interconnect_0": {
         "vlnv": "xilinx.com:ip:axi_interconnect:2.1",
-        "xci_path": "ip\\soc_4core_trial_axi_interconnect_0_0_1\\soc_4core_trial_axi_interconnect_0_0.xci",
+        "xci_path": "ip\\soc_4core_trial_axi_interconnect_0_0_2\\soc_4core_trial_axi_interconnect_0_0.xci",
         "inst_hier_path": "axi_interconnect_0",
         "xci_name": "soc_4core_trial_axi_interconnect_0_0",
         "parameters": {
@@ -255,7 +272,7 @@
           "xbar": {
             "vlnv": "xilinx.com:ip:axi_crossbar:2.1",
             "xci_name": "soc_4core_trial_xbar_0",
-            "xci_path": "ip\\soc_4core_trial_xbar_0_1\\soc_4core_trial_xbar_0.xci",
+            "xci_path": "ip\\soc_4core_trial_xbar_0_2\\soc_4core_trial_xbar_0.xci",
             "inst_hier_path": "axi_interconnect_0/xbar",
             "parameters": {
               "NUM_MI": {
@@ -338,7 +355,7 @@
               "auto_pc": {
                 "vlnv": "xilinx.com:ip:axi_protocol_converter:2.1",
                 "xci_name": "soc_4core_trial_auto_pc_1",
-                "xci_path": "ip\\soc_4core_trial_auto_pc_1_1\\soc_4core_trial_auto_pc_1.xci",
+                "xci_path": "ip\\soc_4core_trial_auto_pc_1_2\\soc_4core_trial_auto_pc_1.xci",
                 "inst_hier_path": "axi_interconnect_0/s00_couplers/auto_pc",
                 "parameters": {
                   "MI_PROTOCOL": {
@@ -551,7 +568,7 @@
               "auto_pc": {
                 "vlnv": "xilinx.com:ip:axi_protocol_converter:2.1",
                 "xci_name": "soc_4core_trial_auto_pc_0",
-                "xci_path": "ip\\soc_4core_trial_auto_pc_0_1\\soc_4core_trial_auto_pc_0.xci",
+                "xci_path": "ip\\soc_4core_trial_auto_pc_0_2\\soc_4core_trial_auto_pc_0.xci",
                 "inst_hier_path": "axi_interconnect_0/m01_couplers/auto_pc",
                 "parameters": {
                   "MI_PROTOCOL": {
@@ -726,7 +743,7 @@
       "cpu0": {
         "vlnv": "xilinx.com:module_ref:quad_core_axi_wrapper_ahb:1.0",
         "xci_name": "soc_4core_trial_cpu0_0",
-        "xci_path": "ip\\soc_4core_trial_cpu0_0_1\\soc_4core_trial_cpu0_0.xci",
+        "xci_path": "ip\\soc_4core_trial_cpu0_0_2\\soc_4core_trial_cpu0_0.xci",
         "inst_hier_path": "cpu0",
         "parameters": {
           "RESET_ADDR0": {
@@ -760,6 +777,10 @@
               "PROTOCOL": {
                 "value": "AXI4LITE",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "user_prop"
               },
               "ID_WIDTH": {
                 "value": "0",
@@ -844,6 +865,10 @@
               "MAX_BURST_LENGTH": {
                 "value": "1",
                 "value_src": "auto"
+              },
+              "CLK_DOMAIN": {
+                "value": "soc_4core_trial_sys_clk",
+                "value_src": "default_prop"
               }
             },
             "address_space_ref": "M_AXI",
@@ -950,6 +975,14 @@
               "ASSOCIATED_RESET": {
                 "value": "ARESETN",
                 "value_src": "constant"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "user_prop"
+              },
+              "CLK_DOMAIN": {
+                "value": "soc_4core_trial_sys_clk",
+                "value_src": "default_prop"
               }
             }
           },
@@ -1072,9 +1105,9 @@
           "cpu0/Cache_Flush"
         ]
       },
-      "CONST_MMU_FLUSH_dout": {
+      "CONST_UNUSED_MMU_FLUSH_dout": {
         "ports": [
-          "CONST_MMU_FLUSH/dout",
+          "CONST_UNUSED_MMU_FLUSH/dout",
           "cpu0/Mmu_Flush"
         ]
       },

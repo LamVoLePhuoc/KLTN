@@ -1,4 +1,8 @@
-# Cải tiến MMU theo kiến trúc bộ điều khiển cache dùng chung
+# [LEGACY] Cải tiến MMU theo kiến trúc bộ điều khiển cache dùng chung
+
+> Tài liệu này ghi lại phương án cũ từng giữ đồng thời Sv32 và cache controller.
+> Phạm vi active hiện nay đã bỏ VA↔PA/TLB/PTW; xem
+> `Risc_V_new/THESIS_SCOPE_CACHE_CONTROLLER.md` và `ARCHITECTURE.md`.
 
 ## 1. Kết luận sau khi đối chiếu góp ý và mã tham khảo
 

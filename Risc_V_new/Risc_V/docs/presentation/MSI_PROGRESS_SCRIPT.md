@@ -1,5 +1,10 @@
 # Kịch bản trình bày tiến độ cache coherence MSI
 
+> Cập nhật phạm vi: “MMU” trong bài này là Cache/Memory Management Unit; không
+> còn TLB/PTW/Sv32 trong hierarchy active. Con số 26/26 là baseline lịch sử trước
+> thay đổi. Chỉ thay bằng 21/21 sau khi chạy thành công
+> `scripts/run_active_cache_xsim.tcl` trên phiên bản hiện tại.
+
 Thời lượng mục tiêu: 10–12 phút. Đối tượng: giảng viên hướng dẫn hoặc hội đồng có
 kiến thức về kiến trúc máy tính và RTL.
 
@@ -10,9 +15,9 @@ kiến thức về kiến trúc máy tính và RTL.
 > Phần em trình bày hôm nay là tiến độ thiết kế cache coherence MSI cho hệ thống
 > RISC-V RV32IMA bốn lõi. Mục tiêu của khối này là bảo đảm bốn D-cache riêng không
 > quan sát dữ liệu cũ khi nhiều lõi cùng truy cập một cache line. Ở thời điểm hiện
-> tại, chức năng MSI blocking đã hoàn thiện ở mức RTL và toàn bộ regression hiện có
-> đạt 26 trên 26 test PASS bằng QuestaSim. Phần chưa hoàn tất chủ yếu nằm ở xác minh
-> Vivado, timing và chạy trên FPGA thật.
+> tại, chức năng MSI blocking đã hoàn thiện ở mức RTL. Baseline trước đổi phạm vi
+> đạt 26 trên 26 test PASS; hierarchy physical-address mới cần được xác nhận lại bằng
+> bộ 21 test active. Phần chưa hoàn tất chủ yếu nằm ở XSIM, timing và FPGA thật.
 
 Điểm cần nhấn mạnh: nói rõ “hoàn thiện ở mức RTL”, không nói “hoàn thiện toàn bộ hệ
 thống” vì chưa có synthesis và kết quả trên board.
@@ -139,7 +144,9 @@ tiên correctness và khả năng kiểm chứng.
 
 **Thời lượng:** 80 giây
 
-> Regression hiện tại có 26 testbench tự kiểm và tất cả đều PASS bằng QuestaSim.
+> Baseline trước đổi phạm vi có 26 testbench tự kiểm và tất cả đều PASS bằng
+> QuestaSim. Bộ regression mới có 21 test active, loại tám test Sv32; chỉ công bố
+> tỷ lệ mới sau khi chạy `run_active_cache_xsim.tcl` trên hierarchy hiện hành.
 > Riêng cache/coherence đã kiểm tra read miss, S lên M, owner forwarding, nhiều
 > sharer, false sharing, eviction L1/L2, AMO, LR/SC, FENCE.I, AHB, uncached và các
 > đường lỗi.
@@ -171,8 +178,9 @@ tiên correctness và khả năng kiểm chứng.
 
 **Thời lượng:** 50 giây
 
-> Em chốt lại ba ý. Thứ nhất, MSI blocking đã hoàn thiện về chức năng ở mức RTL và
-> regression đạt 26 trên 26 PASS. Thứ hai, chuyển từ MESI sang MSI là quyết định có
+> Em chốt lại ba ý. Thứ nhất, MSI blocking đã hoàn thiện về chức năng ở mức RTL;
+> 26/26 là baseline cũ và bộ 21 test active đang là mốc xác minh tiếp theo. Thứ hai,
+> chuyển từ MESI sang MSI là quyết định có
 > chủ đích để mọi thay đổi ownership đều hiện ra dưới dạng RFO, giúp directory và
 > kiểm chứng rõ ràng hơn. Thứ ba, phần còn lại tập trung vào bằng chứng phần cứng và
 > hiệu năng, không phải các luồng coherence cơ bản.
@@ -191,8 +199,8 @@ Round-robin chọn một request. Giao dịch được tuần tự hóa, request
 tất invalidate và nhận M; request còn lại xử lý sau và phải chuyển ownership lại.
 
 **26/26 PASS có nghĩa là hoàn thành chưa?**  
-Hoàn thành chức năng RTL trong phạm vi test hiện tại. Chưa thể tuyên bố hoàn thành
-toàn hệ thống trước khi có synthesis, timing và demo FPGA.
+Không. Đây là baseline trước khi bỏ Sv32. Cần 21/21 active trên hierarchy mới và
+vẫn chưa thể tuyên bố hoàn thành toàn hệ thống trước synthesis, timing và demo FPGA.
 
 **Tại sao chưa làm non-blocking?**  
 Non-blocking cần nhiều transaction ID, MSHR và xử lý race phức tạp. Bản blocking

@@ -117,6 +117,7 @@ module tb_coherence_ahb;
     wire        hmastlock [0:3];
     wire [2:0]  hsize [0:3];
     wire [3:0]  hprot [0:3];
+    wire        req_active [0:3];
 
     genvar gi;
     generate
@@ -143,12 +144,13 @@ module tb_coherence_ahb;
                 .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_error(bus_resp_error[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
                 .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HSIZE(hsize[gi]), .HTRANS(htrans[gi]),
                 .HWDATA(hwdata[gi]), .HBURST(), .HPROT(hprot[gi]), .HMASTLOCK(hmastlock[gi]),
-                .HRDATA(hrdata[gi]), .HREADY(hready[gi]), .HRESP(hresp[gi])
+                .HRDATA(hrdata[gi]), .HREADY(hready[gi]), .HRESP(hresp[gi]),
+                .REQ_ACTIVE(req_active[gi])
             );
 
             ahb_lite_l1_slave_adapter u_ahb_s (
                 .HCLK(clk), .HRESETn(HRESETn),
-                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]), .HSIZE(hsize[gi]), .HPROT(hprot[gi]),
+                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]), .HSIZE(hsize[gi]), .HPROT(hprot[gi]), .REQ_ACTIVE(req_active[gi]),
                 .HREADYOUT(hready[gi]), .HRDATA(hrdata[gi]), .HRESP(hresp[gi]),
                 .dreq_valid(dreq_valid[gi]), .dreq_type(dreq_type[gi]),
                 .dreq_addr(dreq_addr[gi]), .dreq_line(dreq_line[gi]),

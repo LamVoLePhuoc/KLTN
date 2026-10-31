@@ -1,0 +1,18 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_cache_lrsc_snoop_behav/xsim_script.tcl
+# xsim {tb_cache_lrsc_snoop_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] LR.W returned 33 before the invalidate
+[PASS] coherence invalidate cleared reservation; SC.W returned 1
+[PASS] failed SC.W issued no store; following LW still read 33
+[PASS] invalidated line refetched twice and failed SC emitted no RFO
+CACHE_LRSC_SNOOP_TB: PASS
+$finish called at time : 5375 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_lrsc_snoop.v" Line 220
+exit
+INFO: [Common 17-206] Exiting xsim at Tue Oct 27 07:46:20 2026...

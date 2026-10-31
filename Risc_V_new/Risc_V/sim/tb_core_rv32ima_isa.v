@@ -284,6 +284,28 @@ module tb_core_rv32ima_isa;
         emit(enc_s(12'h0a0, 5'd10, 5'd20, 3'b010));
         emit(enc_s(12'h0a4, 5'd11, 5'd20, 3'b010));
 
+        // Branches whose operands are produced immediately beforehand.
+        // When each branch reaches EX, one source is forwarded from M and the
+        // other from W.  This directly covers the timing-sensitive path from
+        // RD_M/forwarding through the dedicated branch comparator and FlushE.
+        emit(enc_i(12'd0,   5'd0,  3'b000, 5'd13, 7'b0010011));
+        emit(enc_i(12'd5,   5'd0,  3'b000, 5'd14, 7'b0010011));
+        emit(enc_i(12'd5,   5'd0,  3'b000, 5'd15, 7'b0010011));
+        emit(enc_b(13'd8,   5'd15, 5'd14, 3'b000));
+        emit(enc_i(12'h200, 5'd13, 3'b000, 5'd13, 7'b0010011));
+        emit(enc_i(12'd1,   5'd13, 3'b000, 5'd13, 7'b0010011));
+        emit(enc_i(12'hfff, 5'd0,  3'b000, 5'd14, 7'b0010011));
+        emit(enc_i(12'd1,   5'd0,  3'b000, 5'd15, 7'b0010011));
+        emit(enc_b(13'd8,   5'd15, 5'd14, 3'b100));
+        emit(enc_i(12'h200, 5'd13, 3'b000, 5'd13, 7'b0010011));
+        emit(enc_i(12'd2,   5'd13, 3'b000, 5'd13, 7'b0010011));
+        emit(enc_i(12'd1,   5'd0,  3'b000, 5'd14, 7'b0010011));
+        emit(enc_i(12'hfff, 5'd0,  3'b000, 5'd15, 7'b0010011));
+        emit(enc_b(13'd8,   5'd15, 5'd14, 3'b110));
+        emit(enc_i(12'h200, 5'd13, 3'b000, 5'd13, 7'b0010011));
+        emit(enc_i(12'd4,   5'd13, 3'b000, 5'd13, 7'b0010011));
+        emit(enc_s(12'h0a8, 5'd13, 5'd20, 3'b010));
+
         // Byte/half/word stores and signed/unsigned loads.
         emit(enc_i(12'h500, 5'd0, 3'b000, 5'd20, 7'b0010011));
         emit(enc_i(12'hf80, 5'd0, 3'b000, 5'd21, 7'b0010011));
@@ -397,6 +419,7 @@ module tb_core_rv32ima_isa;
         check_mem(16'h049c, 32'd1, "JAL redirect");
         check_mem(16'h04a0, jalr_pc + 12, "JALR link");
         check_mem(16'h04a4, 32'd2, "JALR redirect");
+        check_mem(16'h04a8, 32'd7, "forwarded branch compare/flush");
 
         check_mem(16'h0500, 32'h8001_7f80, "SB/SH lane merge");
         check_mem(16'h0520, 32'hffff_ff80, "LB");

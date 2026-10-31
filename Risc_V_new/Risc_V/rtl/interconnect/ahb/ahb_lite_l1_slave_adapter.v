@@ -62,6 +62,7 @@ module ahb_lite_l1_slave_adapter (
     input  wire          HMASTLOCK,
     input  wire [2:0]    HSIZE,
     input  wire [3:0]    HPROT,
+    input  wire          REQ_ACTIVE, // paired-master transaction remains active
     output reg            HREADYOUT,
     output reg  [31:0]    HRDATA,
     output wire [1:0]     HRESP,
@@ -100,6 +101,7 @@ module ahb_lite_l1_slave_adapter (
     reg [2:0]   transfer_size;
     reg [255:0] rd_buf;
     reg [255:0] wr_buf;
+    reg         release_pending;
 
     function [3:0] ahb_wstrb;
         input [2:0] size;
@@ -122,12 +124,26 @@ module ahb_lite_l1_slave_adapter (
             resp_error_hold <= 1'b0;
             is_uncached <= 1'b0;
             transfer_size <= 3'b010;
+            release_pending <= 1'b0;
         end
         else begin
             case (state)
                 // ------------------------------------------------
                 S_IDLE: begin
-                    dreq_valid <= 1'b0;
+                    // A cached read/RFO backend request stays asserted after
+                    // dresp_valid until the paired master reports that its L1
+                    // has committed the returned line.  The shared controller
+                    // therefore remains in WAIT_REQ_DROP and cannot issue an
+                    // early same-line snoop that would miss this new holder.
+                    if (release_pending) begin
+                        if (!REQ_ACTIVE) begin
+                            dreq_valid     <= 1'b0;
+                            release_pending <= 1'b0;
+                        end
+                    end
+                    else begin
+                        dreq_valid <= 1'b0;
+                    end
                     resp_error_hold <= 1'b0;
                     if (HTRANS == TRANS_NONSEQ) begin
                         is_uncached <= ~HPROT[3];
@@ -218,7 +234,8 @@ module ahb_lite_l1_slave_adapter (
                     // can be lost while another core owns the CM.
                     dreq_valid <= 1'b1;
                     if (dresp_valid) begin
-                        dreq_valid <= 1'b0;
+                        dreq_valid <= is_uncached ? 1'b0 : 1'b1;
+                        release_pending <= !is_uncached;
                         resp_error_hold <= dresp_error;
                         rd_buf    <= dresp_line;
                         HRDATA    <= dresp_line[0 +: 32]; // word 0

@@ -42,7 +42,8 @@
 #
 # CHANGES FROM build_soc_mmu_trial.tcl (the 1-core version), all per
 # instruction:
-#   - 4 cores (quad_core_axi_wrapper_ahb), not 1 (mmu_ip_wrapper) --
+#   - 4 cores through quad_core_axi_wrapper_ahb, not the legacy 1-core
+#     Sv32 demo wrapper --
 #     wired through coherence_manager.v's L2/MSI/arbiter (now reached
 #     through the AHB-Lite bridge -- see above), so this script only
 #     ever touches ONE AXI master from the CPU side (unlike the 1-core
@@ -65,15 +66,10 @@
 # real DDR path is confirmed; axi_cdma over axi_dma since this is a
 # memory-mapped-to-memory-mapped copy engine, not a stream device).
 #
-# MMU enable is no longer an external pin (see step [3] below): each
-# core boots with its satp CSR reset to 0 (Bare/bypass, same effective
-# result as the old CONST_MMU_ENABLE=0 tie-off) and only starts
-# translating once boot/supervisor code running ON that core executes
-# CSRRW satp, ... itself -- same as real RISC-V hardware. This script
-# does not preload a page table into mem_ctrl, so as long as the
-# preloaded program never writes satp, behaviour is unchanged from the
-# old tie-off (see tb_mmu_core.v for the table layout a future
-# preloaded test could use).
+# The active thesis hierarchy uses one direct physical address space.
+# There is no TLB/PTW or VA-to-PA translation. CONST_UNUSED_MMU_FLUSH
+# ties off a deprecated compatibility pin; remove both after regenerating
+# the block design with the final packaged interface.
 #
 # CORRECTNESS CAVEAT (read before trusting results from this BD):
 # coherence_manager.v / l1_dcache.v / l2_cache.v implement a from-
@@ -145,15 +141,14 @@ proc find_rtl_source {rtl_root filename} {
 }
 
 set new_sources {
-    mmu_region_decode.v
-    mmu_debug_buffer.v
-    mmu_super_tlb.v
+    physical_core_wrapper.v
     l1_icache.v
     l1_dcache.v
     core_l1_wrapper.v
     l2_cache.v
     cache_debug_buffer.v
     cache_maintenance_tracker.v
+    system_cache_maintenance.v
     coherence_manager.v
     cache_controller_mmu.v
     ahb_lite_l1_adapter.v
@@ -234,7 +229,7 @@ catch {set_property -dict [list \
 connect_bd_net $ACLK    [get_bd_pins cpu0/ACLK]
 connect_bd_net $ARESETN [get_bd_pins cpu0/ARESETN]
 
-set c_flush [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 CONST_MMU_FLUSH]
+set c_flush [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 CONST_UNUSED_MMU_FLUSH]
 set_property CONFIG.CONST_WIDTH {1} [get_bd_cells $c_flush]
 set_property CONFIG.CONST_VAL   {0} [get_bd_cells $c_flush]
 connect_bd_net [get_bd_pins $c_flush/dout] [get_bd_pins cpu0/Mmu_Flush]
@@ -244,13 +239,10 @@ set_property CONFIG.CONST_WIDTH {1} [get_bd_cells $c_cflush]
 set_property CONFIG.CONST_VAL   {0} [get_bd_cells $c_cflush]
 connect_bd_net [get_bd_pins $c_cflush/dout] [get_bd_pins cpu0/Cache_Flush]
 
-# NOTE: no CONST_MMU_ENABLE / CONST_SATP_PPN0..3 any more -- each
-# core's own satp CSR (software CSRRW, see csr_trap_unit.v) is now the
-# real source of truth for MMU enable + page-table root
-# (core_l1_wrapper.v's mmu_core_wrapper instance uses
-# MMU_CTRL_FROM_CSR=1). Boot code must CSRRW satp itself once a page
-# table is ready in mem_ctrl; there is no external pin left to flip
-# for this any more.
+# NOTE: the Mmu_Flush pin is retained only for compatibility with an
+# already-generated wrapper.  The active core uses direct physical
+# addresses and ignores this tied-low signal. Regenerate the BD after
+# the compatibility pin is removed from the outer wrappers.
 
 #---------------------------------------------------------------
 # 4. DMA (memory-mapped to memory-mapped copy engine)
@@ -369,9 +361,8 @@ puts ""
 puts "Next steps:"
 puts "  1. Window -> $BD_NAME -- inspect the diagram, check for red/unconnected pins."
 puts "  2. If any WARNING printed above, fix that one connection/address by hand."
-puts "  3. MMU enable/satp are CSR-driven now (no external pin) -- each core boots"
-puts "     with paging off and only translates once ITS OWN boot code executes"
-puts "     CSRRW satp, ... after preloading a page table into mem_ctrl."
+puts "  3. Addressing is direct physical: no TLB/PTW/page-table preload is required."
+puts "     CONST_UNUSED_MMU_FLUSH only ties off a deprecated compatibility pin."
 puts "  4. Run the MSI regressions (sim/tb_coherence.v and"
 puts "     sim/tb_coherence_ahb.v) in addition to validating this block design."
 puts "  5. To simulate: set the generated <BD_NAME>_wrapper as the simulation top,"

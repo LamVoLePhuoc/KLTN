@@ -1,0 +1,561 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_coherence_behav/xsim_script.tcl
+# xsim {tb_coherence_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+---------------------------------------------
+MSI A: cold BusRd must grant S
+[FAIL] ready/valid accepted a second request from core 0 before response
+[PASS] A: core0 initial read: 0x00000000
+MSI B: S write must issue RFO before entering M
+[PASS] B: S->M generated exactly one RFO
+MSI C: BusRd snoops M, forwards new data, M->S, no DRAM read
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[PASS] C: core1 sees core0's dirty write: 0xaaaa0001
+[PASS] C: value came from owner/L2 without DRAM
+[PASS] C: core0 forwarded exactly one dirty owner line
+[PASS] C: controller wrote latest owner line into L2 as dirty
+[PASS] C: L2 directory records core0/core1 as Shared
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[PASS] C: downgraded core0 still reads shared value: 0xaaaa0001
+MSI D: four readers, then one writer invalidates all sharers
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[PASS] D: shared writer generated one RFO
+[PASS] D: all three remote sharers were snooped in parallel
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[PASS] D: core0 re-fetches writer value: 0xbbbb0002
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[PASS] D: core1 re-fetches writer value: 0xbbbb0002
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[PASS] D: core3 re-fetches writer value: 0xbbbb0002
+MSI E: false sharing preserves both words in one line
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[PASS] E: word 0 survives ownership transfer: 0x1111aaaa
+[PASS] E: word 1 written by new owner: 0x2222bbbb
+MSI F: dirty L1 eviction writes L2; consumer must not access DRAM
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] core 0 changed request payload while valid && !ready
+[PASS] F: conflicting third line caused an L1 writeback
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] F: consumer sees L1-evicted value from L2: got=0x00000000 expected=0xcafe0000
+[FAIL] F: L2 hit avoided DRAM
+MSI G: inclusive dirty L2 eviction snoops victim and writes DRAM
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[PASS] G: fifth same-set line wrote dirty victim to DRAM
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[PASS] G: evicted dirty victim is recoverable from DRAM: 0xd0000000
+MSI H: whole-cache flush writes back M lines before invalidation
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] response for core 0 had no accepted request
+[PASS] H: flush emitted writeback for dirty data
+[FAIL] ready/valid accepted a second request from core 1 before response
+[PASS] H: another core sees flushed value: 0xf1e50001
+[PASS] H: flushed value was recovered from L2
+MSI I: simultaneous misses are served in round-robin order
+[FAIL] core 1 changed request payload while valid && !ready
+[FAIL] response for core 1 had no accepted request
+[FAIL] core 2 changed request payload while valid && !ready
+[FAIL] I: first grant follows saved round-robin pointer
+[FAIL] I: all four grants rotate without starvation
+MSI J: byte/halfword merge and signed/unsigned loads
+[FAIL] ready/valid accepted a second request from core 0 before response
+[PASS] J: SB/SH preserve untouched lanes: 0x80ffaa44
+[PASS] J: LB sign extends: 0xffffffaa
+[PASS] J: LBU zero extends: 0x000000aa
+[PASS] J: LH sign extends: 0xffff80ff
+[PASS] J: LHU zero extends: 0x000080ff
+MSI K: cached AMO RMW is correct on cold miss, M hit and S upgrade
+[FAIL] K: cold AMOADD returns old filled value: got=0x00000000 expected=0x0000000a
+[FAIL] K: AMOSWAP returns prior M value: got=0x00000005 expected=0x0000000f
+[PASS] K: AMOXOR returns prior value: 0x000000f0
+[PASS] K: AMOOR returns prior value: 0x000000ff
+[PASS] K: AMOAND returns prior value: 0x000001ff
+[PASS] K: AMOMIN returns prior value: 0x0000001f
+[PASS] K: AMOMAX returns signed-negative prior: 0xfffffff0
+[PASS] K: AMOMINU returns prior value: 0x00000002
+[PASS] K: AMOMAXU returns prior value: 0x00000001
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[PASS] K: another core observes final AMO value: 0xffffffff
+[PASS] K: shared AMO upgrade returns old value: 0xffffffff
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[PASS] K: AMO upgrade publishes new value: 0x12345678
+[PASS] K: nonzero-word AMO returns its own old lane: 0x00000000
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[PASS] K: nonzero-word AMO updates the selected lane: 0xdeadbeef
+[PASS] K: nonzero-word AMO preserves neighboring lane: 0x12345678
+MSI L: deterministic randomized ownership/flush stress
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] core 3 changed request payload while valid && !ready
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] core 3 changed request payload while valid && !ready
+[FAIL] response for core 3 had no accepted request
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] core 3 changed request payload while valid && !ready
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: stress op=42 core=2 word=45 got=0x5a002225 expected=0x5a00170d
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: stress op=44 core=2 word=54 got=0x00000000 expected=0x5a001606
+[FAIL] core 1 changed request payload while valid && !ready
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] core 1 changed request payload while valid && !ready
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] core 1 changed request payload while valid && !ready
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: stress op=47 core=1 word=53 got=0x5a00170d expected=0x00000000
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: stress op=67 core=3 word=50 got=0x00000000 expected=0x5a002112
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] core 2 changed request payload while valid && !ready
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] core 2 changed request payload while valid && !ready
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: stress op=73 core=1 word=55 got=0x5a00372f expected=0x00000000
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: stress op=82 core=0 word=50 got=0x5a002e3a expected=0x5a002112
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: stress op=86 core=0 word=33 got=0x5a001b29 expected=0x5a000401
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: stress op=91 core=0 word=39 got=0x5a00352f expected=0x5a001d27
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] core 0 changed request payload while valid && !ready
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: stress op=94 core=0 word=56 got=0x5a005418 expected=0x00000000
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: stress op=102 core=0 word=35 got=0x5a00483b expected=0x5a003f23
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: stress op=106 core=3 word=51 got=0x5a00483b expected=0x00000000
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] core 2 changed request payload while valid && !ready
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: stress op=122 core=2 word=34 got=0x5a002e3a expected=0x00000000
+[FAIL] L: stress op=124 core=3 word=10 got=0x00000000 expected=0x5a00231a
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: stress op=126 core=3 word=43 got=0x5a001133 expected=0x5a004e2b
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: stress op=135 core=0 word=22 got=0x5a003b36 expected=0x5a004f06
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] core 3 changed request payload while valid && !ready
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] core 3 changed request payload while valid && !ready
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: stress op=142 core=0 word=31 got=0x00000000 expected=0x5a00352f
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: final stress word=0 got=0x5a005f20 expected=0x00000000
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=1 got=0x00000000 expected=0x5a006101
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=2 got=0x5a008402 expected=0x5a005712
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: final stress word=3 got=0x00000000 expected=0x5a000513
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=5 got=0x5a004d15 expected=0x5a007b15
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=6 got=0x5a007416 expected=0x5a006716
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: final stress word=8 got=0x5a005f20 expected=0x5a005418
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=13 got=0x5a004d15 expected=0x00000000
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=14 got=0x5a003b36 expected=0x5a005c0e
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: final stress word=24 got=0x00000000 expected=0x5a008928
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=25 got=0x5a007901 expected=0x5a005119
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=26 got=0x5a002622 expected=0x5a00761a
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=29 got=0x5a009735 expected=0x5a004b0d
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=30 got=0x5a004f06 expected=0x5a00810e
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: final stress word=32 got=0x5a005f20 expected=0x5a006000
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=33 got=0x00000000 expected=0x5a000401
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=34 got=0x5a008402 expected=0x00000000
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: final stress word=36 got=0x00000000 expected=0x5a005324
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=38 got=0x5a007416 expected=0x00000000
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: final stress word=39 got=0x5a00372f expected=0x5a006b17
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] L: final stress word=40 got=0x5a008928 expected=0x5a007808
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=41 got=0x5a001b29 expected=0x5a001019
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=42 got=0x5a00761a expected=0x5a00301a
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] L: final stress word=45 got=0x5a002d3d expected=0x5a00752d
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] L: final stress word=46 got=0x5a00810e expected=0x5a004a0e
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: final stress word=55 got=0x5a00372f expected=0x00000000
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] response for core 0 had no accepted request
+[FAIL] ready/valid accepted a second request from core 1 before response
+[FAIL] response for core 1 had no accepted request
+[FAIL] ready/valid accepted a second request from core 2 before response
+[FAIL] response for core 2 had no accepted request
+[FAIL] ready/valid accepted a second request from core 3 before response
+[FAIL] response for core 3 had no accepted request
+[FAIL] ready/valid accepted a second request from core 0 before response
+[FAIL] L: randomized MSI scoreboard stayed coherent
+[PASS] M: CM performance counters observed all D requests
+[PASS] M: CM observed both L2 hits and misses
+[PASS] M: CM protocol checker stayed clean
+[PASS] M: CM handshake watchdog stayed clean
+[PASS] M: CM external-memory error flag stayed clean
+[PASS] M: optional CM trace buffer captured events
+[PASS] MSI never granted removed Exclusive state
+---------------------------------------------
+MSI_COHERENCE_TB: FAIL (486 check(s) failed)
+---------------------------------------------
+$finish called at time : 209620 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence.v" Line 777
+exit
+INFO: [Common 17-206] Exiting xsim at Mon Oct 26 14:53:26 2026...

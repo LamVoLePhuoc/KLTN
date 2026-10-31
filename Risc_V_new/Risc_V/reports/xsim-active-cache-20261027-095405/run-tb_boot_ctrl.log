@@ -1,0 +1,25 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_boot_ctrl_behav/xsim_script.tcl
+# xsim {tb_boot_ctrl_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] pre-GO maintenance request is rejected and reported
+[PASS] zero byte strobe cannot release cores
+[PASS] GO write releases cores
+[PASS] GO remains sticky after a write of zero
+[PASS] RESULT register applies AXI byte strobes
+[PASS] accepted maintenance emits one request pulse
+[PASS] accepted maintenance clears rejected and stale done status
+[PASS] CACHE status exposes hierarchy busy
+[PASS] command while busy is rejected without a second pulse
+[PASS] one-cycle hierarchy done is latched for software polling
+[PASS] CACHE status exposes sticky hierarchy error
+BOOT_CTRL_TB: PASS
+$finish called at time : 520 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_boot_ctrl.v" Line 170
+exit
+INFO: [Common 17-206] Exiting xsim at Tue Oct 27 09:54:29 2026...

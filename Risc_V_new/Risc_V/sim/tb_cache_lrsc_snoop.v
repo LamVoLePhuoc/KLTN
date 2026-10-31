@@ -124,7 +124,7 @@ module tb_cache_lrsc_snoop;
 
             // reservation_valid is internal architectural state.  Using it as
             // the injection trigger makes this test independent of cache latency.
-            if (!snoop_injected && dut.mmu_core.core.memory_unit.reservation_valid) begin
+            if (!snoop_injected && dut.physical_core.core.memory_unit.reservation_valid) begin
                 snoop_valid    <= 1'b1;
                 snoop_type     <= 1'b0;
                 snoop_addr     <= 32'h0000_4000;
@@ -148,12 +148,12 @@ module tb_cache_lrsc_snoop;
             saw_sc_failure     <= 1'b0;
             saw_original_value <= 1'b0;
         end
-        else if (dut.mmu_core.core.RegWriteW) begin
-            if ((dut.mmu_core.core.RD_W == 5'd5) && (result_w == 32'd33))
+        else if (dut.physical_core.core.RegWriteW) begin
+            if ((dut.physical_core.core.RD_W == 5'd5) && (result_w == 32'd33))
                 saw_lr_value <= 1'b1;
-            if ((dut.mmu_core.core.RD_W == 5'd6) && (result_w == 32'd1))
+            if ((dut.physical_core.core.RD_W == 5'd6) && (result_w == 32'd1))
                 saw_sc_failure <= 1'b1;
-            if ((dut.mmu_core.core.RD_W == 5'd7) && (result_w == 32'd33))
+            if ((dut.physical_core.core.RD_W == 5'd7) && (result_w == 32'd33))
                 saw_original_value <= 1'b1;
         end
     end

@@ -1,0 +1,61 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Oct 27 07:44:57 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/l2-bram-synth-20261027-074309/utilization_hierarchical.rpt
+| Design       : l2_cache
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Synthesized
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------------------+---------------------+------------+------------+---------+------+-----+--------+--------+------------+
+|          Instance          |        Module       | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP Blocks |
++----------------------------+---------------------+------------+------------+---------+------+-----+--------+--------+------------+
+| l2_cache                   |               (top) |      14444 |       2924 |   11520 |    0 | 354 |    128 |      0 |          0 |
+|   (l2_cache)               |               (top) |      13533 |       2013 |   11520 |    0 | 354 |      0 |      0 |          0 |
+|   u_data_word0             |      l2_sp_word_ram |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  | xpm_memory_spram_13 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              | xpm_memory_spram_13 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__1 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word1             |    l2_sp_word_ram_0 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  | xpm_memory_spram_12 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              | xpm_memory_spram_12 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__2 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word2             |    l2_sp_word_ram_1 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  | xpm_memory_spram_11 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              | xpm_memory_spram_11 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__3 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word3             |    l2_sp_word_ram_2 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  | xpm_memory_spram_10 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              | xpm_memory_spram_10 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__4 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word4             |    l2_sp_word_ram_3 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  |  xpm_memory_spram_9 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              |  xpm_memory_spram_9 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__5 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word5             |    l2_sp_word_ram_4 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  |  xpm_memory_spram_8 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              |  xpm_memory_spram_8 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__6 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word6             |    l2_sp_word_ram_5 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  |  xpm_memory_spram_7 |         32 |         32 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              |  xpm_memory_spram_7 |         32 |         32 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__7 |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
+|   u_data_word7             |    l2_sp_word_ram_6 |        687 |        687 |       0 |    0 |   0 |     16 |      0 |          0 |
+|     u_xpm                  |    xpm_memory_spram |        687 |        687 |       0 |    0 |   0 |     16 |      0 |          0 |
+|       (u_xpm)              |    xpm_memory_spram |        687 |        687 |       0 |    0 |   0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |     xpm_memory_base |          0 |          0 |       0 |    0 |   0 |     16 |      0 |          0 |
++----------------------------+---------------------+------------+------------+---------+------+-----+--------+--------+------------+
+
+

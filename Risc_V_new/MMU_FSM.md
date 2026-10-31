@@ -1,4 +1,7 @@
-# FSM điều khiển MMU
+# FSM điều khiển MMU [LEGACY SV32]
+
+> Tài liệu lịch sử cho nhánh dịch địa chỉ Sv32. Không thuộc kiến trúc active
+> của khóa luận sau khi chuyển phạm vi sang Cache/Memory Management Unit.
 
 Tài liệu này mô tả đúng RTL hiện tại trong `Risc_V/rtl/mmu/mmu_top.v` và
 `Risc_V/rtl/mmu/mmu_ptw.v`. MMU dùng hai FSM lồng nhau: FSM ngoài phân xử yêu cầu

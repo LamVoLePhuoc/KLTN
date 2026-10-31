@@ -1,0 +1,16 @@
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical xil_defaultlib.tb_dma_end_to_end -snapshot tb_dma_end_to_end_behav 
+Multi-threading is on. Using 10 slave threads.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.axi_lite_dma_regs
+Compiling module xil_defaultlib.dma_cache_coordinator(TIMEOUT_CY...
+Compiling module xil_defaultlib.axi_memcpy_dma(MAX_BURST_LEN=4)
+Compiling module xil_defaultlib.soc_dma_controller(MAX_BURST_LEN...
+Compiling module xil_defaultlib.tb_dma_end_to_end
+Built simulation snapshot tb_dma_end_to_end_behav

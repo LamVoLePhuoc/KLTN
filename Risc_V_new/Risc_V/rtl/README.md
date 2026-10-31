@@ -1,6 +1,6 @@
 # RTL organization
 
-> Last verified baseline: the full inventory in [`files.f`](files.f) compiled
+> Last verified pre-scope-change baseline: the then-current inventory compiled
 > with QuestaSim 10.2c after the directory reorganization and all 26 then-present
 > self-checking testbenches passed. New RV32IMA legality/execution and DMA tests
 > have since been added and require a fresh regression. The active
@@ -10,12 +10,14 @@
 > estimate is not yet met (WNS -5.308 ns). Implementation and board validation remain, see
 > [`../../README.md`](../../README.md).
 
-The active quad-core design is grouped by architectural block. Module names and interfaces are unchanged; only source locations changed.
+The active quad-core design is grouped by architectural block. It uses direct
+physical addresses; TLB/PTW/Sv32 sources are excluded from `files.f` and kept in
+`files_sv32_legacy.f` only for reproducing historical tests.
 
 ```text
 rtl/
 ├── core/             RV32IMA pipeline, execution units, CSR, trap and privilege logic
-├── mmu/              Per-core Sv32 translation plus the complete shared cache-controller MMU
+├── mmu/              Active shared cache-controller MMU plus legacy Sv32 source files
 ├── cache/            Per-core L1 I/D caches, shared L2 cache and the core-L1 subsystem wrapper
 ├── coherence/        Backward-compatible facade for legacy integrated-L2 tests
 ├── interconnect/ahb/ AHB-Lite adapters used at the L1/coherence boundary
@@ -36,6 +38,7 @@ rtl/
   automatic pre/post global cache maintenance.
 - `docs/BOOT_DMA_PROTOCOL.md`: AXI4-Lite register map and the required pre/post-DMA cache-maintenance sequence.
 - `files.f`: canonical relative source inventory for static checks and simulator setup.
+- `files_sv32_legacy.f`: optional translation-source inventory; never add it to an active build.
 
 The Vivado scripts resolve source files recursively below `rtl/`, so adding another block folder does not require flattening the tree again.
 
@@ -59,17 +62,16 @@ until the pre/post-DMA maintenance sequence completes.
 ## Dependency direction
 
 ```text
-soc -> cache/core subsystem -> mmu -> core
+soc -> cache/core subsystem -> physical_core_wrapper -> core
 soc -> cache_controller_mmu (owns arbitration, MSI FSM, snoop and memory transactions)
 soc -> cache/L2 (peer of cache_controller_mmu)
 soc -> interconnect/ahb -> cache_controller_mmu
 soc -> boot
 soc/external AXI fabric -> dma -> global cache-maintenance handshake
-mmu -> debug (optional generate blocks)
+cache_controller_mmu -> debug (optional generate blocks)
 legacy_2core -> core
 ```
 
-Avoid dependencies in the opposite direction. In particular, the core must remain independent of cache and SoC wrappers. `mmu_top` (Sv32 translation) must not instantiate a cache; `cache_controller_mmu` is a separately named system-level controller and communicates with the peer L2 only through its command/status interface.
-
-The two meanings of "MMU" used in the project are documented in
-[`docs/architecture/MMU_CACHE_CONTROLLER_REDESIGN.md`](../docs/architecture/MMU_CACHE_CONTROLLER_REDESIGN.md).
+Avoid dependencies in the opposite direction. In particular, the core remains
+independent of cache and SoC wrappers. `cache_controller_mmu` is the only active
+MMU-named block and communicates with peer L2 only through command/status ports.

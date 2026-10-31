@@ -3,66 +3,44 @@
 // ============================================================
 // core_l1_wrapper
 //
-// One "CORE N" box from the 4-CORE CPU WRAPPER diagram: RV32IMA +
-// per-core Sv32 address translation (mmu_core_wrapper.v) + private L1
-// I-Cache/D-Cache (l1_icache.v/l1_dcache.v, this session). This is
-// what quad_core_soc.v instantiates x4.
+// One "CORE N" box from the 4-CORE CPU WRAPPER diagram: RV32IMA plus
+// private L1 I-Cache/D-Cache.  The active thesis scope uses one direct
+// 32-bit physical address space; no TLB/PTW/address-translation MMU is
+// instantiated in this hierarchy.  Shared cache management is handled
+// below the four cores by cache_controller_mmu.
 //
-// mmu_core_wrapper's PCF/InstrF/Instr_ValidF and Mem_*/Mem_ReadDataValidM/
-// Mem_WriteDoneM ports -- built specifically to support a real,
-// multi-cycle-latency memory system (see its header) -- are exactly
-// the ports the L1s plug into: no further stalling logic needed
-// here, l1_icache/l1_dcache's own cpu_valid outputs ARE the
-// Instr_ValidF/Mem_ReadDataValidM/Mem_WriteDoneM signals.
-// Their matching error sidebands are preserved as well: a failed I$
-// fill becomes an instruction access fault, while a failed D$ fill/RFO
-// becomes the original load/store/PTW access fault. Failed lines are
-// never installed by either L1 cache.
+// physical_core_wrapper supplies the pipeline back-pressure needed by
+// a real, multi-cycle cache. l1_icache/l1_dcache completion outputs
+// directly become the instruction/data completion inputs of that
+// wrapper. Error sidebands are preserved: a failed I$ fill becomes an
+// instruction access fault and a failed D$ fill/RFO becomes the
+// original load/store access fault. Failed lines are never installed.
 //
 // LR/SC note: l1_dcache's own INVALIDATE-type snoops (i.e. this
 // core's D$ copy of some line was just invalidated because another
 // core is writing it) are wired into the core's Snoop_Addr/Snoop_WE
 // ports, which is what memory_stage.v's LR/SC reservation check
-// already consumes. This is a strictly more accurate signal than
-// the old round_robin_arbiter_2core's "any write commit, broadcast
-// to the other core" scheme it replaces (it now fires exactly when
-// coherence actually required invalidating this line, nothing more/
-// less). FIXED (was flagged as a real, un-fixed VA-vs-PA mismatch
-// here previously -- see Risc_V_new/README.md's risk register):
-// memory_stage.v's reservation_addr now tracks/compares in the
-// PHYSICAL domain throughout (via RV32IMA.v's new Mem_PhysAddrM
-// input, wired from mmu_core_wrapper.v's own pa_mem -- see that
-// file's header and memory_stage.v's header for the full reasoning),
-// the same domain the snoop address here already was. No change
-// needed in THIS file -- the fix lives entirely inside
-// mmu_core_wrapper.v/RV32IMA.v/memory_stage.v, below this wrapper.
+// already consumes. It fires only when coherence actually invalidates
+// this core's line. Because the active design has one physical address
+// domain, the reservation and snoop comparison use the same address.
 //
-// MMU control: mmu_core_wrapper is instantiated below with
-// MMU_CTRL_FROM_CSR=1 -- the core's own satp CSR (software-written via
-// CSRRW, see csr_trap_unit.v) is the ONE real source of truth for
-// whether translation is on and which page table root is active, same
-// as real RISC-V hardware (there is no external "enable paging" pin on
-// a real core). This is why there is no Mmu_Enable/Satp_PPN port here
-// any more (there was, in an earlier version of this file, before the
-// satp-CSR-to-MMU feedback loop was wired up) -- keeping them would
-// have left two sources of truth that could disagree. Mmu_Flush
-// remains a real external input: it is
-// OR'd with the CSR's own sfence.vma-triggered flush (mmu_core_wrapper.v),
-// which is safe (an extra TLB invalidate only costs a refill, never a
-// correctness bug) and useful for a testbench that wants to force a
-// flush without executing real supervisor code.
+// The legacy Mmu_Flush input and MMU parameters remain only to avoid a
+// disruptive top-level pin change while existing Vivado block designs
+// are regenerated. They have no functional effect in this hierarchy.
 // ============================================================
 module core_l1_wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_1000,
     parameter [31:0] HART_ID    = 32'd0,
-    parameter        MMU_REGION_POLICY_ENABLE = 1,
+    // Deprecated compatibility parameters. They intentionally have no
+    // effect now that address translation is outside the thesis scope.
+    parameter        MMU_REGION_POLICY_ENABLE = 0,
     parameter        MMU_DEBUG_TRACE_ENABLE   = 0,
-    parameter integer MMU_PTW_WATCHDOG_CYCLES = 4096
+    parameter integer MMU_PTW_WATCHDOG_CYCLES = 0
 )(
     input  wire        clk,
     input  wire        rst,
 
-    input  wire        Mmu_Flush,
+    input  wire        Mmu_Flush,     // deprecated/no-op; kept for top-level pin compatibility
     input  wire        Cache_Flush,   // pulse: clean/invalidate D$, then invalidate I$
 
     // Cache-maintenance handshake.  Busy covers both an external
@@ -223,26 +201,18 @@ module core_l1_wrapper #(
         end
     end
 
-    mmu_core_wrapper #(
+    // Mmu_Flush and the three deprecated MMU parameters are preserved at
+    // this wrapper boundary only so old block designs keep elaborating.
+    // They do not reach the active core/cache datapath.
+    wire unused_mmu_flush = Mmu_Flush;
+
+    physical_core_wrapper #(
         .RESET_ADDR(RESET_ADDR),
-        .HART_ID(HART_ID),
-        .MMU_CTRL_FROM_CSR(1),
-        .MMU_REGION_POLICY_ENABLE(MMU_REGION_POLICY_ENABLE),
-        .MMU_DEBUG_TRACE_ENABLE(MMU_DEBUG_TRACE_ENABLE),
-        .PTW_ATOMIC_AD_ENABLE(1),
-        .MMU_PTW_WATCHDOG_CYCLES(MMU_PTW_WATCHDOG_CYCLES)
-    ) mmu_core (
+        .HART_ID(HART_ID)
+    ) physical_core (
         .clk                (clk),
         .rst                (rst),
         .Stall_Core_External(cache_maintenance_stall),
-
-        // Ignored inside mmu_core_wrapper when MMU_CTRL_FROM_CSR=1 (see
-        // its header) -- tied to the transparent-bypass/root-0 values
-        // only so the port connection itself stays well-formed; satp
-        // CSR state is what actually drives translation here.
-        .Mmu_Enable         (1'b0),
-        .Satp_PPN           (20'b0),
-        .Mmu_Flush          (Mmu_Flush),
 
         .Snoop_Addr         (snoop_addr_to_core),
         .Snoop_WE           (snoop_we_to_core),
@@ -269,22 +239,15 @@ module core_l1_wrapper #(
         .ResultW            (ResultW),
         .ALU_ResultE_Debug  (ALU_ResultE_Debug),
 
-        .Fetch_PageFault       (Fetch_PageFault),
-        .Data_PageFault        (Data_PageFault),
         .Fetch_AccessFault     (Fetch_AccessFault),
         .Data_AccessFault      (Data_AccessFault),
-        .Fetch_PageFault_Cause (Fetch_PageFault_Cause),
-        .Data_PageFault_Cause  (Data_PageFault_Cause),
-
-        // The integrated 4-core path consumes satp internally through
-        // MMU_CTRL_FROM_CSR=1; these are observability-only outputs at
-        // this wrapper level, so terminate them explicitly.
-        .CurrentPriv           (),
-        .Mmu_Enable_Csr        (),
-        .Satp_PPN_Csr          (),
-        .Mmu_Flush_Csr         (),
         .FenceI_M              (fence_i_m)
     );
+
+    assign Fetch_PageFault       = 1'b0;
+    assign Data_PageFault        = 1'b0;
+    assign Fetch_PageFault_Cause = 2'b00;
+    assign Data_PageFault_Cause  = 2'b00;
 
     l1_icache u_icache (
         .clk            (clk),

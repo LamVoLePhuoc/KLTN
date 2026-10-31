@@ -4,27 +4,20 @@
 // quad_core_soc
 //
 // The full "4-CORE CPU WRAPPER" box from the architecture diagram:
-// 4x core_l1_wrapper (RV32IMA + per-core Sv32 translation + private
-// L1 I$/D$) feeding one shared cache_controller_mmu.  The controller
+// 4x core_l1_wrapper (RV32IMA + private L1 I$/D$) feeding one shared
+// cache_controller_mmu. All cores issue physical addresses directly;
+// no TLB, PTW or virtual-address translation is active. The controller
 // and l2_cache are peer instances: policy/control stays in the former,
 // data/tag/directory storage stays in the latter.  This is the new
 // "MMU as cache controller" boundary requested for the architecture,
-// with a single flat physical
-// memory port out (the diagram's "CPU MEMORY PORT") for whatever
+// with a single flat physical memory port out (the diagram's "CPU MEMORY
+// PORT") for whatever
 // sits on the AXI4 system bus side. See quad_core_axi_wrapper.v for
 // the real AXI4 handshake around that port.
 //
-// Each core's satp CSR (software-written, see csr_trap_unit.v) is now
-// the one real source of truth for MMU enable + page-table root --
-// core_l1_wrapper.v instantiates its MMU with MMU_CTRL_FROM_CSR=1, so
-// there is no external Mmu_Enable/Satp_PPN0..3 pin here any more (an
-// earlier version of this file had them, before the satp-CSR-to-MMU
-// feedback loop was wired up -- see Risc_V_new/README.md). Mmu_Flush
-// remains external
-// (OR'd with each core's own sfence.vma-triggered flush): harmless to
-// share one flush pulse across all 4 cores since an extra TLB
-// invalidate only costs a refill, never a correctness bug. Boot
-// addresses are parameterized per core (RESET_ADDR0..3) so each can
+// Mmu_Flush remains only as a deprecated/no-op compatibility pin until
+// existing Vivado block designs are regenerated. Boot addresses are
+// parameterized per core (RESET_ADDR0..3) so each can
 // be pointed at a distinct program region, unlike
 // RV32IMA_DualCore_Wrapper.v's two cores (which share one hardcoded
 // default -- see Risc_V_new/README.md's "Sổ rủi ro" #3).
@@ -39,7 +32,7 @@ module quad_core_soc #(
     input  wire        clk,
     input  wire        rst,
 
-    input  wire        Mmu_Flush,
+    input  wire        Mmu_Flush, // deprecated/no-op compatibility pin
     input  wire        Cache_Flush,
     output wire        Cache_Flush_Busy,
     output wire        Cache_Flush_Done,
@@ -94,12 +87,30 @@ module quad_core_soc #(
     wire [3:0]  cache_flush_core_busy;
     wire [3:0]  cache_flush_core_done;
     wire [3:0]  cache_flush_core_error;
+    wire        l1_flush_request;
+    wire        l1_flush_busy;
+    wire        l1_flush_done;
+    wire        l1_flush_error;
+    wire        l2_flush_request;
+    wire        l2_flush_busy;
+    wire        l2_flush_done;
+    wire        l2_flush_error;
 
     cache_maintenance_tracker u_cache_maintenance_tracker (
-        .clk(clk), .rst(rst), .request(Cache_Flush),
+        .clk(clk), .rst(rst), .request(l1_flush_request),
         .core_busy(cache_flush_core_busy),
         .core_done(cache_flush_core_done),
         .core_error(cache_flush_core_error),
+        .busy(l1_flush_busy), .done(l1_flush_done),
+        .error(l1_flush_error)
+    );
+
+    system_cache_maintenance u_system_cache_maintenance (
+        .clk(clk), .rst(rst), .request(Cache_Flush),
+        .l1_request(l1_flush_request), .l1_busy(l1_flush_busy),
+        .l1_done(l1_flush_done), .l1_error(l1_flush_error),
+        .l2_request(l2_flush_request), .l2_busy(l2_flush_busy),
+        .l2_done(l2_flush_done), .l2_error(l2_flush_error),
         .busy(Cache_Flush_Busy), .done(Cache_Flush_Done),
         .error(Cache_Flush_Error)
     );
@@ -143,10 +154,20 @@ module quad_core_soc #(
     wire [3:0]   l2_resp_victim_sharers;
     wire [255:0] l2_resp_line;
     wire [3:0]   l2_resp_sharers;
+    wire         l2_maint_valid;
+    wire [11:0]  l2_maint_set;
+    wire [1:0]   l2_maint_way;
+    wire         l2_maint_invalidate;
+    wire         l2_maint_ready;
+    wire         l2_maint_resp_valid;
+    wire         l2_maint_line_valid;
+    wire         l2_maint_line_dirty;
+    wire [14:0]  l2_maint_line_tag;
+    wire [255:0] l2_maint_line_data;
 
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0), .HART_ID(32'd0)) core0 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[0]), .Cache_Flush_Done(cache_flush_core_done[0]), .Cache_Flush_Error(cache_flush_core_error[0]),
         .ResultW(ResultW0), .ALU_ResultE_Debug(alu_dbg_unused0),
         .Fetch_PageFault(Fetch_PageFault0), .Data_PageFault(Data_PageFault0),
@@ -163,7 +184,7 @@ module quad_core_soc #(
 
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR1), .HART_ID(32'd1)) core1 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[1]), .Cache_Flush_Done(cache_flush_core_done[1]), .Cache_Flush_Error(cache_flush_core_error[1]),
         .ResultW(ResultW1), .ALU_ResultE_Debug(alu_dbg_unused1),
         .Fetch_PageFault(Fetch_PageFault1), .Data_PageFault(Data_PageFault1),
@@ -180,7 +201,7 @@ module quad_core_soc #(
 
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR2), .HART_ID(32'd2)) core2 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[2]), .Cache_Flush_Done(cache_flush_core_done[2]), .Cache_Flush_Error(cache_flush_core_error[2]),
         .ResultW(ResultW2), .ALU_ResultE_Debug(alu_dbg_unused2),
         .Fetch_PageFault(Fetch_PageFault2), .Data_PageFault(Data_PageFault2),
@@ -197,7 +218,7 @@ module quad_core_soc #(
 
     core_l1_wrapper #(.RESET_ADDR(RESET_ADDR3), .HART_ID(32'd3)) core3 (
         .clk(clk), .rst(rst),
-        .Mmu_Flush(Mmu_Flush), .Cache_Flush(Cache_Flush),
+        .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[3]), .Cache_Flush_Done(cache_flush_core_done[3]), .Cache_Flush_Error(cache_flush_core_error[3]),
         .ResultW(ResultW3), .ALU_ResultE_Debug(alu_dbg_unused3),
         .Fetch_PageFault(Fetch_PageFault3), .Data_PageFault(Data_PageFault3),
@@ -214,7 +235,10 @@ module quad_core_soc #(
 
     cache_controller_mmu #(
         .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE),
-        .REQUEST_QUEUE_ENABLE(1)
+        // A D-cache keeps its request asserted until the granted line is
+        // committed.  Disable the speculative one-entry queue so that held
+        // valid cannot be mistaken for a second request.
+        .REQUEST_QUEUE_ENABLE(0)
     ) u_cache_controller_mmu (
         .clk(clk), .rst(rst),
 
@@ -263,6 +287,8 @@ module quad_core_soc #(
         .debug_trace_count(cache_debug_trace_count),
         .debug_trace_write_index(cache_debug_trace_write_index),
         .debug_controller_state(cache_debug_controller_state),
+        .cache_flush_req(l2_flush_request), .cache_flush_busy(l2_flush_busy),
+        .cache_flush_done(l2_flush_done), .cache_flush_error(l2_flush_error),
         .l2_cmd_valid_o(l2_cmd_valid), .l2_cmd_we_o(l2_cmd_we),
         .l2_cmd_addr_o(l2_cmd_addr), .l2_cmd_way_o(l2_cmd_way),
         .l2_cmd_wdata_o(l2_cmd_wdata), .l2_cmd_w_valid_o(l2_cmd_w_valid),
@@ -272,7 +298,13 @@ module quad_core_soc #(
         .l2_resp_victim_valid_i(l2_resp_victim_valid),
         .l2_resp_victim_dirty_i(l2_resp_victim_dirty),
         .l2_resp_victim_sharers_i(l2_resp_victim_sharers),
-        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers)
+        .l2_resp_line_i(l2_resp_line), .l2_resp_sharers_i(l2_resp_sharers),
+        .l2_maint_valid_o(l2_maint_valid), .l2_maint_set_o(l2_maint_set),
+        .l2_maint_way_o(l2_maint_way), .l2_maint_invalidate_o(l2_maint_invalidate),
+        .l2_maint_ready_i(l2_maint_ready), .l2_maint_resp_valid_i(l2_maint_resp_valid),
+        .l2_maint_line_valid_i(l2_maint_line_valid),
+        .l2_maint_line_dirty_i(l2_maint_line_dirty), .l2_maint_line_tag_i(l2_maint_line_tag),
+        .l2_maint_line_data_i(l2_maint_line_data)
     );
 
     l2_cache u_shared_l2 (
@@ -281,6 +313,12 @@ module quad_core_soc #(
         .cmd_addr(l2_cmd_addr), .cmd_way(l2_cmd_way),
         .cmd_wdata(l2_cmd_wdata), .cmd_w_valid(l2_cmd_w_valid),
         .cmd_w_dirty(l2_cmd_w_dirty), .cmd_w_sharers(l2_cmd_w_sharers),
+        .maint_valid(l2_maint_valid), .maint_set(l2_maint_set),
+        .maint_way(l2_maint_way), .maint_invalidate(l2_maint_invalidate),
+        .maint_ready(l2_maint_ready), .maint_resp_valid(l2_maint_resp_valid),
+        .maint_line_valid(l2_maint_line_valid),
+        .maint_line_dirty(l2_maint_line_dirty), .maint_line_tag(l2_maint_line_tag),
+        .maint_line_data(l2_maint_line_data),
         .resp_valid(l2_resp_valid), .resp_hit(l2_resp_hit),
         .resp_way(l2_resp_way), .resp_victim_tag(l2_resp_victim_tag),
         .resp_victim_valid(l2_resp_victim_valid),

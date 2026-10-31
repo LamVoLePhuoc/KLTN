@@ -1,0 +1,231 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Oct 27 14:11:00 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_methodology -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/vivado-mdu-pipeline-20261027-132625/methodology_route.rpt
+| Design       : soc_4core_trial_wrapper
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Fully Routed
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Report Methodology
+
+Table of Contents
+-----------------
+1. REPORT SUMMARY
+2. REPORT DETAILS
+
+1. REPORT SUMMARY
+-----------------
+            Netlist: netlist
+          Floorplan: impl_1
+      Design limits: <entire design considered>
+             Max violations: <unlimited>
+             Violations found: 39
++-----------+----------+-------------------------------+------------+
+| Rule      | Severity | Description                   | Violations |
++-----------+----------+-------------------------------+------------+
+| TIMING-16 | Warning  | Large setup violation         | 38         |
+| TIMING-18 | Warning  | Missing input or output delay | 1          |
++-----------+----------+-------------------------------+------------+
+
+2. REPORT DETAILS
+-----------------
+TIMING-16#1 Warning
+Large setup violation  
+There is a large setup violation of -1.007 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/ALUControlE_reg[0]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#2 Warning
+Large setup violation  
+There is a large setup violation of -1.007 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/JumpE_reg/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#3 Warning
+Large setup violation  
+There is a large setup violation of -1.007 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/OpE_reg[3]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#4 Warning
+Large setup violation  
+There is a large setup violation of -1.007 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/PCE_reg[4]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#5 Warning
+Large setup violation  
+There is a large setup violation of -1.012 ns between soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/id_ex/ALUControlE_reg[0]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#6 Warning
+Large setup violation  
+There is a large setup violation of -1.020 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/MemWriteE_reg/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#7 Warning
+Large setup violation  
+There is a large setup violation of -1.020 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD1_E_reg[26]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#8 Warning
+Large setup violation  
+There is a large setup violation of -1.020 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD2_E_reg[28]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#9 Warning
+Large setup violation  
+There is a large setup violation of -1.020 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD2_E_reg[30]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#10 Warning
+Large setup violation  
+There is a large setup violation of -1.023 ns between soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/id_ex/RD1_E_reg[26]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#11 Warning
+Large setup violation  
+There is a large setup violation of -1.023 ns between soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/id_ex/RS2_E_reg[0]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#12 Warning
+Large setup violation  
+There is a large setup violation of -1.023 ns between soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/id_ex/RS2_E_reg[1]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#13 Warning
+Large setup violation  
+There is a large setup violation of -1.023 ns between soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/id_ex/RS2_E_reg[3]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#14 Warning
+Large setup violation  
+There is a large setup violation of -1.029 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD2_E_reg[27]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#15 Warning
+Large setup violation  
+There is a large setup violation of -1.029 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD2_E_reg[29]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#16 Warning
+Large setup violation  
+There is a large setup violation of -1.029 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD2_E_reg[30]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#17 Warning
+Large setup violation  
+There is a large setup violation of -1.029 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[3]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#18 Warning
+Large setup violation  
+There is a large setup violation of -1.030 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/PCE_reg[5]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#19 Warning
+Large setup violation  
+There is a large setup violation of -1.030 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/PCPlus4E_reg[23]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#20 Warning
+Large setup violation  
+There is a large setup violation of -1.030 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/PCPlus4E_reg[25]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#21 Warning
+Large setup violation  
+There is a large setup violation of -1.030 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/PCPlus4E_reg[26]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#22 Warning
+Large setup violation  
+There is a large setup violation of -1.033 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD2_E_reg[2]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#23 Warning
+Large setup violation  
+There is a large setup violation of -1.033 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD2_E_reg[9]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#24 Warning
+Large setup violation  
+There is a large setup violation of -1.033 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RS2_E_reg[1]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#25 Warning
+Large setup violation  
+There is a large setup violation of -1.039 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/ALUSrcE_reg/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#26 Warning
+Large setup violation  
+There is a large setup violation of -1.039 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RS2_E_reg[2]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#27 Warning
+Large setup violation  
+There is a large setup violation of -1.039 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RS2_E_reg[3]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#28 Warning
+Large setup violation  
+There is a large setup violation of -1.039 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RS2_E_reg[4]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#29 Warning
+Large setup violation  
+There is a large setup violation of -1.048 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[1]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/Imm_Ext_E_reg[1]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#30 Warning
+Large setup violation  
+There is a large setup violation of -1.052 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD1_E_reg[16]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#31 Warning
+Large setup violation  
+There is a large setup violation of -1.052 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD1_E_reg[24]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#32 Warning
+Large setup violation  
+There is a large setup violation of -1.052 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD1_E_reg[26]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#33 Warning
+Large setup violation  
+There is a large setup violation of -1.052 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RD1_E_reg[30]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#34 Warning
+Large setup violation  
+There is a large setup violation of -1.052 ns between soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[4]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core2/physical_core/core/id_ex/RS1_E_reg[1]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#35 Warning
+Large setup violation  
+There is a large setup violation of -1.060 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/Imm_Ext_E_reg[11]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#36 Warning
+Large setup violation  
+There is a large setup violation of -1.060 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD1_E_reg[3]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#37 Warning
+Large setup violation  
+There is a large setup violation of -1.060 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD1_E_reg[7]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-16#38 Warning
+Large setup violation  
+There is a large setup violation of -1.060 ns between soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/ex_mem/RD_M_reg[3]/C (clocked by sys_clk_in) and soc_4core_trial_i/cpu0/inst/soc/core0/physical_core/core/id_ex/RD2_E_reg[8]/R (clocked by sys_clk_in). Large setup violations at the end of those stages might be difficult to fix during the post-placement implementation flow and could be the result of non-optimal XDC constraints or non-optimal design architecture
+Related violations: <none>
+
+TIMING-18#1 Warning
+Missing input or output delay  
+An input delay is missing on ext_reset_in relative to clock(s) sys_clk_in
+Related violations: <none>
+
+

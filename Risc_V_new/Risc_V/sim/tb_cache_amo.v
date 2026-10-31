@@ -124,10 +124,10 @@ module tb_cache_amo;
             saw_amo_old_value <= 1'b0;
             saw_load_new_value <= 1'b0;
         end
-        else if (dut.mmu_core.core.RegWriteW) begin
-            if ((dut.mmu_core.core.RD_W == 5'd3) && (result_w == 32'd10))
+        else if (dut.physical_core.core.RegWriteW) begin
+            if ((dut.physical_core.core.RD_W == 5'd3) && (result_w == 32'd10))
                 saw_amo_old_value <= 1'b1;
-            if ((dut.mmu_core.core.RD_W == 5'd4) && (result_w == 32'd15))
+            if ((dut.physical_core.core.RD_W == 5'd4) && (result_w == 32'd15))
                 saw_load_new_value <= 1'b1;
         end
     end

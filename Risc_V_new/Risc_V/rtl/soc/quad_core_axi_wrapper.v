@@ -4,22 +4,21 @@
 // quad_core_axi_wrapper
 //
 // Real AXI4 master wrapper around quad_core_soc.v's single "CPU
-// MEMORY PORT" (coherence_manager.v's mem_req_valid/mem_we/mem_addr/
-// mem_wdata/mem_rdata/mem_valid) -- the counterpart of
-// mmu_ip_wrapper.v for the full 4-core system. Drop this into a
+// MEMORY PORT" (cache_controller_mmu.v's mem_req_valid/mem_we/mem_addr/
+// mem_wdata/mem_rdata/mem_valid). Drop this into a
 // Vivado IP Integrator block design and hook it to AXI Interconnect
 // + AXI BRAM Controller / Zynq PS7 HP port, per
 // Risc_V_new/scripts/build_soc_4core_trial.tcl.
 //
 // One combined read/write AXI4 master, not split IMEM/DMEM like
 // mmu_ip_wrapper.v -- by the time traffic reaches this port, it has
-// already gone through coherence_manager.v's single arbiter, so
+// already gone through cache_controller_mmu.v's single arbiter, so
 // instruction and data misses/writebacks are already serialized
 // onto the one mem_* port coherence_manager.v exposes.
 //
 // Cached writebacks use WSTRB=4'b1111.  Uncached/MMIO SB/SH/SW
 // requests bypass L1/L2 and carry their architectural byte strobes
-// through coherence_manager's mem_wstrb sideband.
+// through the controller's mem_wstrb sideband.
 //
 // Same protocol-compliance rationale as mmu_ip_wrapper.v: hold
 // *VALID until the matching *READY, single outstanding transaction,
@@ -40,11 +39,9 @@ module quad_core_axi_wrapper #(
     (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_LOW" *)
     input  wire        ARESETN,
 
-    // ---------------- MMU control (tie off via Constant IP) ----------------
-    // Mmu_Enable/Satp_PPN0..3 no longer exist here: each core's own
-    // satp CSR is now the real source of truth (quad_core_soc.v's
-    // header, core_l1_wrapper.v's header). Mmu_Flush remains -- a
-    // real external hook, OR'd with each core's own sfence.vma flush.
+    // -------- Cache maintenance / legacy top-level compatibility --------
+    // Mmu_Flush is a deprecated no-op and may be tied low. It is kept
+    // temporarily so previously generated block designs still elaborate.
     input  wire         Mmu_Flush,
     input  wire         Cache_Flush,
     output wire         Cache_Flush_Busy,

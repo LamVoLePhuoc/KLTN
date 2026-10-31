@@ -1,0 +1,4 @@
+RAMD64E=11712 (limit 26600)
+RAMB36E1=240
+RAMB18E1=16
+Conservative BRAM tiles=248 (limit 265)

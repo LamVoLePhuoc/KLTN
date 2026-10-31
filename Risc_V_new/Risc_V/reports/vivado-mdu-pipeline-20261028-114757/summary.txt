@@ -1,0 +1,22 @@
+Active four-core cache-controller implementation
+Generated: Wed Oct 28 12:20:47 +0700 2026
+Timing target: 9.800 ns (102.041 MHz)
+Applied sys_clk_in period: 9.800 ns
+soc_4core_trial_cpu0_0_synth_1: synth_design Complete!
+synth_1: synth_design Complete!
+impl_1:  route_design Complete!
+Post-route WNS: 0.029 ns
+Critical startpoint: soc_4core_trial_i/cpu0/inst/soc/core1/u_icache/u_meta_way1/u_xpm/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg/CLKARDCLK
+Critical endpoint:   soc_4core_trial_i/cpu0/inst/soc/core1/physical_core/core/mem_wb/ALU_ResultW_reg[23]/R
+Post-route WHS: 0.036 ns
+Detailed reports:
+  resource_gate.txt
+  utilization_synth.rpt
+  utilization_hierarchical_synth.rpt
+  timing_synth.rpt
+  utilization_route.rpt
+  utilization_hierarchical_route.rpt
+  timing_route.rpt
+  drc_route.rpt
+  methodology_route.rpt
+  power_route.rpt

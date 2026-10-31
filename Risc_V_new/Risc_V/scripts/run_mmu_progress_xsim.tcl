@@ -35,6 +35,16 @@ while {[gets $manifest line] >= 0} {
 }
 close $manifest
 
+# Historical Sv32 sources are excluded from the active architecture manifest.
+# Add them only for this explicitly legacy regression.
+set legacy_manifest [open [file join $rtl_dir files_sv32_legacy.f] r]
+while {[gets $legacy_manifest line] >= 0} {
+    set line [string trim $line]
+    if {$line eq "" || [string index $line 0] eq "#"} { continue }
+    lappend rtl_files [file normalize [file join $rtl_dir $line]]
+}
+close $legacy_manifest
+
 set old_dir [pwd]
 cd $report_dir
 puts "=== XSIM MMU regression ==="

@@ -21,6 +21,7 @@ module tb_ahb_error_sideband;
     wire [1:0] htrans, hresp;
     wire [2:0] hsize;
     wire [3:0] hprot;
+    wire req_active;
 
     wire dreq_valid;
     wire [1:0] dreq_type;
@@ -37,13 +38,15 @@ module tb_ahb_error_sideband;
         .bus_resp_line(bus_resp_line), .bus_resp_state(bus_resp_state),
         .HADDR(haddr), .HWRITE(hwrite), .HSIZE(hsize), .HTRANS(htrans),
         .HWDATA(hwdata), .HBURST(), .HPROT(hprot), .HMASTLOCK(hmastlock),
-        .HRDATA(hrdata), .HREADY(hready), .HRESP(hresp)
+        .HRDATA(hrdata), .HREADY(hready), .HRESP(hresp),
+        .REQ_ACTIVE(req_active)
     );
 
     ahb_lite_l1_slave_adapter u_slave (
         .HCLK(clk), .HRESETn(resetn),
         .HADDR(haddr), .HWRITE(hwrite), .HTRANS(htrans),
         .HWDATA(hwdata), .HMASTLOCK(hmastlock), .HSIZE(hsize), .HPROT(hprot),
+        .REQ_ACTIVE(req_active),
         .HREADYOUT(hready), .HRDATA(hrdata), .HRESP(hresp),
         .dreq_valid(dreq_valid), .dreq_type(dreq_type),
         .dreq_addr(dreq_addr), .dreq_line(dreq_line),

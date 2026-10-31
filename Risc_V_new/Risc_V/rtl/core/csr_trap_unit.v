@@ -21,7 +21,7 @@
 //     Only *synchronous* exceptions (instruction-caused) are handled.
 //   - mstatus/sstatus implement only the fields that matter for this
 //     core's own trap-entry/return stacking: MIE/SIE, MPIE/SPIE,
-//     MPP/SPP plus MXR/SUM for MMU permission checks. Other fields
+//     MPP/SPP plus retained MXR/SUM CSR bits. Other fields
 //     (FS, XS, MPRV, TVM, TW, TSR,
 //     SD, ...) read as 0 and writes to their bit positions are
 //     ignored -- legal (WPRI-like) for unimplemented optional
@@ -34,17 +34,10 @@
 //     (its address's bits[11:10]==2'b11 architecturally requires
 //     that, and IS enforced below -- a write attempt traps illegal-
 //     instruction, unlike misa's silent-ignore).
-//   - satp: fully real (software can CSRRW it; Mmu_Enable_Csr/
-//     Satp_PPN_Csr reflect the current value, already gated by
-//     current privilege -- see the assign site below). NOW WIRED to
-//     actually drive mmu_core_wrapper/mmu_top, behind a parameter
-//     (mmu_core_wrapper.v's MMU_CTRL_FROM_CSR) so the existing,
-//     already-traced tb_mmu_core.v -- which deliberately drives
-//     Mmu_Enable/Satp_PPN directly to isolate MMU/PTW/TLB correctness
-//     from CSR correctness -- keeps compiling and behaving exactly as
-//     before, unchanged. The new real top-level (core_l1_wrapper.v)
-//     instantiates mmu_core_wrapper with MMU_CTRL_FROM_CSR=1 to make
-//     satp the one real source of truth. See Risc_V_new/README.md.
+//   - satp/MXR/SUM remain readable/writable for CSR compatibility and
+//     for the optional legacy Sv32 tests. The active thesis hierarchy
+//     uses physical_core_wrapper, so these bits do not translate or
+//     permission-check instruction/data addresses.
 //   - CSR read-only/privilege-level enforcement uses the standard
 //     address-bit convention. CSRRS/CSRRC (and immediate forms) with
 //     a zero rs1/uimm field perform a read without a write attempt, so

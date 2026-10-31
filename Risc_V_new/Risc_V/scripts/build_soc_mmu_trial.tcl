@@ -1,5 +1,5 @@
 #===============================================================
-# build_soc_mmu_trial.tcl
+# build_soc_mmu_trial.tcl [LEGACY SV32 DEMO - NOT ACTIVE THESIS HIERARCHY]
 #
 # First architecture "trial fit": wires the MMU-integrated core
 # (mmu_ip_wrapper.v -> mmu_core_wrapper.v -> RV32IMA core) into a

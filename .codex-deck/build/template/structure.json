@@ -1,0 +1,568 @@
+{
+  "slideCount": 15,
+  "masters": [
+    {
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": ""
+    }
+  ],
+  "layouts": [
+    {
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": "",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "body",
+          "type": "body",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout1.xml",
+      "name": "Title Slide",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "Text Placeholder 48",
+          "type": "body",
+          "text": "Địa điểm, Ngày Tháng Năm"
+        },
+        {
+          "name": "Text Placeholder 50",
+          "type": "body",
+          "text": "Loại trình bày"
+        },
+        {
+          "name": "Text Placeholder 50",
+          "type": "body",
+          "text": "Trình bày: …"
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout2.xml",
+      "name": "Section Header",
+      "placeholders": [
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        },
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "body",
+          "type": "body",
+          "text": "Click to edit Master text styles"
+        },
+        {
+          "name": "content placeholder 24",
+          "text": "01"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout3.xml",
+      "name": "1_Title and Content",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout4.xml",
+      "name": "5_Title and Content",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout5.xml",
+      "name": "4_Title and Content",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout6.xml",
+      "name": "3_Title and Content",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout7.xml",
+      "name": "2_Title and Content",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout8.xml",
+      "name": "Two Content",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "content placeholder 3",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout9.xml",
+      "name": "Comparison",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "Text Placeholder 2",
+          "type": "body",
+          "text": "Click to edit Master text styles"
+        },
+        {
+          "name": "content placeholder 3",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "Text Placeholder 4",
+          "type": "body",
+          "text": "Click to edit Master text styles"
+        },
+        {
+          "name": "content placeholder 5",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout10.xml",
+      "name": "Title Only",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout11.xml",
+      "name": "Blank",
+      "placeholders": [
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout12.xml",
+      "name": "2_Blank",
+      "placeholders": [
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout13.xml",
+      "name": "1_Blank",
+      "placeholders": [
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout14.xml",
+      "name": "Content with Caption",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "content placeholder 2",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "body",
+          "type": "body",
+          "text": "Click to edit Master text styles"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout15.xml",
+      "name": "Picture with Caption",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "picture",
+          "type": "picture",
+          "text": "Click icon to add picture"
+        },
+        {
+          "name": "body",
+          "type": "body",
+          "text": "Click to edit Master text styles"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout16.xml",
+      "name": "Title and Vertical Text",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "body",
+          "type": "body",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    },
+    {
+      "id": "/ppt/slideLayouts/slideLayout17.xml",
+      "name": "Vertical Title and Text",
+      "placeholders": [
+        {
+          "name": "title",
+          "type": "title",
+          "text": "Click to edit Master title style"
+        },
+        {
+          "name": "body",
+          "type": "body",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level"
+        },
+        {
+          "name": "dateTime",
+          "type": "dateTime",
+          "text": "31 March 2024"
+        },
+        {
+          "name": "footer",
+          "type": "footer",
+          "text": "Copyrights 2024 CE-UIT. All Rights Reserved."
+        },
+        {
+          "name": "slideNumber",
+          "type": "slideNumber",
+          "text": "‹#›"
+        }
+      ]
+    }
+  ]
+}

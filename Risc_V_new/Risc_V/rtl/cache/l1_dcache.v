@@ -731,11 +731,11 @@ module l1_dcache #(
             end
             else begin
 
-            // Once accepted, request payload is owned by the shared
-            // controller.  This cache may therefore drop valid while it
-            // remains in the same blocking state waiting for the response.
-            if (bus_req_valid && bus_req_ready)
-                bus_req_valid <= 1'b0;
+            // Keep a fill/RFO request asserted through the registered cache
+            // commit, not merely through controller acceptance.  This is the
+            // completion barrier that prevents a following core's snoop from
+            // arriving while the granted line is still in an AHB return
+            // buffer and therefore not yet visible in this L1.
 
             case (state)
                 // ------------------------------------------------
@@ -903,11 +903,11 @@ module l1_dcache #(
                 // ------------------------------------------------
                 S_MISS_REQ: begin
                     if (bus_resp_valid) begin
-                        bus_req_valid <= 1'b0;
                         if (bus_resp_error) begin
                             // Never install or modify a line returned with
                             // an error. The registered pulse completes the
                             // held load/store/AMO as an access fault.
+                            bus_req_valid    <= 1'b0;
                             miss_error_pulse <= 1'b1;
                         end
                         else begin
@@ -942,9 +942,11 @@ module l1_dcache #(
                 // retries against the snoop-updated MSI state.
                 S_CACHE_WRITE: begin
                     if (cache_write_snoop_conflict) begin
+                        bus_req_valid <= 1'b0;
                         state <= S_IDLE;
                     end
                     else begin
+                        bus_req_valid <= 1'b0;
                         if (cache_write_from_hit)
                             hit_write_done_pulse <= 1'b1;
                         else begin

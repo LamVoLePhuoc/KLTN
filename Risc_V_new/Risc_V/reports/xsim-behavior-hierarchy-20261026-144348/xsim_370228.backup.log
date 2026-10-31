@@ -1,0 +1,26 @@
+#-----------------------------------------------------------
+# xsim v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Mon Oct 26 14:44:07 2026
+# Process ID: 370228
+# Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-behavior-hierarchy-20261026-144348
+# Command line: xsim.exe -mode tcl -source {xsim.dir/tb_core_l1_physical_subsystem_behav/xsim_script.tcl}
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-behavior-hierarchy-20261026-144348/xsim.log
+# Journal file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-behavior-hierarchy-20261026-144348\xsim.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_core_l1_physical_subsystem_behav/xsim_script.tcl
+# xsim {tb_core_l1_physical_subsystem_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] TC-L1-SUB-001 core executes through private I$ and D$
+[PASS] TC-L1-SUB-002 deprecated Mmu_Flush is a no-op
+[PASS] TC-L1-SUB-003 Mmu_Flush causes no translation exception
+[PASS] TC-L1-SUB-004 D$ clean then I$ invalidate completes
+[PASS] TC-L1-SUB-005 dirty physical data reaches memory after flush
+[PASS] TC-L1-SUB-006 physical subsystem has no page faults
+CORE_L1_PHYSICAL_SUBSYSTEM_TB: PASS
+$finish called at time : 20975 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_core_l1_physical_subsystem.v" Line 244
+exit
+INFO: [Common 17-206] Exiting xsim at Mon Oct 26 14:44:09 2026...

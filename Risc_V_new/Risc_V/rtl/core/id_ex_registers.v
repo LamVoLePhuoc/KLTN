@@ -124,7 +124,11 @@ module id_ex_registers(
         else if (flush) begin
             // =====================================================
             // FLUSH: insert clean bubble
-            // Xóa cả control, metadata, address, data
+            // Only architectural control/exception state must be killed.
+            // Datapath fields are don't-care while these controls are zero;
+            // retaining them removes the branch/flush net from 170+ data
+            // register reset pins and sharply reduces its routing fanout.
+            // They are still initialized by the real pipeline reset below.
             // =====================================================
             RegWriteE   <= 1'b0;
             ALUSrcE     <= 1'b0;
@@ -144,17 +148,9 @@ module id_ex_registers(
             Fence_E     <= 1'b0;
             OpE         <= 7'b0000000;
             ExcFlagsE   <= 9'b0;
-            InstrE      <= 32'h00000013;
 
-            RD1_E       <= 32'b0;
-            RD2_E       <= 32'b0;
-            Imm_Ext_E   <= 32'b0;
-            PCE         <= 32'b0;
-            PCPlus4E    <= 32'b0;
-
-            RD_E        <= 5'b00000;
-            RS1_E       <= 5'b00000;
-            RS2_E       <= 5'b00000;
+            // InstrE, register operands/indices, immediate and PC fields
+            // intentionally hold their previous values for this bubble.
         end
 
         else if (!stall) begin

@@ -1,4 +1,7 @@
-# Báo cáo tiến độ MMU: tuần trước và tuần này
+# Báo cáo tiến độ MMU: tuần trước và tuần này [LEGACY SV32]
+
+> Tài liệu lịch sử cho phần TLB/PTW/Sv32 đã loại khỏi hierarchy active.
+> Tiến độ hiện hành xem `THESIS_SCOPE_CACHE_CONTROLLER.md` và `README.md`.
 
 ## 1. Thông điệp chính nên trình bày
 

@@ -42,7 +42,10 @@ $rtlFiles = Get-Content (Join-Path $rtlDir "files.f") |
 Push-Location $workDir
 try {
     & vlib work | Out-Null
-    & vlog -quiet -work work @rtlFiles 2>&1 | Tee-Object -FilePath (Join-Path $OutputRoot "compile-rtl.log")
+    $legacyFiles = Get-Content (Join-Path $rtlDir "files_sv32_legacy.f") |
+        Where-Object { $_.Trim() -and -not $_.Trim().StartsWith("#") } |
+        ForEach-Object { Join-Path $rtlDir $_.Trim() }
+    & vlog -quiet -work work @rtlFiles @legacyFiles 2>&1 | Tee-Object -FilePath (Join-Path $OutputRoot "compile-rtl.log")
     if ($LASTEXITCODE -ne 0) { throw "Compile RTL that bai. Xem compile-rtl.log." }
 
     $results = @()

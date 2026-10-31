@@ -17,7 +17,7 @@ const svg = body => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height
 
 const diagrams = {
   "system_overview.svg": svg(`${title("Kiến trúc tổng thể hệ thống 4 lõi RV32IMA")}
-    ${[0,1,2,3].map(i=>box(50+i*300,100,260,150,`Core ${i}\nRV32IMA + Sv32 ATU/TLB\nL1 I$ + D$`,C.white,C.blue,20)).join("")}
+    ${[0,1,2,3].map(i=>box(50+i*300,100,260,150,`Core ${i}\nRV32IMA, physical address\nL1 I$ + D$`,C.white,C.blue,20)).join("")}
     ${[0,1,2,3].map(i=>arrow(180+i*300,250,180+i*300,320)).join("")}
     ${box(70,320,1140,70,"AHB-Lite domain: 4 cores / 8 instruction-data request sources",C.pale,C.blue,24)}
     ${arrow(640,390,640,440)}
@@ -42,7 +42,7 @@ const diagrams = {
     ${box(710,520,320,90,"RV32A\nLR/SC + 9 AMO operations",C.white,C.cyan,22)}
     ${arrow(570,565,710,565,"shared memory ordering")}`),
 
-  "mmu.svg": svg(`${title("Khối dịch địa chỉ Sv32 (ATU) cho từng lõi")}
+  "mmu.svg": svg(`${title("LEGACY — khối dịch địa chỉ Sv32, không thuộc hierarchy active")}
     ${box(45,135,210,90,"Fetch VA",C.white,C.blue)}${box(45,350,210,90,"Data VA",C.white,C.blue)}
     ${arrow(255,180,340,180)}${arrow(255,395,340,395)}
     ${box(340,120,250,120,"iTLB\n16 entries, 4 set x 4 way\n+ 4 superpage entries",C.white,C.cyan,20)}
@@ -54,7 +54,7 @@ const diagrams = {
     ${arrow(780,555,930,555,"PTE read/write")}${box(930,500,280,110,"Page tables in memory\nL1 leaf: 4 MiB\nL0 leaf: 4 KiB",C.white,C.gold,21)}
     ${box(65,545,310,85,"Region policy + permission\nU/S, SUM, MXR, R/W/X",C.pale,C.navy,21)}`),
 
-  "mmu_control_fsm.svg": svg(`${title("FSM điều phối MMU (mmu_top)")}
+  "mmu_control_fsm.svg": svg(`${title("LEGACY — FSM điều phối Sv32 (mmu_top)")}
     ${box(70,275,235,115,"IDLE\nTLB lookup + permission",C.white,C.blue,22)}
     ${box(520,110,240,115,"WALK\nPTW owns memory bus",C.white,C.orange,22)}
     ${box(970,275,235,115,"GATE\n1-cycle fault/resume",C.white,C.cyan,22)}
@@ -70,7 +70,7 @@ const diagrams = {
     ${text(490,615,"• Fault chỉ pulse tại GATE; core resume đồng bộ",20,600,"start",C.gray)}
     ${text(490,650,"• Data-side được ưu tiên khi I/D cùng miss",20,600,"start",C.gray)}`),
 
-  "mmu_ptw_fsm.svg": svg(`${title("FSM Page Table Walker Sv32 (mmu_ptw)")}
+  "mmu_ptw_fsm.svg": svg(`${title("LEGACY — FSM Page Table Walker Sv32 (mmu_ptw)")}
     ${box(55,275,210,105,"PTW_IDLE\nnhận VPN/context",C.white,C.blue,21)}
     ${box(345,110,210,105,"L1_READ\nroot PTE",C.white,C.orange,21)}
     ${box(345,440,210,105,"L0_READ\nleaf 4 KiB",C.white,C.orange,21)}
@@ -95,6 +95,22 @@ const diagrams = {
     ${arrow(640,590,640,650,"32-bit memory words")}
     ${box(470,650,340,55,"External memory / AXI4",C.navy,C.navy,22)}
     ${text(90,470,"States",20,700,"start",C.navy)}${box(90,495,120,55,"I",C.white,C.gray,22)}${box(90,560,120,55,"S",C.white,C.cyan,22)}${box(90,625,120,55,"M",C.white,C.orange,22)}`),
+
+  "cache_controller_fsm.svg": svg(`${title("FSM Cache/Memory Management Unit (cache controller)")}
+    ${box(45,120,190,90,"IDLE\nRR chọn 1/8 nguồn",C.white,C.blue,20)}
+    ${box(310,120,210,90,"L2 LOOKUP\nđọc line + directory",C.white,C.cyan,20)}
+    ${box(610,95,220,90,"SNOOP SHARERS\nDOWNGRADE / INVALIDATE",C.white,C.orange,19)}
+    ${box(970,120,220,90,"GRANT + L2 UPDATE\nS cho read, M cho RFO",C.white,C.cyan,19)}
+    ${box(970,300,220,90,"RESPOND\nvalid/error/line",C.pale,C.navy,20)}
+    ${arrow(235,165,310,165,"cached")}${arrow(520,155,610,145,"L2 hit")}${arrow(830,145,970,165,"all ack")}${arrow(1080,210,1080,300)}
+    ${box(310,330,210,90,"EVICT SNOOP\nthu hồi dirty owner",C.white,C.orange,19)}
+    ${box(610,330,220,90,"WRITEBACK VICTIM\n8 words nếu dirty",C.white,C.gold,19)}
+    ${box(610,515,220,90,"FETCH MEMORY\n8 words + error check",C.white,C.blue,19)}
+    ${box(310,515,210,90,"L2 FILL\nclean, no sharers",C.white,C.cyan,20)}
+    ${arrow(415,210,415,330,"L2 miss")}${arrow(520,375,610,375,"dirty")}${arrow(720,420,720,515,"then fetch")}${arrow(610,560,520,560,"complete")}${arrow(310,545,215,545)}
+    ${arrow(215,545,215,210)}${text(225,470,"resume lookup/grant path",17,600,"start",C.gray)}
+    ${box(45,300,190,90,"UNCACHED MEM\nMMIO single word",C.white,C.gold,19)}${arrow(140,210,140,300,"device")}${arrow(235,345,970,345,"exactly once")}
+    ${text(45,665,"Bất biến: một giao dịch coherence nguyên tử; dirty owner là nguồn dữ liệu mới nhất; lỗi memory không được cài line lỗi.",21,650,"start",C.navy)}`),
 
   "bus_domains.svg": svg(`${title("Hai miền bus và ranh giới giao thức")}
     ${[0,1,2,3].map(i=>box(50+i*290,105,225,80,`Core ${i}\nI$ / D$`,C.white,C.blue,20)).join("")}
@@ -121,7 +137,7 @@ const diagrams = {
     ${text(55,660,"The FPGA demo must prove the complete storage - memory - execution - storage path.",24,650,"start",C.navy)}`),
 
   "verification.svg": svg(`${title("Chiến lược kiểm chứng không dùng UVM")}
-    ${box(45,120,250,95,"Unit testbenches\ncore, MMU, cache, bus",C.white,C.blue,21)}${arrow(295,168,365,168)}
+    ${box(45,120,250,95,"Unit testbenches\ncore, cache, coherence, bus",C.white,C.blue,21)}${arrow(295,168,365,168)}
     ${box(365,120,250,95,"Self-checking RTL\nscoreboard + PASS/FAIL",C.white,C.cyan,21)}${arrow(615,168,685,168)}
     ${box(685,120,250,95,"Integration tests\n4 cores + MSI + AHB",C.white,C.orange,21)}${arrow(935,168,1005,168)}
     ${box(1005,120,230,95,"Regression\nlogs and assertions",C.white,C.gold,21)}
@@ -138,7 +154,7 @@ const diagrams = {
     ${arrow(285,136,355,136)}
     ${box(355,80,250,70,"core/",C.white,C.blue)}${box(355,170,250,70,"mmu/",C.white,C.cyan)}${box(355,260,250,70,"cache/",C.white,C.cyan)}${box(355,350,250,70,"coherence/",C.white,C.orange)}${box(355,440,250,70,"interconnect/ahb/",C.white,C.blue)}${box(355,530,250,70,"soc/",C.white,C.navy)}${box(355,620,250,55,"boot/ + debug/",C.white,C.gold,20)}
     ${box(720,80,500,70,"Pipeline, ISA, CSR, trap, privilege",C.pale,C.blue,20)}
-    ${box(720,170,500,70,"Sv32 TLB/PTW + shared cache-controller MMU facade",C.pale,C.cyan,20)}
+    ${box(720,170,500,70,"Active cache-controller MMU; Sv32 sources kept legacy",C.pale,C.cyan,20)}
     ${box(720,260,500,70,"L1 I/D, shared L2, core-L1 wrapper",C.pale,C.cyan,20)}
     ${box(720,350,500,70,"MSI manager, directory, snoop engine",C.pale,C.orange,20)}
     ${box(720,440,500,70,"AHB-Lite master/slave adapters",C.pale,C.blue,20)}

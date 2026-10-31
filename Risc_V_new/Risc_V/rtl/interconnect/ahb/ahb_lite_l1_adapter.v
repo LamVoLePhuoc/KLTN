@@ -75,6 +75,8 @@ module ahb_lite_l1_adapter (
     output reg  [1:0]   bus_resp_state, // MSI read fills are always S; write/RFO
                                           // completion is promoted to M locally by
                                           // l1_dcache after the locked request returns.
+    output wire         REQ_ACTIVE,     // internal completion sideband: remains
+                                        // high until L1 commits the returned line
 
     // ---- AHB-Lite master ----
     output reg  [31:0]  HADDR,
@@ -93,6 +95,7 @@ module ahb_lite_l1_adapter (
     localparam [1:0] TRANS_IDLE = 2'b00, TRANS_NONSEQ = 2'b10;
 
     assign HBURST    = 3'b000;      // SINGLE (see header)
+    assign REQ_ACTIVE = bus_req_valid;
 
     wire HRESETn_sync = HRESETn;    // kept as its own wire so the intent (active-low
                                      // input, used directly -- no internal inversion
