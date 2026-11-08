@@ -1,0 +1,72 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_core_rv32ima_isa_behav/xsim_script.tcl
+# xsim {tb_core_rv32ima_isa_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] ADD = 00000002
+[PASS] SUB = 00000008
+[PASS] SLL = 00000028
+[PASS] SLT = 00000001
+[PASS] SLTU = 00000000
+[PASS] XOR = fffffff8
+[PASS] SRL = 10000000
+[PASS] SRA = f0000000
+[PASS] OR = fffffffd
+[PASS] AND = 00000005
+[PASS] ADDI = 00000004
+[PASS] SLTI = 00000001
+[PASS] SLTIU = 00000000
+[PASS] XORI = 0000000a
+[PASS] ORI = 0000000f
+[PASS] ANDI = 00000005
+[PASS] SLLI = 00000050
+[PASS] SRLI = 08000000
+[PASS] SRAI = f8000000
+[PASS] LUI = 12345000
+[PASS] AUIPC = 000010b4
+[PASS] conditional branches = 000000ff
+[PASS] JAL link = 00000128
+[PASS] JAL redirect = 00000001
+[PASS] JALR link = 00000144
+[PASS] JALR redirect = 00000002
+[PASS] forwarded branch compare/flush = 00000007
+[PASS] SB/SH lane merge = 80017f80
+[PASS] LB = ffffff80
+[PASS] LBU = 0000007f
+[PASS] LH = ffff8001
+[PASS] LHU = 00008001
+[PASS] LW/SW = 12345678
+[PASS] MUL = ffffffeb
+[PASS] MULH = ffffffff
+[PASS] MULHSU = ffffffff
+[PASS] MULHU = 00000001
+[PASS] DIV = fffffffe
+[PASS] DIVU = 55555553
+[PASS] REM = ffffffff
+[PASS] REMU = 00000000
+[PASS] DIV by zero = ffffffff
+[PASS] REM by zero = 0000007b
+[PASS] DIV overflow = 80000000
+[PASS] REM overflow = 00000000
+[PASS] AMOADD old value = 00000005
+[PASS] AMOSWAP old value = 00000008
+[PASS] AMOXOR old value = 00000002
+[PASS] AMOAND old value = 0000000d
+[PASS] AMOOR old value = 00000004
+[PASS] AMOMIN old value = 00000005
+[PASS] AMOMAX old value = fffffffe
+[PASS] AMOMINU old value = 00000007
+[PASS] AMOMAXU old value = 00000003
+[PASS] LR.W old value = ffffffff
+[PASS] SC.W success = 00000000
+[PASS] SC.W failure without LR = 00000001
+[PASS] final atomic word = 00000009
+CORE_RV32IMA_ISA_TB: PASS
+$finish called at time : 3915 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_core_rv32ima_isa.v" Line 462
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Nov  1 02:16:31 2026...

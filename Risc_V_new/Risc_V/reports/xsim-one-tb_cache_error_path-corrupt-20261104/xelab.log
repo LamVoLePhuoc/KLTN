@@ -1,0 +1,20 @@
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical -mt off xil_defaultlib.tb_cache_error_path -snapshot tb_cache_error_path_behav 
+Turned off multi-threading.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.cache_sp_ram
+Compiling module xil_defaultlib.cache_sp_ram(WIDTH=18)
+Compiling module xil_defaultlib.l1_icache_default
+Compiling module xil_defaultlib.store_unit
+Compiling module xil_defaultlib.cache_tdp_data_ram(ADDR_WIDTH=9)
+Compiling module xil_defaultlib.cache_tdp_data_ram(WIDTH=20,ADDR...
+Compiling module xil_defaultlib.l1_dcache_default
+Compiling module xil_defaultlib.tb_cache_error_path
+ERROR: [XSIM 43-3409] Failed to compile generated C file xsim.dir/tb_cache_error_path_behav/obj/xsim_1.c.
+ERROR: [XSIM 43-3915] Encountered a fatal error. Cannot continue. Exiting... 

@@ -1,0 +1,183 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Sun Nov  8 01:05:34 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l2_cache-20261108-004505/utilization_hierarchical_route.rpt
+| Design       : l2_cache
+| Device       : xcvu29p-fsga2577-2L-e
+| Speed File   : -2L
+| Design State : Routed
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++-------------------------------+--------------------------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+|            Instance           |                Module                | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
++-------------------------------+--------------------------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+| l2_cache                      |                                (top) |       1072 |       1072 |       0 |    0 | 1511 |    136 |      5 |    0 |          0 |
+|   (l2_cache)                  |                                (top) |         79 |         79 |       0 |    0 |  486 |      0 |      0 |    0 |          0 |
+|   g_line_slice[0].u_slice     |                   l2_line_slice_pipe |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[1].u_slice     |                 l2_line_slice_pipe_0 |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[2].u_slice     |                 l2_line_slice_pipe_1 |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[3].u_slice     |                 l2_line_slice_pipe_2 |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[4].u_slice     |                 l2_line_slice_pipe_3 |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[5].u_slice     |                 l2_line_slice_pipe_4 |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[6].u_slice     |                 l2_line_slice_pipe_5 |         16 |         16 |       0 |    0 |  128 |      0 |      0 |    0 |          0 |
+|   g_line_slice[7].u_slice     |                 l2_line_slice_pipe_6 |         16 |         16 |       0 |    0 |  129 |      0 |      0 |    0 |          0 |
+|   u_data_way0                 |                      l2_way_data_ram |        276 |        276 |       0 |    0 |    0 |     32 |      0 |    0 |          0 |
+|     g_word_bank[0].u_word_ram | l2_sync_block_ram__parameterized1_62 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_77 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_77 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__4 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[1].u_word_ram | l2_sync_block_ram__parameterized1_63 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_76 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_76 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__5 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[2].u_word_ram | l2_sync_block_ram__parameterized1_64 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_75 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_75 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__6 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[3].u_word_ram | l2_sync_block_ram__parameterized1_65 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_74 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_74 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__7 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[4].u_word_ram | l2_sync_block_ram__parameterized1_66 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_73 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_73 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__8 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[5].u_word_ram | l2_sync_block_ram__parameterized1_67 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_72 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_72 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__9 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[6].u_word_ram | l2_sync_block_ram__parameterized1_68 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_71 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_71 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__10 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[7].u_word_ram | l2_sync_block_ram__parameterized1_69 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_70 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_70 |         33 |         33 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__1 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|   u_data_way1                 |                    l2_way_data_ram_7 |        151 |        151 |       0 |    0 |    0 |     32 |      0 |    0 |          0 |
+|     g_word_bank[0].u_word_ram | l2_sync_block_ram__parameterized1_46 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_61 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_61 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__11 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[1].u_word_ram | l2_sync_block_ram__parameterized1_47 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_60 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_60 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__12 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[2].u_word_ram | l2_sync_block_ram__parameterized1_48 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_59 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_59 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__13 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[3].u_word_ram | l2_sync_block_ram__parameterized1_49 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_58 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_58 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__14 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[4].u_word_ram | l2_sync_block_ram__parameterized1_50 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_57 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_57 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__15 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[5].u_word_ram | l2_sync_block_ram__parameterized1_51 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_56 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_56 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__16 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[6].u_word_ram | l2_sync_block_ram__parameterized1_52 |         18 |         18 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_55 |         18 |         18 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_55 |         16 |         16 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__17 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[7].u_word_ram | l2_sync_block_ram__parameterized1_53 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_54 |         19 |         19 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_54 |         17 |         17 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__2 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|   u_data_way2                 |                    l2_way_data_ram_8 |         21 |         21 |       0 |    0 |    0 |     32 |      0 |    0 |          0 |
+|     g_word_bank[0].u_word_ram | l2_sync_block_ram__parameterized1_30 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_45 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__18 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[1].u_word_ram | l2_sync_block_ram__parameterized1_31 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_44 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__19 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[2].u_word_ram | l2_sync_block_ram__parameterized1_32 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_43 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__20 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[3].u_word_ram | l2_sync_block_ram__parameterized1_33 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_42 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__21 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[4].u_word_ram | l2_sync_block_ram__parameterized1_34 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_41 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__22 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[5].u_word_ram | l2_sync_block_ram__parameterized1_35 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_40 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__23 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[6].u_word_ram | l2_sync_block_ram__parameterized1_36 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_39 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__24 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[7].u_word_ram | l2_sync_block_ram__parameterized1_37 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_38 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_38 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |   xpm_memory_base__parameterized1__3 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|   u_data_way3                 |                    l2_way_data_ram_9 |        305 |        305 |       0 |    0 |    0 |     32 |      0 |    0 |          0 |
+|     g_word_bank[0].u_word_ram |    l2_sync_block_ram__parameterized1 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_29 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_29 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__25 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[1].u_word_ram | l2_sync_block_ram__parameterized1_16 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_28 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_28 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__26 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[2].u_word_ram | l2_sync_block_ram__parameterized1_17 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_27 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_27 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__27 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[3].u_word_ram | l2_sync_block_ram__parameterized1_18 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_26 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_26 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__28 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[4].u_word_ram | l2_sync_block_ram__parameterized1_19 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_25 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_25 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__29 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[5].u_word_ram | l2_sync_block_ram__parameterized1_20 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_24 |         35 |         35 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_24 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__30 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[6].u_word_ram | l2_sync_block_ram__parameterized1_21 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |  xpm_memory_spram__parameterized1_23 |         34 |         34 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |  xpm_memory_spram__parameterized1_23 |         32 |         32 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |  xpm_memory_base__parameterized1__31 |          2 |          2 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|     g_word_bank[7].u_word_ram | l2_sync_block_ram__parameterized1_22 |         61 |         61 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|       u_xpm                   |     xpm_memory_spram__parameterized1 |         61 |         61 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|         (u_xpm)               |     xpm_memory_spram__parameterized1 |         58 |         58 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|         xpm_memory_base_inst  |      xpm_memory_base__parameterized1 |          3 |          3 |       0 |    0 |    0 |      4 |      0 |    0 |          0 |
+|   u_meta_lru                  |    l2_sync_block_ram__parameterized0 |          3 |          3 |       0 |    0 |    0 |      0 |      1 |    0 |          0 |
+|     u_xpm                     |     xpm_memory_spram__parameterized0 |          3 |          3 |       0 |    0 |    0 |      0 |      1 |    0 |          0 |
+|       (u_xpm)                 |     xpm_memory_spram__parameterized0 |          3 |          3 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|       xpm_memory_base_inst    |      xpm_memory_base__parameterized0 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |    0 |          0 |
+|   u_meta_way0                 |                    l2_sync_block_ram |          4 |          4 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|     u_xpm                     |                  xpm_memory_spram_15 |          4 |          4 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|       (u_xpm)                 |                  xpm_memory_spram_15 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|       xpm_memory_base_inst    |                   xpm_memory_base__1 |          3 |          3 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|   u_meta_way1                 |                 l2_sync_block_ram_10 |          4 |          4 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|     u_xpm                     |                  xpm_memory_spram_14 |          4 |          4 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|       (u_xpm)                 |                  xpm_memory_spram_14 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|       xpm_memory_base_inst    |                   xpm_memory_base__2 |          3 |          3 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|   u_meta_way2                 |                 l2_sync_block_ram_11 |         20 |         20 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|     u_xpm                     |                  xpm_memory_spram_13 |         20 |         20 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|       (u_xpm)                 |                  xpm_memory_spram_13 |         17 |         17 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|       xpm_memory_base_inst    |                   xpm_memory_base__3 |          3 |          3 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|   u_meta_way3                 |                 l2_sync_block_ram_12 |         87 |         87 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|     u_xpm                     |                     xpm_memory_spram |         87 |         87 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
+|       (u_xpm)                 |                     xpm_memory_spram |         84 |         84 |       0 |    0 |    0 |      0 |      0 |    0 |          0 |
+|       xpm_memory_base_inst    |                      xpm_memory_base |          3 |          3 |       0 |    0 |    0 |      2 |      1 |    0 |          0 |
++-------------------------------+--------------------------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

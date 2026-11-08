@@ -19,9 +19,9 @@ const diagrams = {
   "system_overview.svg": svg(`${title("Kiến trúc tổng thể hệ thống 4 lõi RV32IMA")}
     ${[0,1,2,3].map(i=>box(50+i*300,100,260,150,`Core ${i}\nRV32IMA, physical address\nL1 I$ + D$`,C.white,C.blue,20)).join("")}
     ${[0,1,2,3].map(i=>arrow(180+i*300,250,180+i*300,320)).join("")}
-    ${box(70,320,1140,70,"AHB-Lite domain: 4 cores / 8 instruction-data request sources",C.pale,C.blue,24)}
+    ${box(70,320,1140,70,"AHB-Lite: 8 master adapters + round-robin 8M1S arbiter",C.pale,C.blue,24)}
     ${arrow(640,390,640,440)}
-    ${box(260,440,340,100,"Cache controller (MMU)\nround-robin + MSI + snoop",C.white,C.orange,22)}
+    ${box(260,440,340,100,"Cache/coherence controller\nMSI + snoop + refill/writeback",C.white,C.orange,22)}
     ${box(680,440,340,100,"Shared L2 cache\n512 KB, 4-way, 32 B line",C.white,C.cyan,22)}
     ${arrow(600,490,680,490,"directory / line")}
     ${arrow(850,540,850,585)}
@@ -88,16 +88,18 @@ const diagrams = {
 
   "cache_coherence.svg": svg(`${title("Phân cấp cache và coherence MSI")}
     ${[0,1,2,3].map(i=>box(45+i*300,115,245,100,`Core ${i} private L1\nI$ 32 KB + D$ 32 KB`,C.white,C.blue,20)).join("")}
-    ${[0,1,2,3].map(i=>arrow(168+i*300,215,168+i*300,310,"request / snoop")).join("")}
-    ${box(100,310,1080,105,"Shared cache controller (MMU)\n8-source round-robin, one atomic transaction, sharer directory, invalidate/downgrade snoops",C.white,C.orange,23)}
-    ${arrow(500,415,500,485)}${arrow(780,485,780,415)}
-    ${box(315,485,650,105,"Shared inclusive L2\n512 KB, 4-way set associative, writeback/refill",C.white,C.cyan,23)}
-    ${arrow(640,590,640,650,"32-bit memory words")}
+    ${[0,1,2,3].map(i=>arrow(168+i*300,215,168+i*300,265,"AHB request")).join("")}
+    ${box(100,265,1080,65,"AHB-Lite 8M1S arbiter\nround-robin grant + per-master response buffer",C.pale,C.blue,20)}
+    ${arrow(640,330,640,375,"selected request + source ID")}
+    ${box(100,375,1080,90,"Shared cache/coherence controller (MMU)\none atomic transaction, sharer directory, invalidate/downgrade snoops",C.white,C.orange,21)}
+    ${arrow(500,465,500,515)}${arrow(780,515,780,465)}
+    ${box(315,515,650,90,"Shared inclusive L2\n512 KB, 4-way set associative, writeback/refill",C.white,C.cyan,21)}
+    ${arrow(640,605,640,650,"32-bit memory words")}
     ${box(470,650,340,55,"External memory / AXI4",C.navy,C.navy,22)}
     ${text(90,470,"States",20,700,"start",C.navy)}${box(90,495,120,55,"I",C.white,C.gray,22)}${box(90,560,120,55,"S",C.white,C.cyan,22)}${box(90,625,120,55,"M",C.white,C.orange,22)}`),
 
   "cache_controller_fsm.svg": svg(`${title("FSM Cache/Memory Management Unit (cache controller)")}
-    ${box(45,120,190,90,"IDLE\nRR chọn 1/8 nguồn",C.white,C.blue,20)}
+    ${box(45,120,190,90,"IDLE\nchốt request đã phân xử",C.white,C.blue,20)}
     ${box(310,120,210,90,"L2 LOOKUP\nđọc line + directory",C.white,C.cyan,20)}
     ${box(610,95,220,90,"SNOOP SHARERS\nDOWNGRADE / INVALIDATE",C.white,C.orange,19)}
     ${box(970,120,220,90,"GRANT + L2 UPDATE\nS cho read, M cho RFO",C.white,C.cyan,19)}
@@ -115,9 +117,9 @@ const diagrams = {
   "bus_domains.svg": svg(`${title("Hai miền bus và ranh giới giao thức")}
     ${[0,1,2,3].map(i=>box(50+i*290,105,225,80,`Core ${i}\nI$ / D$`,C.white,C.blue,20)).join("")}
     ${[0,1,2,3].map(i=>arrow(162+i*290,185,162+i*290,265)).join("")}
-    ${box(80,265,1120,80,"AHB-Lite request adapters: HADDR, HWRITE, HTRANS, HREADY, HRESP",C.pale,C.blue,23)}
+    ${box(80,265,1120,80,"AHB-Lite: 8 master adapters + 8M1S arbiter + registered owner response",C.pale,C.blue,22)}
     ${arrow(640,345,640,410)}
-    ${box(300,410,680,90,"Cache controller (MMU)\nserialized MSI + round-robin + back-pressure",C.white,C.orange,23)}
+    ${box(300,410,680,90,"Cache/coherence controller (MMU)\nserialized MSI + snoop + refill/writeback",C.white,C.orange,23)}
     ${arrow(640,500,640,560)}
     ${box(405,560,470,75,"Shared L2 / CPU memory port",C.white,C.cyan,23)}
     ${arrow(875,597,1030,597,"bridge")}${box(1030,555,200,85,"AXI4 wrapper\nread/write channels",C.white,C.navy,20)}

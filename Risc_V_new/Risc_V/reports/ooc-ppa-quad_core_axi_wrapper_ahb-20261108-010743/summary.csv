@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+quad_core_axi_wrapper_ahb,xcvu29p-fsga2577-2L-e,impl,ACLK,4.000,250.000,0.031,0.009,251.953,49523,38889,232,21,243,128,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-quad_core_axi_wrapper_ahb-20261108-010743

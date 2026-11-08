@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+physical_core_wrapper,xc7z030fbv676-1,impl,clk,9.000,111.111,0.803,0.057,121.996,3835,2414,0,0,0,0,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-physical_core_wrapper-20261103-223606

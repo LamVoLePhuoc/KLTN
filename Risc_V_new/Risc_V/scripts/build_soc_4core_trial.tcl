@@ -25,7 +25,7 @@
 #   cpu0 (quad_core_axi_wrapper_ahb: 4 cores + L1 I$/D$ + L2 + MSI,
 #         AHB-Lite between cores and L2/coherence -- see header above)
 #              M_AXI (single combined R/W master)
-#                     |            dma0 (axi_cdma)
+#                     |            dma0 (Xilinx AXI CDMA IP)
 #                     |               M_AXI
 #                      \_______________/
 #                             |
@@ -33,7 +33,8 @@
 #                     (stand-in for the diagram's AXI4 system bus)
 #                    /                  \
 #             mem_ctrl/S_AXI          dma0/S_AXI_LITE
-#             (axi_bram_ctrl)         (ctrl regs)
+#             (Xilinx AXI BRAM          (Xilinx stock control port)
+#              Controller IP)
 #             0x0000_0000, sized
 #             by MEM_SIZE_BYTES
 #             below -- stands in
@@ -52,7 +53,7 @@
 #     wrapper's AXI logic ever sees it).
 #   - Interrupt controller (axi_intc) and the second BRAM target
 #     (the "SRAM Controller + SRAM" stand-in) are DROPPED entirely,
-#     per instruction -- only DMA (axi_cdma) and one memory target
+#     per instruction -- only Xilinx stock DMA and memory IP plus one memory target
 #     ("Memory Controller + DDRAM") remain. If SRAM ends up back in
 #     scope later, re-add a second axi_bram_ctrl/blk_mem_gen pair the
 #     same way build_soc_mmu_trial.tcl does it.
@@ -63,8 +64,10 @@
 # WHY THESE CHOICES: see build_soc_mmu_trial.tcl's header for the
 # reasoning that still applies unchanged here (no AHB IP in Vivado's
 # catalog; BRAM stand-in instead of PS7 DDR/MIG until the board's
-# real DDR path is confirmed; axi_cdma over axi_dma since this is a
-# memory-mapped-to-memory-mapped copy engine, not a stream device).
+# real DDR path is confirmed). Everything below the CPU's M_AXI boundary
+# is now Vivado IP Catalog content: AXI Interconnect, AXI CDMA, AXI BRAM
+# Controller and Block Memory Generator. No custom DMA or memory RTL is
+# part of the active source set.
 #
 # The active thesis hierarchy uses one direct physical address space.
 # There is no TLB/PTW or VA-to-PA translation. CONST_UNUSED_MMU_FLUSH
@@ -152,6 +155,7 @@ set new_sources {
     coherence_manager.v
     cache_controller_mmu.v
     ahb_lite_l1_adapter.v
+    ahb_lite_arbiter_8m1s.v
     ahb_lite_l1_slave_adapter.v
     quad_core_soc_ahb.v
     quad_core_axi_wrapper_ahb.v
@@ -207,6 +211,7 @@ connect_bd_net [get_bd_ports ext_reset_in] [get_bd_pins $rst0/ext_reset_in]
 
 set ACLK       [get_bd_ports sys_clk]
 set ARESETN    [get_bd_pins  $rst0/peripheral_aresetn]
+set RESET      [get_bd_pins  $rst0/peripheral_reset]
 set IC_ARESETN [get_bd_pins  $rst0/interconnect_aresetn]
 
 #---------------------------------------------------------------
@@ -234,20 +239,15 @@ set_property CONFIG.CONST_WIDTH {1} [get_bd_cells $c_flush]
 set_property CONFIG.CONST_VAL   {0} [get_bd_cells $c_flush]
 connect_bd_net [get_bd_pins $c_flush/dout] [get_bd_pins cpu0/Mmu_Flush]
 
-set c_cflush [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 CONST_CACHE_FLUSH]
-set_property CONFIG.CONST_WIDTH {1} [get_bd_cells $c_cflush]
-set_property CONFIG.CONST_VAL   {0} [get_bd_cells $c_cflush]
-connect_bd_net [get_bd_pins $c_cflush/dout] [get_bd_pins cpu0/Cache_Flush]
-
 # NOTE: the Mmu_Flush pin is retained only for compatibility with an
 # already-generated wrapper.  The active core uses direct physical
 # addresses and ignores this tied-low signal. Regenerate the BD after
 # the compatibility pin is removed from the outer wrappers.
 
 #---------------------------------------------------------------
-# 4. DMA (memory-mapped to memory-mapped copy engine)
+# 4. Platform DMA IP (memory-mapped to memory-mapped copy engine)
 #---------------------------------------------------------------
-puts "--> [4] Instantiating dma0 = axi_cdma"
+puts "--> [4] Instantiating Xilinx AXI Central DMA (axi_cdma)"
 
 set dma0 [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_cdma:4.1 dma0]
 catch {set_property CONFIG.C_INCLUDE_SG {0} [get_bd_cells $dma0]}
@@ -255,10 +255,28 @@ connect_bd_net $ACLK    [get_bd_pins $dma0/s_axi_lite_aclk]
 connect_bd_net $ACLK    [get_bd_pins $dma0/m_axi_aclk]
 connect_bd_net $ARESETN [get_bd_pins $dma0/s_axi_lite_aresetn]
 
+# AXI CDMA is intentionally treated as a platform IP, not CPU RTL.  Software
+# or an external platform controller must perform cache maintenance before and
+# after a non-coherent transfer.  Export the existing CPU cache-maintenance
+# handshake instead of embedding custom DMA policy inside the CPU wrapper.
+create_bd_port -dir I cache_flush_req
+create_bd_port -dir O cache_flush_busy
+create_bd_port -dir O cache_flush_done
+create_bd_port -dir O cache_flush_error
+connect_bd_net [get_bd_ports cache_flush_req]   [get_bd_pins cpu0/Cache_Flush]
+connect_bd_net [get_bd_pins cpu0/Cache_Flush_Busy]  [get_bd_ports cache_flush_busy]
+connect_bd_net [get_bd_pins cpu0/Cache_Flush_Done]  [get_bd_ports cache_flush_done]
+connect_bd_net [get_bd_pins cpu0/Cache_Flush_Error] [get_bd_ports cache_flush_error]
+
+# Leave interrupt handling to the surrounding platform.
+create_bd_port -dir O dma_irq
+connect_bd_net [get_bd_pins $dma0/cdma_introut] [get_bd_ports dma_irq]
+
 #---------------------------------------------------------------
-# 5. One BRAM-backed memory target ("Memory Controller + DDRAM"
-#    stand-in). No second target this time -- SRAM Controller is
-#    dropped per instruction.
+# 5. Platform memory IP.  This generic-part trial uses Xilinx AXI BRAM
+#    Controller + Block Memory Generator.  On a real board replace this
+#    target with the board's PS DDR/HP path or configured MIG IP; no custom
+#    memory-controller RTL belongs in the four-core source hierarchy.
 #---------------------------------------------------------------
 puts "--> [5] Instantiating mem_ctrl (${MEM_SIZE_BYTES} bytes)"
 
@@ -300,11 +318,11 @@ foreach idx {00 01} {
 }
 
 # Masters in: cpu0 (the whole 4-core+cache+coherence system, as ONE
-# AXI master), dma0's data-mover port.
+# AXI master), dma0's AXI4 data-mover port.
 connect_bd_intf_net [get_bd_intf_pins cpu0/M_AXI]  [get_bd_intf_pins $ic0/S00_AXI]
 connect_bd_intf_net [get_bd_intf_pins $dma0/M_AXI] [get_bd_intf_pins $ic0/S01_AXI]
 
-# Slaves out: the one memory target, dma0's own control port.
+# Slaves out: platform memory and the AXI CDMA AXI4-Lite control port.
 connect_bd_intf_net [get_bd_intf_pins $ic0/M00_AXI] [get_bd_intf_pins $mem_ctrl/S_AXI]
 connect_bd_intf_net [get_bd_intf_pins $ic0/M01_AXI] [get_bd_intf_pins $dma0/S_AXI_LITE]
 
@@ -315,14 +333,33 @@ puts "--> [7] Assigning addresses"
 
 catch {assign_bd_address} ; # auto-assign everything first
 
-foreach {space_name} {cpu0/M_AXI dma0/Data} {
+foreach master_if_name {cpu0/M_AXI dma0/M_AXI} {
     if {[catch {
-        set addr_space [get_bd_addr_spaces $space_name]
+        set master_if [get_bd_intf_pins $master_if_name]
+        set addr_space [get_bd_addr_spaces -of_objects $master_if]
+        if {[llength $addr_space] != 1} {
+            error "expected one address space for $master_if_name, found: $addr_space"
+        }
         set seg [get_bd_addr_segs -of_objects $addr_space -filter {NAME =~ "*mem_ctrl*"}]
         assign_bd_address -offset 0x00000000 -range ${MEM_SIZE_BYTES} -target_address_space $addr_space $seg -force
     } err]} {
-        puts "    WARNING: could not pin mem_ctrl address for $space_name ($err) -- fix by hand in the Address Editor."
+        puts "    WARNING: could not pin mem_ctrl address for $master_if_name ($err) -- fix by hand in the Address Editor."
     }
+}
+
+# CPU software programs the stock AXI CDMA register bank through this fixed
+# AXI4-Lite aperture.  The DMA data master must not map its own control port.
+set dma_cfg_seg [get_bd_addr_segs -quiet dma0/S_AXI_LITE/Reg]
+if {[llength $dma_cfg_seg] != 1} {
+    puts "    WARNING: expected one AXI CDMA register segment, found: $dma_cfg_seg"
+    puts "    Assign dma0/S_AXI_LITE manually at 0x40000000 in Address Editor."
+} elseif {[catch {
+    set cpu_addr_space [get_bd_addr_spaces -of_objects [get_bd_intf_pins cpu0/M_AXI]]
+    assign_bd_address -offset 0x40000000 -range 64K \
+        -target_address_space $cpu_addr_space $dma_cfg_seg -force
+} err]} {
+    puts "    WARNING: could not pin AXI CDMA configuration aperture ($err)."
+    puts "    Assign dma0/S_AXI_LITE manually at 0x40000000 in Address Editor."
 }
 
 #---------------------------------------------------------------

@@ -57,6 +57,7 @@
 module ahb_lite_l1_adapter (
     input  wire         HCLK,
     input  wire         HRESETn,     // active-LOW, matches AHB-Lite convention
+    input  wire         HGRANT,      // arbiter grant; tie high on a point-to-point link
                                        // (note: every other reset in this repo is
                                        // active-HIGH -- see the inverter below)
 
@@ -102,12 +103,13 @@ module ahb_lite_l1_adapter (
                                      // needed since this module's own regs are reset
                                      // by !HRESETn below) is obvious at a glance.
 
-    localparam [1:0] S_IDLE  = 2'd0,
-                      S_ADDR  = 2'd1,
-                      S_DATA  = 2'd2,
-                      S_WAIT_REQ_DROP = 2'd3;
+    localparam [2:0] S_IDLE  = 3'd0,
+                     S_ARB   = 3'd1,
+                     S_ADDR  = 3'd2,
+                     S_DATA  = 3'd3,
+                     S_WAIT_REQ_DROP = 3'd4;
 
-    reg [1:0]   state;
+    reg [2:0]   state;
     reg [2:0]   word_idx;
     reg [31:0]  line_addr;
     reg [255:0] wr_line_buf;
@@ -164,9 +166,19 @@ module ahb_lite_l1_adapter (
                         is_rfo      <= (bus_req_type == 2'b01);
                         word_idx    <= 3'd0;
 
-                        HADDR  <= bus_req_addr;
-                        HWRITE <= (bus_req_type == 2'b10) ||
-                                  ((bus_req_type == 2'b11) && bus_req_line[36]);
+                        // Do not issue an address phase until the shared-bus
+                        // arbiter grants this master.  Point-to-point users tie
+                        // HGRANT high and pay only this explicit arbitration cycle.
+                        HTRANS <= TRANS_IDLE;
+                        state  <= S_ARB;
+                    end
+                end
+
+                S_ARB: begin
+                    HTRANS <= TRANS_IDLE;
+                    if (HGRANT) begin
+                        HADDR  <= line_addr;
+                        HWRITE <= is_write;
                         HTRANS <= TRANS_NONSEQ;
                         state  <= S_ADDR;
                     end

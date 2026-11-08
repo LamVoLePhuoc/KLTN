@@ -88,9 +88,9 @@ module tb_cache_error_path;
         wait (i_req_valid);
         @(negedge clk);
         i_resp_valid = 1'b1; i_resp_error = 1'b1;
-        #1 check(i_cpu_valid && i_cpu_error,
+        @(posedge clk); #1;
+        check(i_cpu_valid && i_cpu_error,
                  "I-cache failed fill completes fetch with error");
-        @(posedge clk);
         @(negedge clk);
         i_resp_valid = 1'b0; i_resp_error = 1'b0;
         wait (i_req_valid);

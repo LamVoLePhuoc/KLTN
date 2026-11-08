@@ -1,0 +1,45 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Nov  3 02:17:16 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l2_cache-20261103-021522/utilization_hierarchical_synth.rpt
+| Design       : l2_cache
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Synthesized
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------------------+--------------------+------------+------------+---------+------+------+--------+--------+------------+
+|          Instance          |       Module       | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++----------------------------+--------------------+------------+------------+---------+------+------+--------+--------+------------+
+| l2_cache                   |              (top) |      12241 |       4049 |    8192 |    0 | 1510 |    112 |      4 |          0 |
+|   (l2_cache)               |              (top) |      11178 |       2986 |    8192 |    0 | 1510 |      0 |      0 |          0 |
+|   u_data_way0              |    l2_way_data_ram |          1 |          1 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  | xpm_memory_spram_5 |          1 |          1 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              | xpm_memory_spram_5 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst | xpm_memory_base__1 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_data_way1              |  l2_way_data_ram_0 |        385 |        385 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  | xpm_memory_spram_4 |        385 |        385 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              | xpm_memory_spram_4 |        385 |        385 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst | xpm_memory_base__2 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_data_way2              |  l2_way_data_ram_1 |        257 |        257 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  | xpm_memory_spram_3 |        257 |        257 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              | xpm_memory_spram_3 |        257 |        257 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst | xpm_memory_base__3 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_data_way3              |  l2_way_data_ram_2 |        420 |        420 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  |   xpm_memory_spram |        420 |        420 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              |   xpm_memory_spram |        420 |        420 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |    xpm_memory_base |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
++----------------------------+--------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

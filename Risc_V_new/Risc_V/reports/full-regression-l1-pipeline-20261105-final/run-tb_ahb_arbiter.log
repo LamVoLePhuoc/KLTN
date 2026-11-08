@@ -1,0 +1,3 @@
+# vsim -do {run -all; quit -f} -l {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-l1-pipeline-20261105-final\run-tb_ahb_arbiter.log} -lib ../reports/.questa-work-d0b4a338ad8c46a780b0a99ce31c807d -c -quiet tb_ahb_arbiter 
+# ** Note: (vsim-3812) Design is being optimized...
+# 

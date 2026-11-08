@@ -15,7 +15,7 @@ Thiết kế một SoC 4 lõi RISC-V RV32IMA phục vụ nghiên cứu hệ th�
 - L1 instruction/data cache riêng, L2 cache dùng chung;
 - coherence MSI cho dữ liệu chia sẻ giữa 4 lõi;
 - AHB-Lite ở miền cache/coherence và AXI4 ở miền hệ thống;
-- boot controller, DMA/DRAM wrapper và kịch bản chạy trên FPGA;
+- boot controller và giao diện AXI4 để ghép DMA/DDR bằng Vivado IP Catalog;
 - kiểm chứng tự động không dùng UVM: testbench tự kiểm, regression và hardware test.
 
 ## 2. Trạng thái tổng quan
@@ -29,7 +29,7 @@ Thiết kế một SoC 4 lõi RISC-V RV32IMA phục vụ nghiên cứu hệ th�
 | Coherence MSI | **PASS hiện tại** | `MSI_COHERENCE_TB` và `MSI_COHERENCE_AHB_TB` đã chạy lại bằng QuestaSim |
 | AHB-Lite adapters | **PASS trong integration MSI/AHB** | Đã kiểm tra RFO, `HMASTLOCK`, `HREADY`, snoop và writeback |
 | AXI4/boot wrapper | **Synthesis PASS (wrapper AHB/AXI4)** | `quad_core_axi_wrapper_ahb` đã synthesize; bootable wrapper và board end-to-end chưa xác nhận |
-| Source-level DMA | RTL + testbench đã có, **chưa chạy lại** | AXI4 burst memcpy, AXI-Lite register, pre/post cache maintenance và `tb_dma_end_to_end.v` |
+| Platform DMA | **Xilinx IP Catalog** | Active BD dùng `axi_cdma:4.1`; custom DMA RTL không còn thuộc source set chính |
 | Vivado synthesis/implementation | **Full-BD synthesis PASS** | Vivado 2022.2, `xc7z030fbv676-1`: 0 error/0 critical warning; post-synthesis timing 100 MHz chưa đạt, implementation/power chưa chạy |
 | FPGA hardware test | Chưa hoàn tất | Chưa chứng minh luồng SD–DRAM–CPU–SD trên board thật |
 
@@ -172,15 +172,18 @@ vật lý 32 bit. Source Sv32 cũ chỉ có trong `files_sv32_legacy.f`.
   `Busy/Done/Error/Rejected`; register map và trình tự DMA nằm trong
   `docs/BOOT_DMA_PROTOCOL.md`.
 
-### 5.5. Source-level DMA
+### 5.5. Platform DMA và memory
 
-- `rtl/dma/soc_dma_controller.v` ghép AXI4-Lite register file, coordinator cache
-  và AXI4 memory-to-memory engine; không phụ thuộc IP sinh tự động của Vivado.
-- DMA dùng burst INCR có giới hạn, không vượt biên 4 KiB, kiểm tra alignment và
-  lan truyền `RRESP/BRESP` lỗi.
-- Trình tự bắt buộc là buffer quiesced → pre-flush → copy → post-flush. Watchdog
-  chỉ chẩn đoán và không tạo completion giả khi giao dịch còn outstanding.
-- `software/ps_loader/soc_dma.h` là API C độc lập BSP cho register map này.
+- RTL active dừng tại cổng `M_AXI` của `quad_core_axi_wrapper_ahb`.
+- Block Design dùng IP Catalog `xilinx.com:ip:axi_cdma:4.1` cho DMA và
+  `axi_bram_ctrl:4.1` + `blk_mem_gen:8.4` làm memory stand-in.
+- Trên board thật, thay memory stand-in bằng PS DDR/HP port hoặc MIG đã cấu hình
+  theo đúng board. Không đưa RTL DMA/DRAM tự viết vào `rtl/files.f` hoặc source
+  set chính.
+- AXI CDMA không coherent; software/platform phải dùng các chân
+  `cache_flush_req/busy/done/error` trước và sau DMA.
+- Các file dưới `rtl/dma/` chỉ được giữ làm reference lịch sử, không tham gia
+  active build, synthesis hay active regression.
 
 ## 6. Kiểm chứng
 
@@ -271,7 +274,6 @@ Các entry point chính:
 - `rtl/soc/quad_core_soc_ahb.v`: đường AHB-Lite;
 - `rtl/soc/quad_core_axi_wrapper_ahb.v`: wrapper AXI4 cho SoC AHB;
 - `rtl/soc/quad_core_axi_wrapper_ahb_bootable.v`: wrapper bootable;
-- `rtl/dma/soc_dma_controller.v`: DMA AXI4 + AXI4-Lite, tự điều phối cache;
 - `rtl/files.f`: inventory chuẩn cho simulator/static checks.
 
 Vivado scripts:
@@ -281,7 +283,7 @@ Vivado scripts:
 - `scripts/build_soc_zu5ev_boot.tcl`.
 - `software/ps_loader/boot_ctrl.h`: register map/API độc lập BSP cho PS loader và
   cache maintenance trước/sau DMA.
-- `software/ps_loader/soc_dma.h`: register map/API cho source-level DMA.
+- AXI CDMA được cấu hình bằng register map chuẩn của Xilinx IP/BSP.
 
 Questa active regression (compile `rtl/files.f`, tự loại các test Sv32 legacy,
 ghi log và tạo lại `reports/full-regression-latest/summary.{md,csv}`):
@@ -392,10 +394,9 @@ compile order về Manual vì `update_module_reference` không hỗ trợ chế 
   nhưng machine-check chính xác cho chính CPU vẫn là phần mở rộng sau.
 - Watchdog cache/memory hiện chỉ báo lỗi; chưa thể tự recovery an toàn khi bus treo
   vì đường memory chưa có cancel/drain cho response đến muộn.
-- DMA chưa là coherence master trực tiếp. `soc_dma_controller` hiện thực protocol
-  coarse-grain tự động (quiesce, pre-flush, DMA, post-flush); PS vẫn có thể dùng
-  đường thủ công qua `boot_ctrl.CACHE`. Coherent DMA theo từng line và scatter-
-  gather vẫn là phần mở rộng sau.
+- AXI CDMA là platform master không coherent. Software/platform bắt buộc quiesce
+  buffer và điều khiển cache maintenance qua interface được export; coherent DMA
+  theo từng line vẫn là phần mở rộng sau.
 - Coherence manager blocking giới hạn throughput khi contention cao.
 - Kết nối SD phụ thuộc board, phải xác nhận đường vật lý trước khi chốt boot flow.
 

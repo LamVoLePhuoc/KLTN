@@ -138,7 +138,7 @@ module tb_coherence_ahb;
             );
 
             ahb_lite_l1_adapter u_ahb_m (
-                .HCLK(clk), .HRESETn(HRESETn),
+                .HCLK(clk), .HRESETn(HRESETn), .HGRANT(1'b1),
                 .bus_req_valid(bus_req_valid[gi]), .bus_req_type(bus_req_type[gi]),
                 .bus_req_addr(bus_req_addr[gi]), .bus_req_line(bus_req_line[gi]),
                 .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_error(bus_resp_error[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),

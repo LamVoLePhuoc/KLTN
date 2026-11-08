@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+l2_cache,xcvu29p-fsga2577-2L-e,impl,clk,4.000,250.000,0.227,0.013,265.041,1621,1511,136,5,139,0,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l2_cache-20261108-004505

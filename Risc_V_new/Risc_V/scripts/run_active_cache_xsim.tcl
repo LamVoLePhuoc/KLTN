@@ -14,6 +14,7 @@ set report_dir  [file join $project_dir reports "xsim-active-cache-$stamp"]
 file mkdir $report_dir
 
 set tests {
+    {tb_ahb_arbiter.v              tb_ahb_arbiter              {AHB_ARBITER_TB: PASS}}
     {tb_ahb_error_sideband.v       tb_ahb_error_sideband       {AHB_ERROR_SIDEBAND_TB: PASS}}
     {tb_ahb_uncached.v             tb_ahb_uncached             {AHB_UNCACHED_TB: PASS}}
     {tb_axi_request_hold.v         tb_axi_request_hold         {AXI_REQUEST_HOLD_TB: PASS}}
@@ -34,7 +35,6 @@ set tests {
     {tb_csr_access_fault.v         tb_csr_access_fault         {CSR_ACCESS_FAULT_TB: PASS}}
     {tb_csr_priv.v                 tb_csr_priv                 {CSR_PRIV_TB: PASS}}
     {tb_csr_trap.v                 tb_csr_trap                 {CSR_TRAP_TB: PASS}}
-    {tb_dma_end_to_end.v           tb_dma_end_to_end           {DMA_END_TO_END_TB: PASS}}
 }
 
 set rtl_files {}
@@ -118,7 +118,7 @@ foreach result $results {
     puts $fd "| $top | $status | $log_name |"
 }
 puts $fd ""
-puts $fd "> Scope: direct physical addressing + core/cache/coherence/bus/boot/DMA. Legacy Sv32 is excluded."
+puts $fd "> Scope: direct physical addressing + core/cache/coherence/bus/boot. Platform DMA and memory are Vivado IP Catalog blocks and are excluded from this RTL regression. Legacy Sv32 is excluded."
 close $fd
 
 cd $old_dir

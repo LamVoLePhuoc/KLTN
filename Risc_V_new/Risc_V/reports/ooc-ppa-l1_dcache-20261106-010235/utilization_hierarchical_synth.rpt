@@ -1,0 +1,49 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Fri Nov  6 01:04:30 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l1_dcache-20261106-010235/utilization_hierarchical_synth.rpt
+| Design       : l1_dcache
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Synthesized
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------------------+-----------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|          Instance          |                     Module                    | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++----------------------------+-----------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| l1_dcache                  |                                         (top) |       3802 |       3770 |      32 |    0 | 2387 |     16 |      2 |          0 |
+|   (l1_dcache)              |                                         (top) |       2878 |       2846 |      32 |    0 | 2387 |      0 |      0 |          0 |
+|   u_data_way0              |                 cache_tdp_data_ram__xdcDup__1 |          1 |          1 |       0 |    0 |    0 |      7 |      1 |          0 |
+|     (u_data_way0)          |                 cache_tdp_data_ram__xdcDup__1 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     u_xpm                  |                          xpm_memory_tdpram__2 |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|       (u_xpm)              |                          xpm_memory_tdpram__2 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |                            xpm_memory_base__2 |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|   u_data_way1              |                            cache_tdp_data_ram |        522 |        522 |       0 |    0 |    0 |      7 |      1 |          0 |
+|     (u_data_way1)          |                            cache_tdp_data_ram |        522 |        522 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     u_xpm                  |                             xpm_memory_tdpram |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|       (u_xpm)              |                             xpm_memory_tdpram |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |                               xpm_memory_base |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|   u_meta_way0              | cache_tdp_data_ram__parameterized0__xdcDup__1 |         62 |         62 |       0 |    0 |    0 |      1 |      0 |          0 |
+|     (u_meta_way0)          | cache_tdp_data_ram__parameterized0__xdcDup__1 |         62 |         62 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     u_xpm                  |          xpm_memory_tdpram__parameterized0__2 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       (u_xpm)              |          xpm_memory_tdpram__parameterized0__2 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |            xpm_memory_base__parameterized0__2 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|   u_meta_way1              |            cache_tdp_data_ram__parameterized0 |        339 |        339 |       0 |    0 |    0 |      1 |      0 |          0 |
+|     (u_meta_way1)          |            cache_tdp_data_ram__parameterized0 |        339 |        339 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     u_xpm                  |             xpm_memory_tdpram__parameterized0 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       (u_xpm)              |             xpm_memory_tdpram__parameterized0 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |               xpm_memory_base__parameterized0 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
++----------------------------+-----------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

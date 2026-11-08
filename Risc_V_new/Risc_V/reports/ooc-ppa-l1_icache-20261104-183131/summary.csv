@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+l1_icache,xc7z030fbv676-1,impl,clk,3.333,300.030,-1.714,0.091,198.138,2597,1393,8,2,9,16,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l1_icache-20261104-183131

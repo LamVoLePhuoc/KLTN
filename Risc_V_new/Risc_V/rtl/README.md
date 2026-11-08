@@ -23,7 +23,7 @@ rtl/
 ├── interconnect/ahb/ AHB-Lite adapters used at the L1/coherence boundary
 ├── soc/              Four-core integration and AXI4-facing wrappers
 ├── boot/             Boot control register block used by bootable wrappers
-├── dma/              Source-level AXI4 memcpy DMA and cache coordinator
+├── dma/              Historical custom-DMA reference; excluded from active source set
 ├── debug/            Optional MMU and cache trace buffers
 └── legacy_2core/     Retained two-core FPGA baseline; not part of the active quad-core hierarchy
 ```
@@ -34,13 +34,12 @@ rtl/
 - `soc/quad_core_soc_ahb.v`: AHB-Lite adapter path.
 - `soc/quad_core_axi_wrapper_ahb.v`: AXI4-facing wrapper for the AHB-Lite quad-core SoC.
 - `soc/quad_core_axi_wrapper_ahb_bootable.v`: bootable AXI4-facing system wrapper.
-- `dma/soc_dma_controller.v`: AXI4-Lite controlled non-coherent AXI4 DMA with
-  automatic pre/post global cache maintenance.
-- `docs/BOOT_DMA_PROTOCOL.md`: AXI4-Lite register map and the required pre/post-DMA cache-maintenance sequence.
 - `files.f`: canonical relative source inventory for static checks and simulator setup.
 - `files_sv32_legacy.f`: optional translation-source inventory; never add it to an active build.
 
-The Vivado scripts resolve source files recursively below `rtl/`, so adding another block folder does not require flattening the tree again.
+The active Vivado build registers an explicit four-core source list. Platform
+DMA and memory are instantiated from the Vivado IP Catalog and must not be added
+to `files.f` as custom RTL.
 
 The Vivado project file has also been updated to the new paths. Add future RTL to
 the appropriate block folder and to `files.f`; do not restore a flat `rtl/` layout.
@@ -63,9 +62,10 @@ until the pre/post-DMA maintenance sequence completes.
 
 ```text
 soc -> cache/core subsystem -> physical_core_wrapper -> core
-soc -> cache_controller_mmu (owns arbitration, MSI FSM, snoop and memory transactions)
+soc -> interconnect/ahb/ahb_lite_arbiter_8m1s (owns active request arbitration)
+soc -> cache_controller_mmu (owns MSI FSM, snoop and memory transactions)
 soc -> cache/L2 (peer of cache_controller_mmu)
-soc -> interconnect/ahb -> cache_controller_mmu
+soc -> interconnect/ahb adapters + arbiter -> cache_controller_mmu
 soc -> boot
 soc/external AXI fabric -> dma -> global cache-maintenance handshake
 cache_controller_mmu -> debug (optional generate blocks)

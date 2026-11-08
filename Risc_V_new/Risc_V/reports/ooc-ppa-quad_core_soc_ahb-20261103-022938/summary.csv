@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+quad_core_soc_ahb,xc7z030fbv676-1,impl,clk,9.800,102.041,0.127,0.031,103.381,48532,32791,208,20,218,8384,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-quad_core_soc_ahb-20261103-022938

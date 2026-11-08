@@ -1,3 +1,0 @@
-#!/usr/local/bin/bash
-
-./scripts/create_markdown.sh ahb3lite_interconnect_datasheet

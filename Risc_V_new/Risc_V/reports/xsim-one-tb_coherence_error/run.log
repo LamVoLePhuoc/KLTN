@@ -20,6 +20,6 @@ run -all
 [PASS] restored victim kept authoritative dirty data
 [PASS] restored victim has no stale sharers
 COHERENCE_ERROR_TB: PASS
-$finish called at time : 42985 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v" Line 222
+$finish called at time : 43255 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v" Line 223
 exit
-INFO: [Common 17-206] Exiting xsim at Tue Oct 27 13:13:04 2026...
+INFO: [Common 17-206] Exiting xsim at Sat Nov  7 23:41:41 2026...

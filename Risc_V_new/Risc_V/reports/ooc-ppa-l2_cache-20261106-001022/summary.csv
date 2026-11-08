@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+l2_cache,xc7z030fbv676-1,synth,clk,3.333,300.030,-0.154,0.191,286.779,1530,1511,136,5,139,0,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l2_cache-20261106-001022

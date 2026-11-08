@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+ahb_lite_arbiter_8m1s,xc7z030fbv676-1,impl,HCLK,3.000,333.333,0.620,0.196,420.168,327,291,0,0,0,0,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-ahb_lite_arbiter_8m1s-20261103-224235

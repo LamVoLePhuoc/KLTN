@@ -1,0 +1,89 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Nov  3 18:08:53 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-core_l1_wrapper-20261103-180444/utilization_hierarchical_synth.rpt
+| Design       : core_l1_wrapper
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Synthesized
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------------------+-----------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|           Instance           |                     Module                    | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++------------------------------+-----------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| core_l1_wrapper              |                                         (top) |       8643 |       8595 |      48 |    0 | 5345 |     24 |      4 |          4 |
+|   (core_l1_wrapper)          |                                         (top) |          2 |          2 |       0 |    0 |    9 |      0 |      0 |          0 |
+|   physical_core              |                         physical_core_wrapper |       3316 |       3316 |       0 |    0 | 2417 |      0 |      0 |          4 |
+|     (physical_core)          |                         physical_core_wrapper |          0 |          0 |       0 |    0 |    1 |      0 |      0 |          0 |
+|     core                     |                                       RV32IMA |       3316 |       3316 |       0 |    0 | 2416 |      0 |      0 |          4 |
+|       (core)                 |                                       RV32IMA |         31 |         31 |       0 |    0 |    3 |      0 |      0 |          0 |
+|       csr_trap               |                                 csr_trap_unit |        294 |        294 |       0 |    0 |  476 |      0 |      0 |          0 |
+|       decode_unit            |                                  decode_stage |        561 |        561 |       0 |    0 |  992 |      0 |      0 |          0 |
+|         rf                   |                                 Register_File |        561 |        561 |       0 |    0 |  992 |      0 |      0 |          0 |
+|       ex_mem                 |                              ex_mem_registers |        785 |        785 |       0 |    0 |  195 |      0 |      0 |          0 |
+|       execute_unit           |                                 execute_stage |        333 |        333 |       0 |    0 |  211 |      0 |      0 |          4 |
+|         (execute_unit)       |                                 execute_stage |          0 |          0 |       0 |    0 |    1 |      0 |      0 |          0 |
+|         alu_unit             |                                           ALU |         22 |         22 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         mdu_unit             |                                           MDU |        311 |        311 |       0 |    0 |  210 |      0 |      0 |          4 |
+|       fetch_unit             |                                   fetch_stage |         17 |         17 |       0 |    0 |   32 |      0 |      0 |          0 |
+|         PC_adder             |                                      PC_Adder |         15 |         15 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         Program_Counter      |                                     PC_module |          2 |          2 |       0 |    0 |   32 |      0 |      0 |          0 |
+|       id_ex                  |                               id_ex_registers |        832 |        832 |       0 |    0 |  233 |      0 |      0 |          0 |
+|       if_id                  |                               if_id_registers |        195 |        195 |       0 |    0 |  105 |      0 |      0 |          0 |
+|       mem_wb                 |                              mem_wb_registers |        214 |        214 |       0 |    0 |  136 |      0 |      0 |          0 |
+|       memory_unit            |                                  memory_stage |         22 |         22 |       0 |    0 |   33 |      0 |      0 |          0 |
+|       writeback_unit         |                               writeback_stage |         32 |         32 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   u_dcache                   |                                     l1_dcache |       3026 |       2994 |      32 |    0 | 1718 |     16 |      2 |          0 |
+|     (u_dcache)               |                                     l1_dcache |       2562 |       2530 |      32 |    0 | 1718 |      0 |      0 |          0 |
+|     u_data_way0              |                 cache_tdp_data_ram__xdcDup__1 |          1 |          1 |       0 |    0 |    0 |      7 |      1 |          0 |
+|       (u_data_way0)          |                 cache_tdp_data_ram__xdcDup__1 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       u_xpm                  |                             xpm_memory_tdpram |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|         (u_xpm)              |                             xpm_memory_tdpram |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |               xpm_memory_base__parameterized1 |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|     u_data_way1              |                            cache_tdp_data_ram |          1 |          1 |       0 |    0 |    0 |      7 |      1 |          0 |
+|       (u_data_way1)          |                            cache_tdp_data_ram |          1 |          1 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       u_xpm                  |                          xpm_memory_tdpram__2 |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|         (u_xpm)              |                          xpm_memory_tdpram__2 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |            xpm_memory_base__parameterized1__2 |          0 |          0 |       0 |    0 |    0 |      7 |      1 |          0 |
+|     u_meta_way0              | cache_tdp_data_ram__parameterized0__xdcDup__1 |        357 |        357 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       (u_meta_way0)          | cache_tdp_data_ram__parameterized0__xdcDup__1 |        357 |        357 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       u_xpm                  |             xpm_memory_tdpram__parameterized0 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|         (u_xpm)              |             xpm_memory_tdpram__parameterized0 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |               xpm_memory_base__parameterized2 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|     u_meta_way1              |            cache_tdp_data_ram__parameterized0 |        105 |        105 |       0 |    0 |    0 |      1 |      0 |          0 |
+|       (u_meta_way1)          |            cache_tdp_data_ram__parameterized0 |        105 |        105 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       u_xpm                  |          xpm_memory_tdpram__parameterized0__2 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|         (u_xpm)              |          xpm_memory_tdpram__parameterized0__2 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |            xpm_memory_base__parameterized2__2 |          0 |          0 |       0 |    0 |    0 |      1 |      0 |          0 |
+|   u_icache                   |                                     l1_icache |       2299 |       2283 |      16 |    0 | 1201 |      8 |      2 |          0 |
+|     (u_icache)               |                                     l1_icache |       1987 |       1971 |      16 |    0 | 1201 |      0 |      0 |          0 |
+|     u_data_way0              |                                  cache_sp_ram |          0 |          0 |       0 |    0 |    0 |      4 |      0 |          0 |
+|       u_xpm                  |                            xpm_memory_spram_3 |          0 |          0 |       0 |    0 |    0 |      4 |      0 |          0 |
+|         (u_xpm)              |                            xpm_memory_spram_3 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |                            xpm_memory_base__1 |          0 |          0 |       0 |    0 |    0 |      4 |      0 |          0 |
+|     u_data_way1              |                                cache_sp_ram_0 |        288 |        288 |       0 |    0 |    0 |      4 |      0 |          0 |
+|       u_xpm                  |                              xpm_memory_spram |        288 |        288 |       0 |    0 |    0 |      4 |      0 |          0 |
+|         (u_xpm)              |                              xpm_memory_spram |        288 |        288 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |                               xpm_memory_base |          0 |          0 |       0 |    0 |    0 |      4 |      0 |          0 |
+|     u_meta_way0              |                  cache_sp_ram__parameterized0 |          7 |          7 |       0 |    0 |    0 |      0 |      1 |          0 |
+|       u_xpm                  |            xpm_memory_spram__parameterized0_2 |          7 |          7 |       0 |    0 |    0 |      0 |      1 |          0 |
+|         (u_xpm)              |            xpm_memory_spram__parameterized0_2 |          7 |          7 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |            xpm_memory_base__parameterized0__1 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|     u_meta_way1              |                cache_sp_ram__parameterized0_1 |         17 |         17 |       0 |    0 |    0 |      0 |      1 |          0 |
+|       u_xpm                  |              xpm_memory_spram__parameterized0 |         17 |         17 |       0 |    0 |    0 |      0 |      1 |          0 |
+|         (u_xpm)              |              xpm_memory_spram__parameterized0 |         17 |         17 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         xpm_memory_base_inst |               xpm_memory_base__parameterized0 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
++------------------------------+-----------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

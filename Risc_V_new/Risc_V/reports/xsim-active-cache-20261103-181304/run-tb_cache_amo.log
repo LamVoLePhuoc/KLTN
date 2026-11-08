@@ -1,0 +1,17 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_cache_amo_behav/xsim_script.tcl
+# xsim {tb_cache_amo_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] AMOADD.W returned old value 10 to x3
+[PASS] following LW observed AMO result 15 in D$
+[PASS] cold AMO issued exactly one RFO
+CACHE_AMO_TB: PASS
+$finish called at time : 5285 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_amo.v" Line 186
+exit
+INFO: [Common 17-206] Exiting xsim at Tue Nov  3 18:13:56 2026...

@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 // End-to-end regression for the source-level DMA subsystem.  It exercises
-// AXI-Lite programming, cache-maintenance ordering, 4 KiB/burst splitting,
+// APB programming, cache-maintenance ordering, 4 KiB/burst splitting,
 // data copying, read/write error propagation, and watchdog drain safety.
 module tb_dma_end_to_end;
     localparam CLK_PERIOD = 10;
@@ -16,23 +16,16 @@ module tb_dma_end_to_end;
     reg  cache_flush_done;
     reg  cache_flush_error;
 
-    reg  [5:0]  s_axi_awaddr;
-    reg         s_axi_awvalid;
-    wire        s_axi_awready;
-    reg  [31:0] s_axi_wdata;
-    reg  [3:0]  s_axi_wstrb;
-    reg         s_axi_wvalid;
-    wire        s_axi_wready;
-    wire [1:0]  s_axi_bresp;
-    wire        s_axi_bvalid;
-    reg         s_axi_bready;
-    reg  [5:0]  s_axi_araddr;
-    reg         s_axi_arvalid;
-    wire        s_axi_arready;
-    wire [31:0] s_axi_rdata;
-    wire [1:0]  s_axi_rresp;
-    wire        s_axi_rvalid;
-    reg         s_axi_rready;
+    reg  [5:0]  paddr;
+    reg         psel;
+    reg         penable;
+    reg         pwrite;
+    reg  [31:0] pwdata;
+    reg  [3:0]  pstrb;
+    reg  [2:0]  pprot;
+    wire [31:0] prdata;
+    wire        pready;
+    wire        pslverr;
 
     wire [31:0] m_axi_araddr;
     wire [7:0]  m_axi_arlen;
@@ -89,6 +82,7 @@ module tb_dma_end_to_end;
     integer before_writes;
     integer before_reads;
     integer wait_cycles;
+    reg [31:0] apb_read_value;
 
     assign m_axi_arready = !read_active;
     assign m_axi_rvalid  = read_active;
@@ -109,15 +103,9 @@ module tb_dma_end_to_end;
         .cache_flush(cache_flush), .cache_flush_busy(cache_flush_busy),
         .cache_flush_done(cache_flush_done),
         .cache_flush_error(cache_flush_error),
-        .s_axi_awaddr(s_axi_awaddr), .s_axi_awvalid(s_axi_awvalid),
-        .s_axi_awready(s_axi_awready), .s_axi_wdata(s_axi_wdata),
-        .s_axi_wstrb(s_axi_wstrb), .s_axi_wvalid(s_axi_wvalid),
-        .s_axi_wready(s_axi_wready), .s_axi_bresp(s_axi_bresp),
-        .s_axi_bvalid(s_axi_bvalid), .s_axi_bready(s_axi_bready),
-        .s_axi_araddr(s_axi_araddr), .s_axi_arvalid(s_axi_arvalid),
-        .s_axi_arready(s_axi_arready), .s_axi_rdata(s_axi_rdata),
-        .s_axi_rresp(s_axi_rresp), .s_axi_rvalid(s_axi_rvalid),
-        .s_axi_rready(s_axi_rready),
+        .paddr(paddr), .psel(psel), .penable(penable), .pwrite(pwrite),
+        .pwdata(pwdata), .pstrb(pstrb), .pprot(pprot),
+        .prdata(prdata), .pready(pready), .pslverr(pslverr),
         .m_axi_araddr(m_axi_araddr), .m_axi_arlen(m_axi_arlen),
         .m_axi_arsize(m_axi_arsize), .m_axi_arburst(m_axi_arburst),
         .m_axi_arvalid(m_axi_arvalid), .m_axi_arready(m_axi_arready),
@@ -253,36 +241,59 @@ module tb_dma_end_to_end;
         end
     end
 
-    task axi_lite_write;
+    task apb_write;
         input [5:0] address;
         input [31:0] value;
         begin
             @(negedge clk);
-            s_axi_awaddr  = address;
-            s_axi_awvalid = 1'b1;
-            s_axi_wdata   = value;
-            s_axi_wstrb   = 4'hf;
-            s_axi_wvalid  = 1'b1;
-            while (!(s_axi_awready && s_axi_wready))
-                @(negedge clk);
+            paddr   = address;
+            pwrite  = 1'b1;
+            pwdata  = value;
+            pstrb   = 4'hf;
+            psel    = 1'b1;
+            penable = 1'b0;
             @(negedge clk);
-            s_axi_awvalid = 1'b0;
-            s_axi_wvalid  = 1'b0;
-            while (!s_axi_bvalid)
+            penable = 1'b1;
+            while (!pready)
                 @(negedge clk);
-            if (s_axi_bresp != 2'b00) begin
-                $display("[FAIL] AXI-Lite write response at %02x", address);
+            if (pslverr) begin
+                $display("[FAIL] APB write response at %02x", address);
                 errors = errors + 1;
             end
-            s_axi_bready = 1'b1;
             @(negedge clk);
-            s_axi_bready = 1'b0;
+            psel    = 1'b0;
+            penable = 1'b0;
+            pwrite  = 1'b0;
         end
     endtask
 
     task clear_status;
         begin
-            axi_lite_write(6'h00, 32'h0000_0002);
+            apb_write(6'h00, 32'h0000_0002);
+        end
+    endtask
+
+    task apb_read;
+        input [5:0] address;
+        output [31:0] value;
+        begin
+            @(negedge clk);
+            paddr   = address;
+            pwrite  = 1'b0;
+            psel    = 1'b1;
+            penable = 1'b0;
+            @(negedge clk);
+            penable = 1'b1;
+            while (!pready)
+                @(negedge clk);
+            value = prdata;
+            if (pslverr) begin
+                $display("[FAIL] APB read response at %02x", address);
+                errors = errors + 1;
+            end
+            @(negedge clk);
+            psel    = 1'b0;
+            penable = 1'b0;
         end
     endtask
 
@@ -292,10 +303,10 @@ module tb_dma_end_to_end;
         input [31:0] length_bytes;
         begin
             clear_status;
-            axi_lite_write(6'h08, source);
-            axi_lite_write(6'h0c, destination);
-            axi_lite_write(6'h10, length_bytes);
-            axi_lite_write(6'h00, 32'h0000_0001);
+            apb_write(6'h08, source);
+            apb_write(6'h0c, destination);
+            apb_write(6'h10, length_bytes);
+            apb_write(6'h00, 32'h0000_0001);
         end
     endtask
 
@@ -318,15 +329,13 @@ module tb_dma_end_to_end;
         clk = 1'b0;
         rst = 1'b1;
         buffer_quiesced = 1'b1;
-        s_axi_awaddr = 6'd0;
-        s_axi_awvalid = 1'b0;
-        s_axi_wdata = 32'd0;
-        s_axi_wstrb = 4'd0;
-        s_axi_wvalid = 1'b0;
-        s_axi_bready = 1'b0;
-        s_axi_araddr = 6'd0;
-        s_axi_arvalid = 1'b0;
-        s_axi_rready = 1'b0;
+        paddr = 6'd0;
+        psel = 1'b0;
+        penable = 1'b0;
+        pwrite = 1'b0;
+        pwdata = 32'd0;
+        pstrb = 4'hf;
+        pprot = 3'd0;
         inject_read_error = 1'b0;
         inject_write_error = 1'b0;
         inject_flush_error = 1'b0;
@@ -337,6 +346,14 @@ module tb_dma_end_to_end;
 
         repeat (5) @(posedge clk);
         rst = 1'b0;
+
+        // Verify the APB4 control plane independently of the AXI datapath.
+        apb_write(6'h08, 32'h1234_5678);
+        apb_read(6'h08, apb_read_value);
+        if (apb_read_value !== 32'h1234_5678) begin
+            $display("[FAIL] APB SRC_ADDR readback: %08x", apb_read_value);
+            errors = errors + 1;
+        end
 
         // A pending software start must not reach cache or AXI until the
         // software/producer declares the DMA buffers quiescent.

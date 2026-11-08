@@ -1,0 +1,70 @@
+#-----------------------------------------------------------
+# Vivado v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Wed Nov  4 23:49:46 2026
+# Process ID: 156708
+# Current directory: D:/Xillinx/Vivado/2022.2/bin
+# Command line: vivado.exe -mode batch -journal C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\cache_error.jou -log C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\cache_error.log -source C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\scripts\run_one_xsim.tcl -tclargs tb_cache_error_path.v tb_cache_error_path CACHE_ERROR_PATH_TB: PASS
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/cache_error.log
+# Journal file: C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\cache_error.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+CRITICAL WARNING: [Common 17-741] No write access right to the local Tcl store at 'C'. XilinxTclStore is reverted to the installation area. If you want to use local Tcl Store, please change the access right and relaunch Vivado.
+source {C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\scripts\run_one_xsim.tcl}
+# set script_dir  [file dirname [file normalize [info script]]]
+# set project_dir [file normalize [file join $script_dir ..]]
+# set rtl_dir     [file join $project_dir rtl]
+# set sim_dir     [file join $project_dir sim]
+# if {$argc >= 3} {
+#     set ONE_TB_FILE   [lindex $argv 0]
+#     set ONE_TB_TOP    [lindex $argv 1]
+#     set ONE_TB_MARKER [lindex $argv 2]
+# }
+# foreach required {ONE_TB_FILE ONE_TB_TOP ONE_TB_MARKER} {
+#     if {![info exists $required]} {
+#         error "Set ONE_TB_FILE, ONE_TB_TOP and ONE_TB_MARKER, or pass three -tclargs values."
+#     }
+# }
+# set work_dir [file join $project_dir reports "xsim-one-$ONE_TB_TOP"]
+# file mkdir $work_dir
+# set rtl_files {}
+# set manifest [open [file join $rtl_dir files.f] r]
+# while {[gets $manifest line] >= 0} {
+#     set line [string trim $line]
+#     if {$line eq "" || [string index $line 0] eq "#"} { continue }
+#     lappend rtl_files [file normalize [file join $rtl_dir $line]]
+# }
+# close $manifest
+# set old_dir [pwd]
+# cd $work_dir
+# exec xvlog -work xil_defaultlib {*}$rtl_files
+# exec xvlog -work xil_defaultlib [file join $sim_dir $ONE_TB_FILE]
+# exec xelab -debug typical -mt off "xil_defaultlib.$ONE_TB_TOP" \
+#     -snapshot "${ONE_TB_TOP}_behav"
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical -mt off xil_defaultlib.tb_cache_error_path -snapshot tb_cache_error_path_behav 
+Turned off multi-threading.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.cache_sp_ram
+Compiling module xil_defaultlib.cache_sp_ram(WIDTH=18)
+Compiling module xil_defaultlib.l1_icache_default
+Compiling module xil_defaultlib.store_unit
+Compiling module xil_defaultlib.cache_tdp_data_ram(ADDR_WIDTH=9)
+Compiling module xil_defaultlib.cache_tdp_data_ram(WIDTH=20,ADDR...
+Compiling module xil_defaultlib.l1_dcache_default
+Compiling module xil_defaultlib.tb_cache_error_path
+ERROR: [XSIM 43-3409] Failed to compile generated C file xsim.dir/tb_cache_error_path_behav/obj/xsim_1.c.
+ERROR: [XSIM 43-3915] Encountered a fatal error. Cannot continue. Exiting... 
+child process exited abnormally
+    while executing
+"exec xelab -debug typical -mt off "xil_defaultlib.$ONE_TB_TOP" \
+    -snapshot "${ONE_TB_TOP}_behav""
+    (file "C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\scripts\run_one_xsim.tcl" line 36)
+INFO: [Common 17-206] Exiting Vivado at Wed Nov  4 23:50:09 2026...

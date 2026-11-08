@@ -78,34 +78,69 @@ module l1_icache #(
     reg [SETS-1:0] valid_way1_r;
     (* ram_style = "distributed" *) reg lru_r [0:SETS-1];
 
-    reg [31:0] lookup_addr;
-    reg        lookup_valid;
-    wire [TAG_BITS-1:0] lookup_tag = lookup_addr[31:32-TAG_BITS];
-    wire [INDEX_BITS-1:0] lookup_index =
-        lookup_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
-    wire [2:0] lookup_word = lookup_addr[4:2];
-    wire lookup_ready = lookup_valid && (lookup_addr == cpu_addr);
+    // The XPM memories below use their internal output register
+    // (READ_LATENCY_A=2).  Delay the request address by the same two cycles so
+    // the returned tag/data always remain associated with the correct fetch.
+    reg [31:0] lookup_addr_q1;
+    reg [31:0] lookup_addr_q2;
+    reg        lookup_valid_q1;
+    reg        lookup_valid_q2;
+    // valid/LRU are flop arrays because whole-cache invalidation clears every
+    // entry in one cycle.  A direct variable bit-select on 512 entries builds
+    // a deep mux, so read them in two registered, balanced stages alongside
+    // the two-cycle tag/data BRAM read: 32 groups x 16 sets, then one group.
+    localparam VALID_GROUP_LOW_BITS  = 4;
+    localparam VALID_GROUP_SIZE      = (1 << VALID_GROUP_LOW_BITS);
+    localparam VALID_GROUP_COUNT     = SETS / VALID_GROUP_SIZE;
+    localparam VALID_GROUP_HIGH_BITS = INDEX_BITS - VALID_GROUP_LOW_BITS;
+    wire [VALID_GROUP_LOW_BITS-1:0] addr_valid_group_offset =
+        addr_index[VALID_GROUP_LOW_BITS-1:0];
+    reg [VALID_GROUP_COUNT-1:0] valid_way0_groups_q1;
+    reg [VALID_GROUP_COUNT-1:0] valid_way1_groups_q1;
+    reg [VALID_GROUP_COUNT-1:0] lru_groups_q1;
+    reg [VALID_GROUP_HIGH_BITS-1:0] valid_group_select_q1;
+    reg valid_way0_q2;
+    reg valid_way1_q2;
+    reg lru_q2;
+    integer lookup_group;
+    wire [TAG_BITS-1:0] lookup_tag = lookup_addr_q2[31:32-TAG_BITS];
+    wire lookup_ready = lookup_valid_q2 && (lookup_addr_q2 == cpu_addr);
 
     reg flush_pending;
 
     assign flush_busy = flush_pending | flush;
 
-    reg hit_v;
-    reg [LINE_BITS-1:0] hit_line_v;
-    always @(*) begin
-        hit_v      = 1'b0;
-        hit_line_v = {LINE_BITS{1'b0}};
-        if (valid_way0_r[lookup_index] && (way0_tag == lookup_tag)) begin
-            hit_v      = 1'b1;
-            hit_line_v = way0_line;
-        end
-        if (valid_way1_r[lookup_index] && (way1_tag == lookup_tag)) begin
-            hit_v      = 1'b1;
-            hit_line_v = way1_line;
-        end
-    end
+    wire hit_way0 = valid_way0_q2 &&
+                    (way0_tag == lookup_tag);
+    wire hit_way1 = valid_way1_q2 &&
+                    (way1_tag == lookup_tag);
 
-    wire [31:0] hit_word = hit_line_v[lookup_word*32 +: 32];
+    // First result stage: register only the tag/valid decision.  Keeping the
+    // 256-bit line and 8:1 word selection out of this stage avoids combining
+    // directory lookup and instruction selection in one cycle.
+    reg        lookup_compare_valid;
+    reg        lookup_compare_hit;
+    reg        lookup_compare_way;
+    reg        lookup_compare_victim;
+    reg [31:0] lookup_compare_addr;
+    wire [LINE_BITS-1:0] lookup_compare_line =
+        lookup_compare_way ? way1_line : way0_line;
+    wire [2:0] lookup_compare_word = lookup_compare_addr[4:2];
+    wire [31:0] lookup_selected_word =
+        lookup_compare_line[lookup_compare_word*32 +: 32];
+
+    // Register the selected instruction before it reaches the core stall/PC
+    // logic or the miss FSM.  Together with lookup_compare_* this cuts both
+    // former critical cones:
+    //   metadata BRAM -> cpu_valid -> core control -> PC
+    //   metadata BRAM -> hit/miss decode -> miss-register enables
+    reg        lookup_result_valid;
+    reg        lookup_result_hit;
+    reg        lookup_result_victim;
+    reg [31:0] lookup_result_addr;
+    reg [31:0] lookup_result_word;
+    wire lookup_result_matches = lookup_result_valid &&
+                                 (lookup_result_addr == cpu_addr);
 
     // ------------------------------------------------------
     // Miss FSM (blocking, single outstanding request)
@@ -118,19 +153,22 @@ module l1_icache #(
     reg [2:0]            miss_word;
     reg                  fill_done_pulse;
     reg [31:0]           fill_return_word;
+    reg [31:0]           fill_return_addr;
+    reg                  fill_return_error;
 
-    wire miss_error = (state == S_MISS) && bus_resp_valid &&
-                      bus_resp_error && !flush_busy;
+    wire fill_response_matches = fill_done_pulse &&
+                                 (fill_return_addr == cpu_addr);
     assign cpu_valid = !flush_busy &&
-                       (((state == S_IDLE) && lookup_ready && hit_v) |
-                        fill_done_pulse | miss_error);
-    assign cpu_error = miss_error;
-    assign cpu_rdata = fill_done_pulse ? fill_return_word : hit_word;
+                       ((lookup_result_matches && lookup_result_hit) |
+                        fill_response_matches);
+    assign cpu_error = fill_response_matches && fill_return_error;
+    assign cpu_rdata = fill_response_matches ? fill_return_word :
+                                               lookup_result_word;
 
     wire fill_write_en = (state == S_MISS) && bus_resp_valid &&
                          !bus_resp_error && !flush_pending && !flush;
-    wire victim_way = !valid_way0_r[lookup_index] ? 1'b0 :
-                      !valid_way1_r[lookup_index] ? 1'b1 : lru_r[lookup_index];
+    wire [INDEX_BITS-1:0] result_index =
+        lookup_result_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
     wire [INDEX_BITS-1:0] ram_index = fill_write_en ? miss_index : addr_index;
 
     cache_sp_ram #(.WIDTH(LINE_BITS), .ADDR_WIDTH(INDEX_BITS)) u_data_way0 (
@@ -150,16 +188,94 @@ module l1_icache #(
         .addr(ram_index), .din(miss_tag), .dout(way1_tag)
     );
 
-    // Associate the registered BRAM outputs with the fetch address sampled
-    // on the same edge.  During initialization no lookup may complete.
+    // Associate the two-cycle registered BRAM outputs with the fetch address
+    // sampled on the same first edge.  During initialization no lookup may
+    // complete.
     always @(posedge clk) begin
         if (rst || flush) begin
-            lookup_addr  <= 32'b0;
-            lookup_valid <= 1'b0;
+            lookup_addr_q1  <= 32'b0;
+            lookup_addr_q2  <= 32'b0;
+            lookup_valid_q1 <= 1'b0;
+            lookup_valid_q2 <= 1'b0;
+            valid_way0_groups_q1 <= {VALID_GROUP_COUNT{1'b0}};
+            valid_way1_groups_q1 <= {VALID_GROUP_COUNT{1'b0}};
+            lru_groups_q1 <= {VALID_GROUP_COUNT{1'b0}};
+            valid_group_select_q1 <= {VALID_GROUP_HIGH_BITS{1'b0}};
+            valid_way0_q2 <= 1'b0;
+            valid_way1_q2 <= 1'b0;
+            lru_q2 <= 1'b0;
         end
         else begin
-            lookup_addr  <= cpu_addr;
-            lookup_valid <= 1'b1;
+            lookup_addr_q1  <= cpu_addr;
+            lookup_addr_q2  <= lookup_addr_q1;
+            lookup_valid_q1 <= 1'b1;
+            lookup_valid_q2 <= lookup_valid_q1;
+            for (lookup_group = 0;
+                 lookup_group < VALID_GROUP_COUNT;
+                 lookup_group = lookup_group + 1) begin
+                valid_way0_groups_q1[lookup_group] <=
+                    valid_way0_r[(lookup_group*VALID_GROUP_SIZE) +
+                                 addr_valid_group_offset];
+                valid_way1_groups_q1[lookup_group] <=
+                    valid_way1_r[(lookup_group*VALID_GROUP_SIZE) +
+                                 addr_valid_group_offset];
+                lru_groups_q1[lookup_group] <=
+                    lru_r[(lookup_group*VALID_GROUP_SIZE) +
+                          addr_valid_group_offset];
+            end
+            valid_group_select_q1 <=
+                addr_index[INDEX_BITS-1:VALID_GROUP_LOW_BITS];
+            valid_way0_q2 <= valid_way0_groups_q1[valid_group_select_q1];
+            valid_way1_q2 <= valid_way1_groups_q1[valid_group_select_q1];
+            lru_q2 <= lru_groups_q1[valid_group_select_q1];
+        end
+    end
+
+    // The compare stage is intentionally separate from both the BRAM output
+    // register and the 256-bit data-selection stage.
+    always @(posedge clk) begin
+        if (rst || flush) begin
+            lookup_compare_valid <= 1'b0;
+            lookup_compare_hit   <= 1'b0;
+            lookup_compare_way   <= 1'b0;
+            lookup_compare_victim <= 1'b0;
+            lookup_compare_addr  <= 32'b0;
+        end
+        else if (state == S_IDLE) begin
+            lookup_compare_valid <= lookup_ready;
+            lookup_compare_hit   <= hit_way0 | hit_way1;
+            // Preserve the former way-1 priority if both tags ever match.
+            lookup_compare_way   <= hit_way1;
+            lookup_compare_victim <= !valid_way0_q2 ? 1'b0 :
+                                     !valid_way1_q2 ? 1'b1 : lru_q2;
+            lookup_compare_addr  <= lookup_addr_q2;
+        end
+        else begin
+            lookup_compare_valid <= 1'b0;
+            lookup_compare_hit   <= 1'b0;
+        end
+    end
+
+    // Final lookup stage.  A result is only meaningful while idle; refill
+    // responses use the dedicated one-cycle completion below.
+    always @(posedge clk) begin
+        if (rst || flush) begin
+            lookup_result_valid <= 1'b0;
+            lookup_result_hit   <= 1'b0;
+            lookup_result_victim <= 1'b0;
+            lookup_result_addr  <= 32'b0;
+            lookup_result_word  <= 32'b0;
+        end
+        else if (state == S_IDLE) begin
+            lookup_result_valid <= lookup_compare_valid;
+            lookup_result_hit   <= lookup_compare_hit;
+            lookup_result_victim <= lookup_compare_victim;
+            lookup_result_addr  <= lookup_compare_addr;
+            lookup_result_word  <= lookup_selected_word;
+        end
+        else begin
+            lookup_result_valid <= 1'b0;
+            lookup_result_hit   <= 1'b0;
         end
     end
 
@@ -172,6 +288,8 @@ module l1_icache #(
             flush_done    <= 1'b0;
             fill_done_pulse <= 1'b0;
             fill_return_word <= 32'b0;
+            fill_return_addr <= 32'b0;
+            fill_return_error <= 1'b0;
             valid_way0_r  <= {SETS{1'b0}};
             valid_way1_r  <= {SETS{1'b0}};
         end
@@ -190,13 +308,15 @@ module l1_icache #(
                             bus_req_valid <= 1'b0;
                             flush_done    <= 1'b1;
                         end
-                        else if (!fill_done_pulse && lookup_ready && !hit_v) begin
-                            miss_index    <= lookup_index;
-                            miss_tag      <= lookup_tag;
-                            miss_way      <= victim_way;
-                            miss_word     <= lookup_word;
+                        else if (!fill_done_pulse && lookup_result_matches &&
+                                 !lookup_result_hit) begin
+                            miss_index    <= result_index;
+                            miss_tag      <= lookup_result_addr[31:32-TAG_BITS];
+                            miss_way      <= lookup_result_victim;
+                            miss_word     <= lookup_result_addr[4:2];
                             bus_req_valid <= 1'b1;
-                            bus_req_addr  <= {lookup_tag, lookup_index,
+                            bus_req_addr  <= {lookup_result_addr[31:32-TAG_BITS],
+                                              result_index,
                                               {OFFSET_BITS{1'b0}}};
                             state         <= S_MISS;
                         end
@@ -207,14 +327,20 @@ module l1_icache #(
                             flush_pending <= 1'b1;
                         if (bus_resp_valid) begin
                             bus_req_valid <= 1'b0;
+                            if (!flush_pending && !flush) begin
+                                fill_return_addr <= {miss_tag, miss_index,
+                                                     miss_word, 2'b00};
+                                fill_return_error <= bus_resp_error;
+                                fill_return_word <= bus_resp_error ? 32'b0 :
+                                                    bus_resp_line[miss_word*32 +: 32];
+                                fill_done_pulse <= 1'b1;
+                            end
                             if (fill_write_en) begin
                                 lru_r[miss_index] <= ~miss_way;
                                 if (miss_way)
                                     valid_way1_r[miss_index] <= 1'b1;
                                 else
                                     valid_way0_r[miss_index] <= 1'b1;
-                                fill_return_word <= bus_resp_line[miss_word*32 +: 32];
-                                fill_done_pulse  <= 1'b1;
                             end
                             if (flush_pending || flush) begin
                                 valid_way0_r <= {SETS{1'b0}};
@@ -260,7 +386,7 @@ module cache_sp_ram #(
         .MEMORY_SIZE        (WIDTH * (1 << ADDR_WIDTH)),
         .MESSAGE_CONTROL    (0),
         .READ_DATA_WIDTH_A  (WIDTH),
-        .READ_LATENCY_A     (1),
+        .READ_LATENCY_A     (2),
         .READ_RESET_VALUE_A ("0"),
         .RST_MODE_A         ("SYNC"),
         .SIM_ASSERT_CHK     (0),
@@ -277,12 +403,14 @@ module cache_sp_ram #(
     );
 `else
     reg [WIDTH-1:0] mem [0:(1 << ADDR_WIDTH)-1];
+    reg [WIDTH-1:0] read_pipe_r;
     reg [WIDTH-1:0] dout_r;
     assign dout = dout_r;
     always @(posedge clk) begin
         if (we)
             mem[addr] <= din;
-        dout_r <= mem[addr];
+        read_pipe_r <= mem[addr];
+        dout_r <= read_pipe_r;
     end
 `endif
 endmodule

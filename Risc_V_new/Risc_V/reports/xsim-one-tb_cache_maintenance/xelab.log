@@ -1,0 +1,13 @@
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical -mt off xil_defaultlib.tb_cache_maintenance -snapshot tb_cache_maintenance_behav 
+Turned off multi-threading.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.cache_maintenance_tracker(WATCHD...
+Compiling module xil_defaultlib.tb_cache_maintenance
+Built simulation snapshot tb_cache_maintenance_behav

@@ -1,0 +1,49 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Nov  3 02:11:10 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-coherence_manager-20261103-020752/utilization_hierarchical_synth.rpt
+| Design       : coherence_manager
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Synthesized
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++--------------------------------+----------------------+------------+------------+---------+------+------+--------+--------+------------+
+|            Instance            |        Module        | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++--------------------------------+----------------------+------------+------------+---------+------+------+--------+--------+------------+
+| coherence_manager              |                (top) |      13357 |       5165 |    8192 |    0 | 4267 |    112 |      4 |          0 |
+|   (coherence_manager)          |                (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   u_cache_controller_mmu       | cache_controller_mmu |      13357 |       5165 |    8192 |    0 | 4267 |    112 |      4 |          0 |
+|     (u_cache_controller_mmu)   | cache_controller_mmu |       1329 |       1329 |       0 |    0 | 3518 |      0 |      0 |          0 |
+|     g_internal_l2.u_l2         |             l2_cache |      12028 |       3836 |    8192 |    0 |  749 |    112 |      4 |          0 |
+|       (g_internal_l2.u_l2)     |             l2_cache |      11485 |       3293 |    8192 |    0 |  749 |      0 |      0 |          0 |
+|       u_data_way0              |      l2_way_data_ram |         57 |         57 |       0 |    0 |    0 |     28 |      1 |          0 |
+|         u_xpm                  |   xpm_memory_spram_5 |         57 |         57 |       0 |    0 |    0 |     28 |      1 |          0 |
+|           (u_xpm)              |   xpm_memory_spram_5 |         57 |         57 |       0 |    0 |    0 |      0 |      0 |          0 |
+|           xpm_memory_base_inst |   xpm_memory_base__1 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       u_data_way1              |    l2_way_data_ram_0 |          1 |          1 |       0 |    0 |    0 |     28 |      1 |          0 |
+|         u_xpm                  |   xpm_memory_spram_4 |          1 |          1 |       0 |    0 |    0 |     28 |      1 |          0 |
+|           (u_xpm)              |   xpm_memory_spram_4 |          1 |          1 |       0 |    0 |    0 |      0 |      0 |          0 |
+|           xpm_memory_base_inst |   xpm_memory_base__2 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       u_data_way2              |    l2_way_data_ram_1 |         57 |         57 |       0 |    0 |    0 |     28 |      1 |          0 |
+|         u_xpm                  |   xpm_memory_spram_3 |         57 |         57 |       0 |    0 |    0 |     28 |      1 |          0 |
+|           (u_xpm)              |   xpm_memory_spram_3 |         57 |         57 |       0 |    0 |    0 |      0 |      0 |          0 |
+|           xpm_memory_base_inst |   xpm_memory_base__3 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       u_data_way3              |    l2_way_data_ram_2 |        428 |        428 |       0 |    0 |    0 |     28 |      1 |          0 |
+|         u_xpm                  |     xpm_memory_spram |        428 |        428 |       0 |    0 |    0 |     28 |      1 |          0 |
+|           (u_xpm)              |     xpm_memory_spram |        428 |        428 |       0 |    0 |    0 |      0 |      0 |          0 |
+|           xpm_memory_base_inst |      xpm_memory_base |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
++--------------------------------+----------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

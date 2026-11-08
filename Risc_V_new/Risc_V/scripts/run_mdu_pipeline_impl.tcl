@@ -17,6 +17,24 @@ if {[llength [get_projects -quiet]] == 0} {
     open_project $project_xpr
 }
 
+# Implementation-only floorplan: keep the 139-tile shared L2 and its MSI
+# controller in the smallest contiguous xc7z030 clock-region rectangle that
+# can hold the complete banked store.  Register it here so command-line runs
+# cannot silently omit the physical constraint from constrs_1.
+set l2_floorplan_xdc [file normalize \
+    [file join $project_dir constraints l2_cluster_floorplan.xdc]]
+if {![file exists $l2_floorplan_xdc]} {
+    error "Missing L2 floorplan constraint: $l2_floorplan_xdc"
+}
+set floorplan_files [get_files -quiet $l2_floorplan_xdc]
+if {[llength $floorplan_files] == 0} {
+    add_files -fileset constrs_1 -norecurse $l2_floorplan_xdc
+    set floorplan_files [get_files -quiet $l2_floorplan_xdc]
+}
+set_property USED_IN_SYNTHESIS false $floorplan_files
+set_property USED_IN_IMPLEMENTATION true $floorplan_files
+puts "L2 floorplan: $l2_floorplan_xdc"
+
 set mdu_source [file normalize [file join $project_dir rtl core execute_stage.v]]
 if {[llength [get_files -quiet $mdu_source]] == 0} {
     error "Active project does not contain $mdu_source"
@@ -172,6 +190,16 @@ report_drc -file [file join $report_dir drc_route.rpt]
 report_methodology -file [file join $report_dir methodology_route.rpt]
 report_power -file [file join $report_dir power_route.rpt]
 
+set pblock_report [open [file join $report_dir l2_pblock_route.txt] w]
+set l2_pblock [get_pblocks -quiet pblock_l2_cluster]
+if {[llength $l2_pblock] == 1} {
+    puts $pblock_report "GRID_RANGES=[get_property GRID_RANGES $l2_pblock]"
+    puts $pblock_report "CELL_COUNT=[llength [get_cells -quiet -of_objects $l2_pblock]]"
+} else {
+    puts $pblock_report "ERROR: pblock_l2_cluster was not present after route"
+}
+close $pblock_report
+
 set summary [open [file join $report_dir summary.txt] w]
 puts $summary "Active four-core cache-controller implementation"
 puts $summary "Generated: [clock format [clock seconds]]"
@@ -205,6 +233,7 @@ puts $summary "  route_status.rpt"
 puts $summary "  drc_route.rpt"
 puts $summary "  methodology_route.rpt"
 puts $summary "  power_route.rpt"
+puts $summary "  l2_pblock_route.txt"
 close $summary
 
 # A completed route is not a timing pass.  Fail explicitly when either

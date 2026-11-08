@@ -1,0 +1,65 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Nov  3 22:53:24 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l2_cache-20261103-225156/utilization_hierarchical_synth.rpt
+| Design       : l2_cache
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Synthesized
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|          Instance          |                Module               | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++----------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| l2_cache                   |                               (top) |       1404 |       1404 |       0 |    0 | 1508 |    120 |      9 |          0 |
+|   (l2_cache)               |                               (top) |        242 |        242 |       0 |    0 | 1508 |      0 |      0 |          0 |
+|   u_data_way0              |                     l2_way_data_ram |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  | xpm_memory_spram__parameterized1_11 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              | xpm_memory_spram__parameterized1_11 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__parameterized1__1 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_data_way1              |                   l2_way_data_ram_0 |        384 |        384 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  | xpm_memory_spram__parameterized1_10 |        384 |        384 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              | xpm_memory_spram__parameterized1_10 |        384 |        384 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__parameterized1__2 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_data_way2              |                   l2_way_data_ram_1 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  |  xpm_memory_spram__parameterized1_9 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              |  xpm_memory_spram__parameterized1_9 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |  xpm_memory_base__parameterized1__3 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_data_way3              |                   l2_way_data_ram_2 |        666 |        666 |       0 |    0 |    0 |     28 |      1 |          0 |
+|     u_xpm                  |    xpm_memory_spram__parameterized1 |        666 |        666 |       0 |    0 |    0 |     28 |      1 |          0 |
+|       (u_xpm)              |    xpm_memory_spram__parameterized1 |        666 |        666 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |     xpm_memory_base__parameterized1 |          0 |          0 |       0 |    0 |    0 |     28 |      1 |          0 |
+|   u_meta_lru               |   l2_sync_block_ram__parameterized0 |          3 |          3 |       0 |    0 |    0 |      0 |      1 |          0 |
+|     u_xpm                  |    xpm_memory_spram__parameterized0 |          3 |          3 |       0 |    0 |    0 |      0 |      1 |          0 |
+|       (u_xpm)              |    xpm_memory_spram__parameterized0 |          3 |          3 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |     xpm_memory_base__parameterized0 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|   u_meta_way0              |                   l2_sync_block_ram |         10 |         10 |       0 |    0 |    0 |      2 |      1 |          0 |
+|     u_xpm                  |                  xpm_memory_spram_8 |         10 |         10 |       0 |    0 |    0 |      2 |      1 |          0 |
+|       (u_xpm)              |                  xpm_memory_spram_8 |         10 |         10 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |                  xpm_memory_base__1 |          0 |          0 |       0 |    0 |    0 |      2 |      1 |          0 |
+|   u_meta_way1              |                 l2_sync_block_ram_3 |         10 |         10 |       0 |    0 |    0 |      2 |      1 |          0 |
+|     u_xpm                  |                  xpm_memory_spram_7 |         10 |         10 |       0 |    0 |    0 |      2 |      1 |          0 |
+|       (u_xpm)              |                  xpm_memory_spram_7 |         10 |         10 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |                  xpm_memory_base__2 |          0 |          0 |       0 |    0 |    0 |      2 |      1 |          0 |
+|   u_meta_way2              |                 l2_sync_block_ram_4 |         18 |         18 |       0 |    0 |    0 |      2 |      1 |          0 |
+|     u_xpm                  |                  xpm_memory_spram_6 |         18 |         18 |       0 |    0 |    0 |      2 |      1 |          0 |
+|       (u_xpm)              |                  xpm_memory_spram_6 |         18 |         18 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |                  xpm_memory_base__3 |          0 |          0 |       0 |    0 |    0 |      2 |      1 |          0 |
+|   u_meta_way3              |                 l2_sync_block_ram_5 |         71 |         71 |       0 |    0 |    0 |      2 |      1 |          0 |
+|     u_xpm                  |                    xpm_memory_spram |         71 |         71 |       0 |    0 |    0 |      2 |      1 |          0 |
+|       (u_xpm)              |                    xpm_memory_spram |         71 |         71 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       xpm_memory_base_inst |                     xpm_memory_base |          0 |          0 |       0 |    0 |    0 |      2 |      1 |          0 |
++----------------------------+-------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

@@ -1,0 +1,18 @@
+ELABORATION FAILED
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical xil_defaultlib.tb_coherence_error -snapshot tb_coherence_error_behav 
+Multi-threading is on. Using 10 slave threads.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+ERROR: [VRFC 10-2991] 'mem_word7' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:209]
+ERROR: [VRFC 10-2991] 'mem_word6' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:210]
+ERROR: [VRFC 10-2991] 'mem_word5' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:211]
+ERROR: [VRFC 10-2991] 'mem_word4' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:212]
+ERROR: [VRFC 10-2991] 'mem_word3' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:213]
+ERROR: [VRFC 10-2991] 'mem_word2' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:214]
+ERROR: [VRFC 10-2991] 'mem_word1' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:215]
+ERROR: [VRFC 10-2991] 'mem_word0' is not declared under prefix 'u_data_way0' [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:216]
+ERROR: [XSIM 43-3322] Static elaboration of top level Verilog design unit(s) in library work failed.
+child process exited abnormally
+

@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir
+l1_dcache,xcvu29p-fsga2577-2L-e,impl,clk,5.000,200.000,1.087,0.018,255.558,4168,2392,0,0,0,32,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-l1_dcache-20261107-234603

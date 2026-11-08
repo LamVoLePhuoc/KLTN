@@ -1,12 +1,17 @@
 # Source-level AXI DMA
 
+> Reference-only implementation. This directory is excluded from
+> `rtl/files.f`, the Vivado `sources_1` fileset and the active regression.
+> The active platform instantiates Xilinx `axi_cdma:4.1` below the CPU's AXI4
+> boundary; do not add these files back to the four-core RTL source set.
+
 `soc_dma_controller` is a small non-coherent memory-to-memory DMA subsystem for
 the thesis SoC. It is ordinary RTL and does not depend on generated Vivado IP.
 
 ## Blocks
 
-- `axi_lite_dma_regs.v`: AXI4-Lite programming/status registers. AW and W are
-  accepted independently and a start request remains pending until accepted.
+- `apb_dma_regs.v`: APB4 programming/status registers. The register page is
+  zero-wait-state, supports byte strobes, and holds start pending until accepted.
 - `dma_cache_coordinator.v`: orders buffer quiescence, global pre-flush, DMA,
   and global post-flush. A watchdog is diagnostic only; it never fabricates
   completion while cache or AXI traffic can still be outstanding.
@@ -20,7 +25,7 @@ ordering and a small verification surface. `MAX_BURST_LEN` must be in `1..256`;
 the current SoC wrapper uses a 32-bit AXI data path and requires source,
 destination, and byte length to be four-byte aligned.
 
-## AXI4-Lite register map
+## APB register map
 
 | Offset | Name | Access | Meaning |
 |---:|---|---|---|
@@ -42,10 +47,31 @@ configured limit.
 
 Connect `cache_flush`, `cache_flush_busy`, `cache_flush_done`, and
 `cache_flush_error` to the four-core aggregate cache-maintenance handshake.
-Connect `M_AXI` as another master of the system AXI fabric and `S_AXI` to the
-control interconnect. `buffer_quiesced` is the hardware proof that software or
-the producer/consumer protocol has stopped all CPU users of the buffer; tying it
-high is only safe when that ownership rule is enforced in software.
+Connect `M_AXI` as another master of the system AXI fabric and `S_APB` behind
+an AXI-to-APB bridge (or a native APB master). `buffer_quiesced` is the hardware
+proof that software or the producer/consumer protocol has stopped all CPU users
+of the buffer; tying it high is only safe when that ownership rule is enforced
+in software.
+
+## Vivado IP packaging and Block Design
+
+Run `scripts/package_soc_dma_ip.tcl` with Vivado 2022.2 to generate the reusable
+IP-XACT core `kltn.local:user:soc_dma_controller:1.0` under
+`ip_repo/soc_dma_controller_1_0`. The package exposes `S_APB`, `M_AXI`, `clk`,
+and active-high `rst` as standard interfaces, plus the cache-maintenance and
+status pins.
+
+`scripts/build_soc_4core_trial.tcl` instantiates that IP with Xilinx
+`axi_apb_bridge:3.0` configured for one APB4 slave. The CPU-visible AXI control
+aperture is `0x4000_0000..0x4000_FFFF`; the register offsets above are unchanged.
+The DMA data path remains an AXI4 master connected to the memory interconnect.
+The bootable ZU5EV script uses the same topology, but its PS clock/reset and HPM
+port still depend on the selected Genesys ZU board preset.
+
+The external `AXI_to_APB_Bridge/` reference was reviewed but is not instantiated:
+it implements a larger burst/clock-domain-crossing design, depends on additional
+FIFO/decoder modules, and has not been protocol-verified in this repository. The
+installed Xilinx bridge is used for the production Block Design path.
 
 The DMA is deliberately not an MSI snoop master. Correctness therefore depends
 on the coordinator's complete pre/post global maintenance sequence. After a DMA

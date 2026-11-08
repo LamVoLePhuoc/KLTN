@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
-// AXI4-Lite register file for soc_dma_controller.
+// Legacy AXI4-Lite register file retained for reference only.
+// The active soc_dma_controller uses apb_dma_regs.v.
 //
 //   0x00 CONTROL  W bit0=start, bit1=clear sticky done/error
 //   0x04 STATUS   R bit0=busy, bit1=done, bit2=error, bits[10:8]=code

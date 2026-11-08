@@ -1,0 +1,48 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Tue Nov  3 02:02:18 2026
+| Host         : DESKTOP-750OH1D running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 5 -file C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-physical_core_wrapper-20261103-015753/utilization_hierarchical_route.rpt
+| Design       : physical_core_wrapper
+| Device       : xc7z030fbv676-1
+| Speed File   : -1
+| Design State : Routed
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++---------------------------+------------------+------------+------------+---------+------+------+--------+--------+------------+
+|          Instance         |      Module      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++---------------------------+------------------+------------+------------+---------+------+------+--------+--------+------------+
+| physical_core_wrapper     |            (top) |       3247 |       3247 |       0 |    0 | 2414 |      0 |      0 |          4 |
+|   (physical_core_wrapper) |            (top) |          0 |          0 |       0 |    0 |    1 |      0 |      0 |          0 |
+|   core                    |          RV32IMA |       3247 |       3247 |       0 |    0 | 2413 |      0 |      0 |          4 |
+|     (core)                |          RV32IMA |         31 |         31 |       0 |    0 |    3 |      0 |      0 |          0 |
+|     csr_trap              |    csr_trap_unit |        266 |        266 |       0 |    0 |  476 |      0 |      0 |          0 |
+|     decode_unit           |     decode_stage |        561 |        561 |       0 |    0 |  992 |      0 |      0 |          0 |
+|       rf                  |    Register_File |        561 |        561 |       0 |    0 |  992 |      0 |      0 |          0 |
+|     ex_mem                | ex_mem_registers |        778 |        778 |       0 |    0 |  192 |      0 |      0 |          0 |
+|     execute_unit          |    execute_stage |        329 |        329 |       0 |    0 |  211 |      0 |      0 |          4 |
+|       (execute_unit)      |    execute_stage |          0 |          0 |       0 |    0 |    1 |      0 |      0 |          0 |
+|       alu_unit            |              ALU |         19 |         19 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       mdu_unit            |              MDU |        310 |        310 |       0 |    0 |  210 |      0 |      0 |          4 |
+|     fetch_unit            |      fetch_stage |         17 |         17 |       0 |    0 |   32 |      0 |      0 |          0 |
+|       PC_adder            |         PC_Adder |         15 |         15 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       Program_Counter     |        PC_module |          2 |          2 |       0 |    0 |   32 |      0 |      0 |          0 |
+|     id_ex                 |  id_ex_registers |        812 |        812 |       0 |    0 |  233 |      0 |      0 |          0 |
+|     if_id                 |  if_id_registers |        189 |        189 |       0 |    0 |  105 |      0 |      0 |          0 |
+|     mem_wb                | mem_wb_registers |        214 |        214 |       0 |    0 |  136 |      0 |      0 |          0 |
+|     memory_unit           |     memory_stage |         22 |         22 |       0 |    0 |   33 |      0 |      0 |          0 |
+|     writeback_unit        |  writeback_stage |         32 |         32 |       0 |    0 |    0 |      0 |      0 |          0 |
++---------------------------+------------------+------------+------------+---------+------+------+--------+--------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

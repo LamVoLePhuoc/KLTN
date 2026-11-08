@@ -3,9 +3,16 @@
 // ============================================================
 // cache_controller_mmu
 //
-// Protocol engine used by the shared cache controller.  It contains
-// the 8-source (4x D$ + 4x I$) round-robin arbiter, the atomic MSI
-// transaction FSM and the external-memory line-transfer engine.
+// Protocol engine used by the shared cache controller.  It contains the
+// atomic MSI transaction FSM and the external-memory line-transfer engine.
+// IMPORTANT ARBITRATION OWNERSHIP:
+//   * The active AHB hierarchy sets EXTERNAL_REQUEST_ARBITER=1.  In that
+//     configuration this module DOES NOT decide which L1 may issue.  The
+//     standalone ahb_lite_arbiter_8m1s owns request selection/grant and
+//     supplies one selected request plus its 3-bit source ID here.
+//   * The small 8-source round-robin picker retained below is a legacy
+//     compatibility path only for direct-wire tops/tests that instantiate
+//     this module with EXTERNAL_REQUEST_ARBITER=0.
 //
 // EXTERNAL_L2=0 preserves the original, self-contained integration
 // used by legacy unit tests.  EXTERNAL_L2=1 exports the command/status
@@ -20,15 +27,10 @@
 // translation unit.  Cores and caches use one direct 32-bit physical
 // address space; no TLB or page-table walker is instantiated.
 //
-// Why one module for two diagram boxes: the diagram's AHB segment
-// has no Vivado stock IP to plug in anyway (see Risc_V_new/README.md
-// -- Vivado's catalog is AXI-only), so nothing is lost by realizing
-// "an AHB-style shared bus" as the arbitration logic inside this
-// module instead of a separate physical bus module. If literal AHB
-// protocol compliance (HADDR/HREADY/HRESP signal names/timing) is
-// ever required for grading rather than just AHB-*shaped*
-// connectivity, that's a signal-level swap at the arbiter boundary,
-// not a redesign of the protocol logic below.
+// The active implementation therefore has separate physical blocks:
+// eight L1 AHB master adapters -> ahb_lite_arbiter_8m1s -> one AHB slave
+// adapter -> this MSI/cache transaction engine.  HADDR/HREADY/HRESP and
+// grant ownership live outside this module in that configuration.
 //
 // ATOMICITY (the central design choice, made for correctness over
 // throughput): only one requester's transaction is in flight system-
@@ -57,10 +59,10 @@
 // still race even under this module's atomicity (a local hit never
 // touches the arbiter) -- resolved there, not here.
 //
-// Arbitration is starvation-free round-robin over all eight D$/I$
-// sources.  The pointer advances only when S_IDLE accepts a request;
-// a level-held requester therefore cannot be skipped or accepted
-// twice while another transaction is in flight.
+// In legacy EXTERNAL_REQUEST_ARBITER=0 mode only, the compatibility picker
+// is starvation-free round-robin over all eight D$/I$ sources.  In active
+// AHB mode, fairness and grant lifetime belong solely to the external
+// ahb_lite_arbiter_8m1s.
 //
 // Encodings (shared with l1_dcache.v -- keep in sync if either
 // changes):
@@ -86,7 +88,8 @@ module cache_controller_mmu #(
     // the first blocked lookup to wait through all 4096 default L2 sets.
     parameter integer WATCHDOG_LIMIT = 8192,
     parameter EXTERNAL_L2 = 1,
-    parameter REQUEST_QUEUE_ENABLE = 0
+    parameter REQUEST_QUEUE_ENABLE = 0,
+    parameter EXTERNAL_REQUEST_ARBITER = 0
 )(
     input  wire clk,
     input  wire rst,
@@ -122,6 +125,15 @@ module cache_controller_mmu #(
     input  wire         c3_dsnoop_ack_valid, input wire c3_dsnoop_ack_hit, input wire c3_dsnoop_ack_dirty, input wire [255:0] c3_dsnoop_ack_line,
     input  wire         c3_ireq_valid, output wire c3_ireq_ready, input wire [31:0] c3_ireq_addr,
     output wire         c3_iresp_valid, output wire c3_iresp_error, output wire [255:0] c3_iresp_line,
+
+    // Optional request stream selected by an external AHB arbiter.  Source
+    // encoding matches the legacy internal arbiter: 0..3 D$, 4..7 I$.
+    input  wire         ext_req_valid,
+    output wire         ext_req_ready,
+    input  wire [2:0]   ext_req_source,
+    input  wire [1:0]   ext_req_type,
+    input  wire [31:0]  ext_req_addr,
+    input  wire [255:0] ext_req_line,
 
     // ---- External memory ("CPU MEMORY PORT"), single word, real handshake ----
     output reg          mem_req_valid,
@@ -456,10 +468,12 @@ module cache_controller_mmu #(
 
     integer i;
 
-    // ---- Starvation-free round-robin arbiter (combinational) ----
-    // Source encoding remains 0..3=D$0..D$3, 4..7=I$0..I$3 so
-    // req_core[2] still selects instruction versus data.  rr_next
-    // advances only when S_IDLE actually accepts a request.
+    // ---- Request-source selector ---------------------------------
+    // Active AHB mode (EXTERNAL_REQUEST_ARBITER=1): this is only a mux
+    // from the already-arbitrated ext_req_* stream; no grant decision is
+    // made here.  Legacy direct-wire mode (=0): the fallback round-robin
+    // picker below selects one of the eight native request ports.
+    // Source encoding is 0..3=D$0..D$3, 4..7=I$0..I$3.
     reg        arb_valid;
     reg [2:0]  arb_core;
     reg [2:0]  rr_next;
@@ -472,14 +486,32 @@ module cache_controller_mmu #(
         arb_valid     = 1'b0;
         arb_core      = rr_next;
         arb_candidate = rr_next;
-        for (arb_offset = 0; arb_offset < 8; arb_offset = arb_offset + 1) begin
-            arb_candidate = rr_next + arb_offset[2:0];
-            if (!arb_valid && arb_requests[arb_candidate]) begin
-                arb_valid = 1'b1;
-                arb_core  = arb_candidate;
+        if (EXTERNAL_REQUEST_ARBITER) begin
+            arb_valid = ext_req_valid;
+            arb_core  = ext_req_source;
+        end
+        else begin
+            for (arb_offset = 0; arb_offset < 8; arb_offset = arb_offset + 1) begin
+                arb_candidate = rr_next + arb_offset[2:0];
+                if (!arb_valid && arb_requests[arb_candidate]) begin
+                    arb_valid = 1'b1;
+                    arb_core  = arb_candidate;
+                end
             end
         end
     end
+
+    wire [1:0] arb_selected_type = EXTERNAL_REQUEST_ARBITER ? ext_req_type :
+                                   (arb_core[2] ? 2'b00 : dreq_type[arb_core[1:0]]);
+    wire [31:0] arb_selected_addr = EXTERNAL_REQUEST_ARBITER ? ext_req_addr :
+                                    (arb_core[2] ? ireq_addr[arb_core[1:0]] :
+                                                   dreq_addr[arb_core[1:0]]);
+    wire [255:0] arb_selected_line = EXTERNAL_REQUEST_ARBITER ? ext_req_line :
+                                     (arb_core[2] ? {LINE_BITS{1'b0}} :
+                                                    dreq_line[arb_core[1:0]]);
+    wire active_source_valid = EXTERNAL_REQUEST_ARBITER ? ext_req_valid :
+                               (req_is_d ? dreq_valid[req_core[1:0]] :
+                                           ireq_valid[req_core[1:0]]);
 
     // A request is accepted only when valid and ready are high on the
     // same edge.  The selected source may drop valid immediately after
@@ -493,14 +525,15 @@ module cache_controller_mmu #(
                          (arb_core != req_core) &&
                          !flush_pending && !flush_active && !cache_flush_req;
     wire request_accept = accept_direct || accept_queued;
-    assign c0_dreq_ready = request_accept && (arb_core == 3'd0);
-    assign c1_dreq_ready = request_accept && (arb_core == 3'd1);
-    assign c2_dreq_ready = request_accept && (arb_core == 3'd2);
-    assign c3_dreq_ready = request_accept && (arb_core == 3'd3);
-    assign c0_ireq_ready = request_accept && (arb_core == 3'd4);
-    assign c1_ireq_ready = request_accept && (arb_core == 3'd5);
-    assign c2_ireq_ready = request_accept && (arb_core == 3'd6);
-    assign c3_ireq_ready = request_accept && (arb_core == 3'd7);
+    assign c0_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd0);
+    assign c1_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd1);
+    assign c2_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd2);
+    assign c3_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd3);
+    assign c0_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd4);
+    assign c1_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd5);
+    assign c2_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd6);
+    assign c3_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd7);
+    assign ext_req_ready = EXTERNAL_REQUEST_ARBITER && request_accept;
 
     // Event codes: 0=request accepted, 1=L2 hit, 2=L2 miss,
     // 3=snoop issued, 4=response returned, 5=external-memory error.
@@ -517,9 +550,8 @@ module cache_controller_mmu #(
 
         if (request_accept) begin
             trace_event_valid = 1'b1;
-            trace_event_addr  = arb_core[2] ? ireq_addr[arb_core[1:0]]
-                                             : dreq_addr[arb_core[1:0]];
-            trace_event_type  = arb_core[2] ? 2'b00 : dreq_type[arb_core[1:0]];
+            trace_event_addr  = arb_selected_addr;
+            trace_event_type  = arb_selected_type;
             trace_event_data  = {trace_cycle, 4'd0, arb_core, ~arb_core[2],
                                  trace_event_type, state, 1'b0, 1'b0, 4'b0,
                                  12'b0, trace_event_addr};
@@ -697,11 +729,9 @@ module cache_controller_mmu #(
             if (accept_queued) begin
                 pending_valid <= 1'b1;
                 pending_core  <= arb_core;
-                pending_type  <= arb_core[2] ? 2'b00 : dreq_type[arb_core[1:0]];
-                pending_addr  <= arb_core[2] ? ireq_addr[arb_core[1:0]] :
-                                 dreq_addr[arb_core[1:0]];
-                pending_line  <= arb_core[2] ? {LINE_BITS{1'b0}} :
-                                 dreq_line[arb_core[1:0]];
+                pending_type  <= arb_selected_type;
+                pending_addr  <= arb_selected_addr;
+                pending_line  <= arb_selected_line;
                 rr_next       <= arb_core + 3'd1;
             end
 
@@ -884,7 +914,7 @@ module cache_controller_mmu #(
                             if (arb_core[2])
                                 perf_i_reads <= perf_i_reads + 32'd1;
                             else begin
-                                case (dreq_type[arb_core[1:0]])
+                                case (arb_selected_type)
                                     2'b00: perf_d_bus_reads  <= perf_d_bus_reads + 32'd1;
                                     2'b01: perf_d_rfos       <= perf_d_rfos + 32'd1;
                                     2'b10: perf_d_writebacks <= perf_d_writebacks + 32'd1;
@@ -892,26 +922,26 @@ module cache_controller_mmu #(
                                 endcase
                             end
                         end
-                        if ((arb_core[2] && (ireq_addr[arb_core[1:0]][4:0] != 5'b0)) ||
+                        if ((arb_core[2] && (arb_selected_addr[4:0] != 5'b0)) ||
                             (!arb_core[2] &&
-                             (dreq_type[arb_core[1:0]] != 2'b11) &&
-                             (dreq_addr[arb_core[1:0]][4:0] != 5'b0)))
+                             (arb_selected_type != 2'b11) &&
+                             (arb_selected_addr[4:0] != 5'b0)))
                             protocol_error <= 1'b1;
                         req_is_d <= ~arb_core[2];
                         if (~arb_core[2]) begin
-                            req_type    <= dreq_type[arb_core[1:0]];
-                            req_addr    <= (dreq_type[arb_core[1:0]] == 2'b11) ?
-                                           {dreq_addr[arb_core[1:0]][31:2], 2'b00} :
-                                           {dreq_addr[arb_core[1:0]][31:5], 5'b0};
-                            req_wr_line <= dreq_line[arb_core[1:0]];
+                            req_type    <= arb_selected_type;
+                            req_addr    <= (arb_selected_type == 2'b11) ?
+                                           {arb_selected_addr[31:2], 2'b00} :
+                                           {arb_selected_addr[31:5], 5'b0};
+                            req_wr_line <= arb_selected_line;
                         end
                         else begin
                             req_type    <= 2'b00; // READ semantics for I$
-                            req_addr    <= {ireq_addr[arb_core[1:0]][31:5], 5'b0};
+                            req_addr    <= {arb_selected_addr[31:5], 5'b0};
                         end
                         mem_waiting <= 1'b0;
                         state <= (!arb_core[2] &&
-                                  (dreq_type[arb_core[1:0]] == 2'b11)) ?
+                                  (arb_selected_type == 2'b11)) ?
                                  S_UNCACHED_MEM : S_L2_LOOKUP;
                     end
                 end
@@ -1223,10 +1253,10 @@ module cache_controller_mmu #(
 
                 S_WAIT_REQ_DROP: begin
                     if (req_is_d) begin
-                        if (!dreq_valid[req_core[1:0]]) state <= S_IDLE;
+                        if (!active_source_valid) state <= S_IDLE;
                     end
                     else begin
-                        if (!ireq_valid[req_core[1:0]]) state <= S_IDLE;
+                        if (!active_source_valid) state <= S_IDLE;
                     end
                 end
 

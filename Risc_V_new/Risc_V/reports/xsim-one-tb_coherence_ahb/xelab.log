@@ -1,0 +1,25 @@
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical -mt off xil_defaultlib.tb_coherence_ahb -snapshot tb_coherence_ahb_behav 
+Turned off multi-threading.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+WARNING: [VRFC 10-5021] port 'bus_req_ready' is not connected on this instance [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_ahb.v:125]
+WARNING: [VRFC 10-3645] port 'mem_wstrb' remains unconnected for this instance [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_ahb.v:195]
+WARNING: [VRFC 10-3645] port 'ext_req_valid' remains unconnected for this instance [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/coherence/coherence_manager.v:51]
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.store_unit
+Compiling module xil_defaultlib.cache_tdp_data_ram(ADDR_WIDTH=9)
+Compiling module xil_defaultlib.cache_tdp_data_ram(WIDTH=20,ADDR...
+Compiling module xil_defaultlib.l1_dcache_default
+Compiling module xil_defaultlib.ahb_lite_l1_adapter
+Compiling module xil_defaultlib.ahb_lite_l1_slave_adapter
+Compiling module xil_defaultlib.l2_way_data_ram
+Compiling module xil_defaultlib.l2_cache_default
+Compiling module xil_defaultlib.cache_controller_mmu(EXTERNAL_L2...
+Compiling module xil_defaultlib.coherence_manager
+Compiling module xil_defaultlib.tb_coherence_ahb
+Built simulation snapshot tb_coherence_ahb_behav

@@ -1,0 +1,73 @@
+#-----------------------------------------------------------
+# Vivado v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Sun Nov  8 00:01:04 2026
+# Process ID: 243304
+# Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V
+# Command line: vivado.exe -mode batch -source scripts/run_one_xsim.tcl -tclargs tb_cache_amo.v tb_cache_amo CACHE_AMO_TB: PASS
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/vivado.log
+# Journal file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V\vivado.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+source scripts/run_one_xsim.tcl
+# set script_dir  [file dirname [file normalize [info script]]]
+# set project_dir [file normalize [file join $script_dir ..]]
+# set rtl_dir     [file join $project_dir rtl]
+# set sim_dir     [file join $project_dir sim]
+# if {$argc >= 3} {
+#     set ONE_TB_FILE   [lindex $argv 0]
+#     set ONE_TB_TOP    [lindex $argv 1]
+#     set ONE_TB_MARKER [lindex $argv 2]
+# }
+# foreach required {ONE_TB_FILE ONE_TB_TOP ONE_TB_MARKER} {
+#     if {![info exists $required]} {
+#         error "Set ONE_TB_FILE, ONE_TB_TOP and ONE_TB_MARKER, or pass three -tclargs values."
+#     }
+# }
+# set work_dir [file join $project_dir reports "xsim-one-$ONE_TB_TOP"]
+# file mkdir $work_dir
+# set rtl_files {}
+# set manifest [open [file join $rtl_dir files.f] r]
+# while {[gets $manifest line] >= 0} {
+#     set line [string trim $line]
+#     if {$line eq "" || [string index $line 0] eq "#"} { continue }
+#     lappend rtl_files [file normalize [file join $rtl_dir $line]]
+# }
+# close $manifest
+# set old_dir [pwd]
+# cd $work_dir
+# exec xvlog -work xil_defaultlib {*}$rtl_files
+# exec xvlog -work xil_defaultlib [file join $sim_dir $ONE_TB_FILE]
+# exec xelab -debug typical -mt off "xil_defaultlib.$ONE_TB_TOP" \
+#     -snapshot "${ONE_TB_TOP}_behav"
+# set output [exec xsim "${ONE_TB_TOP}_behav" -R]
+# set fd [open [file join $work_dir run.log] w]
+# puts $fd $output
+# close $fd
+# puts $output
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_cache_amo_behav/xsim_script.tcl
+# xsim {tb_cache_amo_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] AMOADD.W returned old value 10 to x3
+[PASS] following LW observed AMO result 15 in D$
+[PASS] cold AMO issued exactly one RFO
+CACHE_AMO_TB: PASS
+$finish called at time : 5345 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_amo.v" Line 186
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Nov  8 00:01:26 2026...
+# cd $old_dir
+# if {[string first $ONE_TB_MARKER $output] < 0 ||
+#     [string first "_TB: FAIL" $output] >= 0} {
+#     error "$ONE_TB_TOP failed. See [file join $work_dir run.log]"
+# }
+# puts "=== ONE TEST PASS: $ONE_TB_TOP ==="
+=== ONE TEST PASS: tb_cache_amo ===
+INFO: [Common 17-206] Exiting Vivado at Sun Nov  8 00:01:26 2026...

@@ -1,0 +1,20 @@
+#-----------------------------------------------------------
+# xsim v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Sun Nov  1 02:26:50 2026
+# Process ID: 104560
+# Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-active-cache-20261101-022353
+# Command line: xsim.exe -mode tcl -source {xsim.dir/tb_core_instruction_legality_behav/xsim_script.tcl}
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-active-cache-20261101-022353/xsim.log
+# Journal file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-active-cache-20261101-022353\xsim.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_core_instruction_legality_behav/xsim_script.tcl
+# xsim {tb_core_instruction_legality_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+CORE_INSTRUCTION_LEGALITY_TB: PASS
+$finish called at time : 32 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_core_instruction_legality.v" Line 95
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Nov  1 02:26:52 2026...

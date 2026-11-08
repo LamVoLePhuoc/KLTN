@@ -1,0 +1,107 @@
+QuestaSim-64 vlog 10.2c Compiler 2013.07 Jul 19 2013
+C:\questasim64_10.2c\win64\vlog.exe -work ../reports/.questa-work-d0b4a338ad8c46a780b0a99ce31c807d -l C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\reports\full-regression-l1-pipeline-20261105-final\compile.log -f files.f C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_ahb_arbiter.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_ahb_error_sideband.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_ahb_uncached.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_axi_request_hold.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_boot_ctrl.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_amo.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_error_path.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_fence_i.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc_snoop.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_lrsc.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_maintenance.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_cache_uncached.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_ahb.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_error.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence_watchdog.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_coherence.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_core_instruction_legality.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_core_l1_physical_subsystem.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_core_rv32ima_isa.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_access_fault.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_priv.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_csr_trap.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_dma_end_to_end.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_quad_core_axi_ahb_behavior.v C:\Users\ADMIN\Documents\GitHub\KLTN\Risc_V_new\Risc_V\sim\tb_quad_core_soc_ahb_behavior.v 
+-- Compiling module ALU
+-- Compiling module ALU_Decoder
+-- Compiling module Control_Unit
+-- Compiling module Main_Decoder
+-- Compiling module Mux_3_by_1
+-- Compiling module PC_Adder
+-- Compiling module PC_module
+-- Compiling module Register_File
+-- Compiling module Sign_Extend
+-- Compiling module csr_trap_unit
+-- Compiling module decode_stage
+-- Compiling module ex_mem_registers
+-- Compiling module execute_stage
+-- Compiling module MDU
+-- Compiling module fetch_stage
+-- Compiling module hazard_unit
+-- Compiling module id_ex_registers
+-- Compiling module if_id_registers
+-- Compiling module load_unit
+-- Compiling module mem_wb_registers
+-- Compiling module memory_stage
+-- Compiling module mux
+-- Compiling module RV32IMA
+-- Compiling module store_unit
+-- Compiling module sys_decoder
+-- Compiling module writeback_stage
+-- Compiling module physical_core_wrapper
+-- Compiling module cache_debug_buffer
+-- Compiling module l1_icache
+-- Compiling module cache_sp_ram
+-- Compiling module l1_dcache
+-- Compiling module cache_tdp_data_ram
+-- Compiling module l2_cache
+-- Compiling module l2_sync_block_ram
+-- Compiling module l2_way_data_ram
+-- Compiling module core_l1_wrapper
+-- Compiling module cache_maintenance_tracker
+-- Compiling module system_cache_maintenance
+-- Compiling module coherence_manager
+-- Compiling module cache_controller_mmu
+-- Compiling module ahb_lite_l1_adapter
+-- Compiling module ahb_lite_l1_slave_adapter
+-- Compiling module ahb_lite_arbiter_8m1s
+-- Compiling module boot_ctrl
+-- Compiling module quad_core_soc
+-- Compiling module quad_core_soc_ahb
+-- Compiling module quad_core_axi_wrapper
+-- Compiling module quad_core_axi_wrapper_ahb
+-- Compiling module quad_core_axi_wrapper_bootable
+-- Compiling module quad_core_axi_wrapper_ahb_bootable
+-- Compiling module tb_ahb_arbiter
+-- Compiling module tb_ahb_error_sideband
+-- Compiling module tb_ahb_uncached
+-- Compiling module tb_axi_request_hold
+-- Compiling module tb_boot_ctrl
+-- Compiling module tb_cache_amo
+-- Compiling module tb_cache_error_path
+-- Compiling module tb_cache_fence_i
+-- Compiling module tb_cache_lrsc_snoop
+-- Compiling module tb_cache_lrsc
+-- Compiling module tb_cache_maintenance
+-- Compiling module tb_cache_uncached
+-- Compiling module tb_coherence_ahb
+-- Compiling module tb_coherence_error
+-- Compiling module tb_coherence_watchdog
+-- Compiling module tb_coherence
+-- Compiling module tb_core_instruction_legality
+-- Compiling module tb_core_l1_physical_subsystem
+-- Compiling module tb_core_rv32ima_isa
+-- Compiling module tb_csr_access_fault
+-- Compiling module tb_csr_priv
+-- Compiling module tb_csr_trap
+-- Compiling module tb_dma_end_to_end
+-- Compiling module tb_quad_core_axi_ahb_behavior
+-- Compiling module tb_quad_core_soc_ahb_behavior
+
+Top level modules:
+	load_unit
+	quad_core_axi_wrapper_bootable
+	quad_core_axi_wrapper_ahb_bootable
+	tb_ahb_arbiter
+	tb_ahb_error_sideband
+	tb_ahb_uncached
+	tb_axi_request_hold
+	tb_boot_ctrl
+	tb_cache_amo
+	tb_cache_error_path
+	tb_cache_fence_i
+	tb_cache_lrsc_snoop
+	tb_cache_lrsc
+	tb_cache_maintenance
+	tb_cache_uncached
+	tb_coherence_ahb
+	tb_coherence_error
+	tb_coherence_watchdog
+	tb_coherence
+	tb_core_instruction_legality
+	tb_core_l1_physical_subsystem
+	tb_core_rv32ima_isa
+	tb_csr_access_fault
+	tb_csr_priv
+	tb_csr_trap
+	tb_dma_end_to_end
+	tb_quad_core_axi_ahb_behavior
+	tb_quad_core_soc_ahb_behavior

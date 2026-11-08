@@ -77,6 +77,6 @@ MSI L: deterministic randomized ownership/flush stress
 ---------------------------------------------
 MSI_COHERENCE_TB: PASS
 ---------------------------------------------
-$finish called at time : 187230 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence.v" Line 791
+$finish called at time : 199670 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence.v" Line 791
 exit
-INFO: [Common 17-206] Exiting xsim at Tue Oct 27 13:12:40 2026...
+INFO: [Common 17-206] Exiting xsim at Fri Nov  6 01:12:42 2026...

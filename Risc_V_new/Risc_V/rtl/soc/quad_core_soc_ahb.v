@@ -31,20 +31,13 @@
 //     README.md's "file cũ vs file mới" policy) of adding new
 //     integration variants instead of overwriting reviewed ones.
 //
-// TOPOLOGY: 8 independent point-to-point AHB-Lite links (I$ and D$,
-// x4 cores), NOT one shared multi-master AHB-Lite bus. A real AHB-Lite
-// bus with >1 master needs its own address-phase arbiter (that is
-// what ahb3lite_interconnect-master_reference/ implements, and why it
-// was reviewed but not instantiated -- see ahb_lite_l1_adapter.v's
-// header: wrong license, missing submodule, multi-layer topology
-// overkill for this). Building a second, redundant arbiter here would
-// be pointless: cache_controller_mmu's round-robin 8-source
-// arbiter (see its header) ALREADY does the real cross-core
-// arbitration, immediately on the other side of the 8 slave adapters.
-// One dedicated point-to-point link per core per cache is standard
-// practice for exactly this situation (e.g. an AHB-Lite "layer" per
-// master in a real multi-layer interconnect is functionally the same
-// idea) and needs no extra arbitration logic of its own.
+// TOPOLOGY: one shared, eight-master AHB-Lite bus.  D$0..D$3 are
+// masters 0..3 and I$0..I$3 are masters 4..7.  The standalone
+// ahb_lite_arbiter_8m1s owns round-robin selection and holds a grant
+// across the complete eight-word cache-line transaction.  The shared
+// slave adapter then presents one pre-arbitrated request plus its source
+// ID to cache_controller_mmu.  The controller's legacy internal arbiter
+// remains available only for the direct-wire and unit-test variants.
 //
 // WHAT DOES / DOES NOT GO THROUGH THE AHB-LITE BRIDGE: the line-
 // fill/writeback and uncached/MMIO request/response path (bus_req/bus_resp <->
@@ -176,8 +169,7 @@ module quad_core_soc_ahb #(
     wire [255:0] l2_maint_line_data;
 
     // ------------------------------------------------------
-    // AHB-Lite link wires, per core, I$ and D$ each -- point-to-point
-    // (see header: no shared-bus arbiter needed here). HSIZE and
+    // Per-master AHB-Lite wires feeding the shared round-robin arbiter. HSIZE and
     // HPROT[3] are connected so the D$ can transport byte/half/word
     // uncached MMIO while HMASTLOCK preserves RFO/upgrade semantics.
     // ------------------------------------------------------
@@ -204,6 +196,44 @@ module quad_core_soc_ahb #(
     wire [2:0]  d_hsize   [0:3];
     wire [3:0]  d_hprot   [0:3];
     wire        d_req_active [0:3];
+
+    // Flattened eight-master AHB bus. Master IDs are 0..3 D$, 4..7 I$.
+    wire [255:0] ahb_m_haddr;
+    wire [7:0]   ahb_m_hwrite;
+    wire [23:0]  ahb_m_hsize;
+    wire [15:0]  ahb_m_htrans;
+    wire [255:0] ahb_m_hwdata;
+    wire [31:0]  ahb_m_hprot;
+    wire [7:0]   ahb_m_hmastlock;
+    wire [7:0]   ahb_m_req_active;
+    wire [7:0]   ahb_m_hgrant;
+    wire [7:0]   ahb_m_hready;
+    wire [255:0] ahb_m_hrdata;
+    wire [15:0]  ahb_m_hresp;
+
+    wire [31:0] shared_haddr;
+    wire        shared_hwrite;
+    wire [2:0]  shared_hsize;
+    wire [1:0]  shared_htrans;
+    wire [31:0] shared_hwdata;
+    wire [3:0]  shared_hprot;
+    wire        shared_hmastlock;
+    wire        shared_req_active;
+    wire        shared_hready;
+    wire [31:0] shared_hrdata;
+    wire [1:0]  shared_hresp;
+    wire        ahb_grant_valid;
+    wire [2:0]  ahb_grant_source;
+
+    wire         shared_req_valid;
+    wire [1:0]   shared_req_type;
+    wire [31:0]  shared_req_addr;
+    wire [255:0] shared_req_line;
+    wire         shared_req_ready;
+    reg          shared_resp_valid;
+    reg          shared_resp_error;
+    reg [255:0]  shared_resp_line;
+    reg [1:0]    shared_resp_state;
 
     // ------------------------------------------------------
     // Post-bridge request/response wires (cache-controller side --
@@ -276,7 +306,7 @@ module quad_core_soc_ahb #(
     );
 
     ahb_lite_l1_adapter u0_i_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[4]),
         .bus_req_valid(ibus_req_valid[0]), .bus_req_type(2'b00),
         .bus_req_addr(ibus_req_addr[0]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[0]), .bus_resp_error(ibus_resp_error[0]), .bus_resp_line(ibus_resp_line[0]), .bus_resp_state(),
@@ -285,16 +315,8 @@ module quad_core_soc_ahb #(
         .HRDATA(i_hrdata[0]), .HREADY(i_hready[0]), .HRESP(i_hresp[0]),
         .REQ_ACTIVE(i_req_active[0])
     );
-    ahb_lite_l1_slave_adapter u0_i_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HTRANS(i_htrans[0]), .HWDATA(i_hwdata[0]), .HMASTLOCK(i_hmastlock[0]), .HSIZE(i_hsize[0]), .HPROT(i_hprot[0]), .REQ_ACTIVE(i_req_active[0]),
-        .HREADYOUT(i_hready[0]), .HRDATA(i_hrdata[0]), .HRESP(i_hresp[0]),
-        .dreq_valid(ireq_valid_w[0]), .dreq_type(), .dreq_addr(ireq_addr_w[0]), .dreq_line(),
-        .dresp_valid(iresp_valid_w[0]), .dresp_error(iresp_error_w[0]), .dresp_line(iresp_line_w[0]), .dresp_state(2'b00)
-    );
-
     ahb_lite_l1_adapter u0_d_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[0]),
         .bus_req_valid(dbus_req_valid[0]), .bus_req_type(dbus_req_type[0]),
         .bus_req_addr(dbus_req_addr[0]), .bus_req_line(dbus_req_line[0]),
         .bus_resp_valid(dbus_resp_valid[0]), .bus_resp_error(dbus_resp_error[0]), .bus_resp_line(dbus_resp_line[0]), .bus_resp_state(dbus_resp_state[0]),
@@ -302,14 +324,6 @@ module quad_core_soc_ahb #(
         .HWDATA(d_hwdata[0]), .HBURST(), .HPROT(d_hprot[0]), .HMASTLOCK(d_hmastlock[0]),
         .HRDATA(d_hrdata[0]), .HREADY(d_hready[0]), .HRESP(d_hresp[0]),
         .REQ_ACTIVE(d_req_active[0])
-    );
-    ahb_lite_l1_slave_adapter u0_d_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HTRANS(d_htrans[0]), .HWDATA(d_hwdata[0]), .HMASTLOCK(d_hmastlock[0]), .HSIZE(d_hsize[0]), .HPROT(d_hprot[0]), .REQ_ACTIVE(d_req_active[0]),
-        .HREADYOUT(d_hready[0]), .HRDATA(d_hrdata[0]), .HRESP(d_hresp[0]),
-        .dreq_valid(dreq_valid_w[0]), .dreq_type(dreq_type_w[0]),
-        .dreq_addr(dreq_addr_w[0]), .dreq_line(dreq_line_w[0]),
-        .dresp_valid(dresp_valid_w[0]), .dresp_error(dresp_error_w[0]), .dresp_line(dresp_line_w[0]), .dresp_state(dresp_state_w[0])
     );
 
     // ------------------------------------------------------
@@ -333,7 +347,7 @@ module quad_core_soc_ahb #(
     );
 
     ahb_lite_l1_adapter u1_i_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[5]),
         .bus_req_valid(ibus_req_valid[1]), .bus_req_type(2'b00),
         .bus_req_addr(ibus_req_addr[1]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[1]), .bus_resp_error(ibus_resp_error[1]), .bus_resp_line(ibus_resp_line[1]), .bus_resp_state(),
@@ -342,16 +356,8 @@ module quad_core_soc_ahb #(
         .HRDATA(i_hrdata[1]), .HREADY(i_hready[1]), .HRESP(i_hresp[1]),
         .REQ_ACTIVE(i_req_active[1])
     );
-    ahb_lite_l1_slave_adapter u1_i_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HTRANS(i_htrans[1]), .HWDATA(i_hwdata[1]), .HMASTLOCK(i_hmastlock[1]), .HSIZE(i_hsize[1]), .HPROT(i_hprot[1]), .REQ_ACTIVE(i_req_active[1]),
-        .HREADYOUT(i_hready[1]), .HRDATA(i_hrdata[1]), .HRESP(i_hresp[1]),
-        .dreq_valid(ireq_valid_w[1]), .dreq_type(), .dreq_addr(ireq_addr_w[1]), .dreq_line(),
-        .dresp_valid(iresp_valid_w[1]), .dresp_error(iresp_error_w[1]), .dresp_line(iresp_line_w[1]), .dresp_state(2'b00)
-    );
-
     ahb_lite_l1_adapter u1_d_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[1]),
         .bus_req_valid(dbus_req_valid[1]), .bus_req_type(dbus_req_type[1]),
         .bus_req_addr(dbus_req_addr[1]), .bus_req_line(dbus_req_line[1]),
         .bus_resp_valid(dbus_resp_valid[1]), .bus_resp_error(dbus_resp_error[1]), .bus_resp_line(dbus_resp_line[1]), .bus_resp_state(dbus_resp_state[1]),
@@ -359,14 +365,6 @@ module quad_core_soc_ahb #(
         .HWDATA(d_hwdata[1]), .HBURST(), .HPROT(d_hprot[1]), .HMASTLOCK(d_hmastlock[1]),
         .HRDATA(d_hrdata[1]), .HREADY(d_hready[1]), .HRESP(d_hresp[1]),
         .REQ_ACTIVE(d_req_active[1])
-    );
-    ahb_lite_l1_slave_adapter u1_d_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HTRANS(d_htrans[1]), .HWDATA(d_hwdata[1]), .HMASTLOCK(d_hmastlock[1]), .HSIZE(d_hsize[1]), .HPROT(d_hprot[1]), .REQ_ACTIVE(d_req_active[1]),
-        .HREADYOUT(d_hready[1]), .HRDATA(d_hrdata[1]), .HRESP(d_hresp[1]),
-        .dreq_valid(dreq_valid_w[1]), .dreq_type(dreq_type_w[1]),
-        .dreq_addr(dreq_addr_w[1]), .dreq_line(dreq_line_w[1]),
-        .dresp_valid(dresp_valid_w[1]), .dresp_error(dresp_error_w[1]), .dresp_line(dresp_line_w[1]), .dresp_state(dresp_state_w[1])
     );
 
     // ------------------------------------------------------
@@ -390,7 +388,7 @@ module quad_core_soc_ahb #(
     );
 
     ahb_lite_l1_adapter u2_i_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[6]),
         .bus_req_valid(ibus_req_valid[2]), .bus_req_type(2'b00),
         .bus_req_addr(ibus_req_addr[2]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[2]), .bus_resp_error(ibus_resp_error[2]), .bus_resp_line(ibus_resp_line[2]), .bus_resp_state(),
@@ -399,16 +397,8 @@ module quad_core_soc_ahb #(
         .HRDATA(i_hrdata[2]), .HREADY(i_hready[2]), .HRESP(i_hresp[2]),
         .REQ_ACTIVE(i_req_active[2])
     );
-    ahb_lite_l1_slave_adapter u2_i_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HTRANS(i_htrans[2]), .HWDATA(i_hwdata[2]), .HMASTLOCK(i_hmastlock[2]), .HSIZE(i_hsize[2]), .HPROT(i_hprot[2]), .REQ_ACTIVE(i_req_active[2]),
-        .HREADYOUT(i_hready[2]), .HRDATA(i_hrdata[2]), .HRESP(i_hresp[2]),
-        .dreq_valid(ireq_valid_w[2]), .dreq_type(), .dreq_addr(ireq_addr_w[2]), .dreq_line(),
-        .dresp_valid(iresp_valid_w[2]), .dresp_error(iresp_error_w[2]), .dresp_line(iresp_line_w[2]), .dresp_state(2'b00)
-    );
-
     ahb_lite_l1_adapter u2_d_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[2]),
         .bus_req_valid(dbus_req_valid[2]), .bus_req_type(dbus_req_type[2]),
         .bus_req_addr(dbus_req_addr[2]), .bus_req_line(dbus_req_line[2]),
         .bus_resp_valid(dbus_resp_valid[2]), .bus_resp_error(dbus_resp_error[2]), .bus_resp_line(dbus_resp_line[2]), .bus_resp_state(dbus_resp_state[2]),
@@ -416,14 +406,6 @@ module quad_core_soc_ahb #(
         .HWDATA(d_hwdata[2]), .HBURST(), .HPROT(d_hprot[2]), .HMASTLOCK(d_hmastlock[2]),
         .HRDATA(d_hrdata[2]), .HREADY(d_hready[2]), .HRESP(d_hresp[2]),
         .REQ_ACTIVE(d_req_active[2])
-    );
-    ahb_lite_l1_slave_adapter u2_d_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HTRANS(d_htrans[2]), .HWDATA(d_hwdata[2]), .HMASTLOCK(d_hmastlock[2]), .HSIZE(d_hsize[2]), .HPROT(d_hprot[2]), .REQ_ACTIVE(d_req_active[2]),
-        .HREADYOUT(d_hready[2]), .HRDATA(d_hrdata[2]), .HRESP(d_hresp[2]),
-        .dreq_valid(dreq_valid_w[2]), .dreq_type(dreq_type_w[2]),
-        .dreq_addr(dreq_addr_w[2]), .dreq_line(dreq_line_w[2]),
-        .dresp_valid(dresp_valid_w[2]), .dresp_error(dresp_error_w[2]), .dresp_line(dresp_line_w[2]), .dresp_state(dresp_state_w[2])
     );
 
     // ------------------------------------------------------
@@ -447,7 +429,7 @@ module quad_core_soc_ahb #(
     );
 
     ahb_lite_l1_adapter u3_i_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[7]),
         .bus_req_valid(ibus_req_valid[3]), .bus_req_type(2'b00),
         .bus_req_addr(ibus_req_addr[3]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[3]), .bus_resp_error(ibus_resp_error[3]), .bus_resp_line(ibus_resp_line[3]), .bus_resp_state(),
@@ -456,16 +438,8 @@ module quad_core_soc_ahb #(
         .HRDATA(i_hrdata[3]), .HREADY(i_hready[3]), .HRESP(i_hresp[3]),
         .REQ_ACTIVE(i_req_active[3])
     );
-    ahb_lite_l1_slave_adapter u3_i_ahb_s (
-        .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HTRANS(i_htrans[3]), .HWDATA(i_hwdata[3]), .HMASTLOCK(i_hmastlock[3]), .HSIZE(i_hsize[3]), .HPROT(i_hprot[3]), .REQ_ACTIVE(i_req_active[3]),
-        .HREADYOUT(i_hready[3]), .HRDATA(i_hrdata[3]), .HRESP(i_hresp[3]),
-        .dreq_valid(ireq_valid_w[3]), .dreq_type(), .dreq_addr(ireq_addr_w[3]), .dreq_line(),
-        .dresp_valid(iresp_valid_w[3]), .dresp_error(iresp_error_w[3]), .dresp_line(iresp_line_w[3]), .dresp_state(2'b00)
-    );
-
     ahb_lite_l1_adapter u3_d_ahb_m (
-        .HCLK(clk), .HRESETn(HRESETn),
+        .HCLK(clk), .HRESETn(HRESETn), .HGRANT(ahb_m_hgrant[3]),
         .bus_req_valid(dbus_req_valid[3]), .bus_req_type(dbus_req_type[3]),
         .bus_req_addr(dbus_req_addr[3]), .bus_req_line(dbus_req_line[3]),
         .bus_resp_valid(dbus_resp_valid[3]), .bus_resp_error(dbus_resp_error[3]), .bus_resp_line(dbus_resp_line[3]), .bus_resp_state(dbus_resp_state[3]),
@@ -474,14 +448,84 @@ module quad_core_soc_ahb #(
         .HRDATA(d_hrdata[3]), .HREADY(d_hready[3]), .HRESP(d_hresp[3]),
         .REQ_ACTIVE(d_req_active[3])
     );
-    ahb_lite_l1_slave_adapter u3_d_ahb_s (
+
+    // ------------------------------------------------------
+    // One physical AHB-Lite layer shared by all eight cache masters.
+    // ------------------------------------------------------
+    assign ahb_m_haddr       = {i_haddr[3], i_haddr[2], i_haddr[1], i_haddr[0],
+                                d_haddr[3], d_haddr[2], d_haddr[1], d_haddr[0]};
+    assign ahb_m_hwrite      = {i_hwrite[3], i_hwrite[2], i_hwrite[1], i_hwrite[0],
+                                d_hwrite[3], d_hwrite[2], d_hwrite[1], d_hwrite[0]};
+    assign ahb_m_hsize       = {i_hsize[3], i_hsize[2], i_hsize[1], i_hsize[0],
+                                d_hsize[3], d_hsize[2], d_hsize[1], d_hsize[0]};
+    assign ahb_m_htrans      = {i_htrans[3], i_htrans[2], i_htrans[1], i_htrans[0],
+                                d_htrans[3], d_htrans[2], d_htrans[1], d_htrans[0]};
+    assign ahb_m_hwdata      = {i_hwdata[3], i_hwdata[2], i_hwdata[1], i_hwdata[0],
+                                d_hwdata[3], d_hwdata[2], d_hwdata[1], d_hwdata[0]};
+    assign ahb_m_hprot       = {i_hprot[3], i_hprot[2], i_hprot[1], i_hprot[0],
+                                d_hprot[3], d_hprot[2], d_hprot[1], d_hprot[0]};
+    assign ahb_m_hmastlock   = {i_hmastlock[3], i_hmastlock[2], i_hmastlock[1], i_hmastlock[0],
+                                d_hmastlock[3], d_hmastlock[2], d_hmastlock[1], d_hmastlock[0]};
+    assign ahb_m_req_active  = {i_req_active[3], i_req_active[2], i_req_active[1], i_req_active[0],
+                                d_req_active[3], d_req_active[2], d_req_active[1], d_req_active[0]};
+
+    assign d_hready[0] = ahb_m_hready[0]; assign d_hready[1] = ahb_m_hready[1];
+    assign d_hready[2] = ahb_m_hready[2]; assign d_hready[3] = ahb_m_hready[3];
+    assign i_hready[0] = ahb_m_hready[4]; assign i_hready[1] = ahb_m_hready[5];
+    assign i_hready[2] = ahb_m_hready[6]; assign i_hready[3] = ahb_m_hready[7];
+    assign d_hrdata[0] = ahb_m_hrdata[0*32 +: 32]; assign d_hrdata[1] = ahb_m_hrdata[1*32 +: 32];
+    assign d_hrdata[2] = ahb_m_hrdata[2*32 +: 32]; assign d_hrdata[3] = ahb_m_hrdata[3*32 +: 32];
+    assign i_hrdata[0] = ahb_m_hrdata[4*32 +: 32]; assign i_hrdata[1] = ahb_m_hrdata[5*32 +: 32];
+    assign i_hrdata[2] = ahb_m_hrdata[6*32 +: 32]; assign i_hrdata[3] = ahb_m_hrdata[7*32 +: 32];
+    assign d_hresp[0] = ahb_m_hresp[0*2 +: 2]; assign d_hresp[1] = ahb_m_hresp[1*2 +: 2];
+    assign d_hresp[2] = ahb_m_hresp[2*2 +: 2]; assign d_hresp[3] = ahb_m_hresp[3*2 +: 2];
+    assign i_hresp[0] = ahb_m_hresp[4*2 +: 2]; assign i_hresp[1] = ahb_m_hresp[5*2 +: 2];
+    assign i_hresp[2] = ahb_m_hresp[6*2 +: 2]; assign i_hresp[3] = ahb_m_hresp[7*2 +: 2];
+
+    ahb_lite_arbiter_8m1s u_ahb_arbiter (
         .HCLK(clk), .HRESETn(HRESETn),
-        .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HTRANS(d_htrans[3]), .HWDATA(d_hwdata[3]), .HMASTLOCK(d_hmastlock[3]), .HSIZE(d_hsize[3]), .HPROT(d_hprot[3]), .REQ_ACTIVE(d_req_active[3]),
-        .HREADYOUT(d_hready[3]), .HRDATA(d_hrdata[3]), .HRESP(d_hresp[3]),
-        .dreq_valid(dreq_valid_w[3]), .dreq_type(dreq_type_w[3]),
-        .dreq_addr(dreq_addr_w[3]), .dreq_line(dreq_line_w[3]),
-        .dresp_valid(dresp_valid_w[3]), .dresp_error(dresp_error_w[3]), .dresp_line(dresp_line_w[3]), .dresp_state(dresp_state_w[3])
+        .M_REQ_ACTIVE(ahb_m_req_active), .M_HADDR(ahb_m_haddr),
+        .M_HWRITE(ahb_m_hwrite), .M_HSIZE(ahb_m_hsize),
+        .M_HTRANS(ahb_m_htrans), .M_HWDATA(ahb_m_hwdata),
+        .M_HPROT(ahb_m_hprot), .M_HMASTLOCK(ahb_m_hmastlock),
+        .M_HGRANT(ahb_m_hgrant), .M_HREADY(ahb_m_hready),
+        .M_HRDATA(ahb_m_hrdata), .M_HRESP(ahb_m_hresp),
+        .S_HADDR(shared_haddr), .S_HWRITE(shared_hwrite),
+        .S_HSIZE(shared_hsize), .S_HTRANS(shared_htrans),
+        .S_HWDATA(shared_hwdata), .S_HPROT(shared_hprot),
+        .S_HMASTLOCK(shared_hmastlock), .S_REQ_ACTIVE(shared_req_active),
+        .S_HREADY(shared_hready), .S_HRDATA(shared_hrdata), .S_HRESP(shared_hresp),
+        .GRANT_VALID(ahb_grant_valid), .GRANT_SOURCE(ahb_grant_source)
     );
+
+    ahb_lite_l1_slave_adapter u_shared_ahb_s (
+        .HCLK(clk), .HRESETn(HRESETn),
+        .HADDR(shared_haddr), .HWRITE(shared_hwrite), .HTRANS(shared_htrans),
+        .HWDATA(shared_hwdata), .HMASTLOCK(shared_hmastlock),
+        .HSIZE(shared_hsize), .HPROT(shared_hprot), .REQ_ACTIVE(shared_req_active),
+        .HREADYOUT(shared_hready), .HRDATA(shared_hrdata), .HRESP(shared_hresp),
+        .dreq_valid(shared_req_valid), .dreq_type(shared_req_type),
+        .dreq_addr(shared_req_addr), .dreq_line(shared_req_line),
+        .dresp_valid(shared_resp_valid), .dresp_error(shared_resp_error),
+        .dresp_line(shared_resp_line), .dresp_state(shared_resp_state)
+    );
+
+    always @(*) begin
+        shared_resp_valid = 1'b0;
+        shared_resp_error = 1'b0;
+        shared_resp_line  = 256'b0;
+        shared_resp_state = 2'b00;
+        case (ahb_grant_source)
+            3'd0: begin shared_resp_valid=dresp_valid_w[0]; shared_resp_error=dresp_error_w[0]; shared_resp_line=dresp_line_w[0]; shared_resp_state=dresp_state_w[0]; end
+            3'd1: begin shared_resp_valid=dresp_valid_w[1]; shared_resp_error=dresp_error_w[1]; shared_resp_line=dresp_line_w[1]; shared_resp_state=dresp_state_w[1]; end
+            3'd2: begin shared_resp_valid=dresp_valid_w[2]; shared_resp_error=dresp_error_w[2]; shared_resp_line=dresp_line_w[2]; shared_resp_state=dresp_state_w[2]; end
+            3'd3: begin shared_resp_valid=dresp_valid_w[3]; shared_resp_error=dresp_error_w[3]; shared_resp_line=dresp_line_w[3]; shared_resp_state=dresp_state_w[3]; end
+            3'd4: begin shared_resp_valid=iresp_valid_w[0]; shared_resp_error=iresp_error_w[0]; shared_resp_line=iresp_line_w[0]; shared_resp_state=2'b01; end
+            3'd5: begin shared_resp_valid=iresp_valid_w[1]; shared_resp_error=iresp_error_w[1]; shared_resp_line=iresp_line_w[1]; shared_resp_state=2'b01; end
+            3'd6: begin shared_resp_valid=iresp_valid_w[2]; shared_resp_error=iresp_error_w[2]; shared_resp_line=iresp_line_w[2]; shared_resp_state=2'b01; end
+            3'd7: begin shared_resp_valid=iresp_valid_w[3]; shared_resp_error=iresp_error_w[3]; shared_resp_line=iresp_line_w[3]; shared_resp_state=2'b01; end
+        endcase
+    end
 
     // ------------------------------------------------------
     // Shared L2 + MSI directory + arbiter. Same instantiation as
@@ -492,41 +536,46 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     cache_controller_mmu #(
         .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE),
-        .REQUEST_QUEUE_ENABLE(0)
+        .REQUEST_QUEUE_ENABLE(0),
+        .EXTERNAL_REQUEST_ARBITER(1)
     ) u_cache_controller_mmu (
         .clk(clk), .rst(rst),
 
-        .c0_dreq_valid(dreq_valid_w[0]), .c0_dreq_type(dreq_type_w[0]), .c0_dreq_addr(dreq_addr_w[0]), .c0_dreq_line(dreq_line_w[0]),
+        .c0_dreq_valid(1'b0), .c0_dreq_type(2'b0), .c0_dreq_addr(32'b0), .c0_dreq_line(256'b0),
         .c0_dresp_valid(dresp_valid_w[0]), .c0_dresp_error(dresp_error_w[0]), .c0_dresp_line(dresp_line_w[0]), .c0_dresp_state(dresp_state_w[0]),
         .c0_dsnoop_valid(dsnoop_valid[0]), .c0_dsnoop_type(dsnoop_type[0]), .c0_dsnoop_addr(dsnoop_addr[0]),
         .c0_dsnoop_ack_valid(dsnoop_ack_valid[0]), .c0_dsnoop_ack_hit(dsnoop_ack_hit[0]),
         .c0_dsnoop_ack_dirty(dsnoop_ack_dirty[0]), .c0_dsnoop_ack_line(dsnoop_ack_line[0]),
-        .c0_ireq_valid(ireq_valid_w[0]), .c0_ireq_addr(ireq_addr_w[0]),
+        .c0_ireq_valid(1'b0), .c0_ireq_addr(32'b0),
         .c0_iresp_valid(iresp_valid_w[0]), .c0_iresp_error(iresp_error_w[0]), .c0_iresp_line(iresp_line_w[0]),
 
-        .c1_dreq_valid(dreq_valid_w[1]), .c1_dreq_type(dreq_type_w[1]), .c1_dreq_addr(dreq_addr_w[1]), .c1_dreq_line(dreq_line_w[1]),
+        .c1_dreq_valid(1'b0), .c1_dreq_type(2'b0), .c1_dreq_addr(32'b0), .c1_dreq_line(256'b0),
         .c1_dresp_valid(dresp_valid_w[1]), .c1_dresp_error(dresp_error_w[1]), .c1_dresp_line(dresp_line_w[1]), .c1_dresp_state(dresp_state_w[1]),
         .c1_dsnoop_valid(dsnoop_valid[1]), .c1_dsnoop_type(dsnoop_type[1]), .c1_dsnoop_addr(dsnoop_addr[1]),
         .c1_dsnoop_ack_valid(dsnoop_ack_valid[1]), .c1_dsnoop_ack_hit(dsnoop_ack_hit[1]),
         .c1_dsnoop_ack_dirty(dsnoop_ack_dirty[1]), .c1_dsnoop_ack_line(dsnoop_ack_line[1]),
-        .c1_ireq_valid(ireq_valid_w[1]), .c1_ireq_addr(ireq_addr_w[1]),
+        .c1_ireq_valid(1'b0), .c1_ireq_addr(32'b0),
         .c1_iresp_valid(iresp_valid_w[1]), .c1_iresp_error(iresp_error_w[1]), .c1_iresp_line(iresp_line_w[1]),
 
-        .c2_dreq_valid(dreq_valid_w[2]), .c2_dreq_type(dreq_type_w[2]), .c2_dreq_addr(dreq_addr_w[2]), .c2_dreq_line(dreq_line_w[2]),
+        .c2_dreq_valid(1'b0), .c2_dreq_type(2'b0), .c2_dreq_addr(32'b0), .c2_dreq_line(256'b0),
         .c2_dresp_valid(dresp_valid_w[2]), .c2_dresp_error(dresp_error_w[2]), .c2_dresp_line(dresp_line_w[2]), .c2_dresp_state(dresp_state_w[2]),
         .c2_dsnoop_valid(dsnoop_valid[2]), .c2_dsnoop_type(dsnoop_type[2]), .c2_dsnoop_addr(dsnoop_addr[2]),
         .c2_dsnoop_ack_valid(dsnoop_ack_valid[2]), .c2_dsnoop_ack_hit(dsnoop_ack_hit[2]),
         .c2_dsnoop_ack_dirty(dsnoop_ack_dirty[2]), .c2_dsnoop_ack_line(dsnoop_ack_line[2]),
-        .c2_ireq_valid(ireq_valid_w[2]), .c2_ireq_addr(ireq_addr_w[2]),
+        .c2_ireq_valid(1'b0), .c2_ireq_addr(32'b0),
         .c2_iresp_valid(iresp_valid_w[2]), .c2_iresp_error(iresp_error_w[2]), .c2_iresp_line(iresp_line_w[2]),
 
-        .c3_dreq_valid(dreq_valid_w[3]), .c3_dreq_type(dreq_type_w[3]), .c3_dreq_addr(dreq_addr_w[3]), .c3_dreq_line(dreq_line_w[3]),
+        .c3_dreq_valid(1'b0), .c3_dreq_type(2'b0), .c3_dreq_addr(32'b0), .c3_dreq_line(256'b0),
         .c3_dresp_valid(dresp_valid_w[3]), .c3_dresp_error(dresp_error_w[3]), .c3_dresp_line(dresp_line_w[3]), .c3_dresp_state(dresp_state_w[3]),
         .c3_dsnoop_valid(dsnoop_valid[3]), .c3_dsnoop_type(dsnoop_type[3]), .c3_dsnoop_addr(dsnoop_addr[3]),
         .c3_dsnoop_ack_valid(dsnoop_ack_valid[3]), .c3_dsnoop_ack_hit(dsnoop_ack_hit[3]),
         .c3_dsnoop_ack_dirty(dsnoop_ack_dirty[3]), .c3_dsnoop_ack_line(dsnoop_ack_line[3]),
-        .c3_ireq_valid(ireq_valid_w[3]), .c3_ireq_addr(ireq_addr_w[3]),
+        .c3_ireq_valid(1'b0), .c3_ireq_addr(32'b0),
         .c3_iresp_valid(iresp_valid_w[3]), .c3_iresp_error(iresp_error_w[3]), .c3_iresp_line(iresp_line_w[3]),
+
+        .ext_req_valid(shared_req_valid), .ext_req_ready(shared_req_ready),
+        .ext_req_source(ahb_grant_source), .ext_req_type(shared_req_type),
+        .ext_req_addr(shared_req_addr), .ext_req_line(shared_req_line),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),
         .mem_rdata(mem_rdata), .mem_valid(mem_valid), .mem_error(mem_error),

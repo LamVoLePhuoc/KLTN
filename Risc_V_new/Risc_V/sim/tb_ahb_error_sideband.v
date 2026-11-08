@@ -31,7 +31,7 @@ module tb_ahb_error_sideband;
     reg [255:0] dresp_line;
 
     ahb_lite_l1_adapter u_master (
-        .HCLK(clk), .HRESETn(resetn),
+        .HCLK(clk), .HRESETn(resetn), .HGRANT(1'b1),
         .bus_req_valid(bus_req_valid), .bus_req_type(bus_req_type),
         .bus_req_addr(bus_req_addr), .bus_req_line(bus_req_line),
         .bus_resp_valid(bus_resp_valid), .bus_resp_error(bus_resp_error),

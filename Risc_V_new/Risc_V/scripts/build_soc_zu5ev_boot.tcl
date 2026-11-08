@@ -33,8 +33,9 @@
 #   cpu0 (quad_core_axi_wrapper_ahb_bootable) |          stand-in for DDR)
 #     M_AXI -----------------------------S00--|--> M01 -> uart0 (axi_uartlite,
 #     S_AXI_BOOT (GO/RESULT/CACHE regs) <-------|          bonus/debug only)
-#                                              |--> M02 -> dma0/S_AXI_LITE
-#   dma0 (axi_cdma)                           |
+#                                              |--> M02 -> dma_cfg_bridge/AXI4_LITE
+#   dma0 (packaged soc_dma_controller)        |              |
+#     S_APB <---------------------------------APB4------------/
 #     M_AXI ------------------------------S01-/--> M03 -> cpu0/S_AXI_BOOT
 #                                                          (boot_ctrl -- see
 #                                                          below: reachable
@@ -76,8 +77,8 @@
 #
 # WHY THESE CHOICES: see build_soc_mmu_trial.tcl's header for the
 # reasoning that still applies unchanged (BRAM stand-in instead of
-# real DDR until confirmed; axi_cdma for the same memory-mapped-copy
-# role).
+# real DDR until confirmed). The source-level DMA uses AXI4 for data
+# and an APB4 control plane behind the Xilinx AXI-to-APB bridge.
 #
 # HONESTY NOTE ON THE PS AUTOMATION CALLS BELOW (read before assuming
 # a clean run means this is fully correct): apply_bd_automation's
@@ -165,6 +166,7 @@ set new_sources {
     cache_debug_buffer.v
     coherence_manager.v
     ahb_lite_l1_adapter.v
+    ahb_lite_arbiter_8m1s.v
     ahb_lite_l1_slave_adapter.v
     quad_core_soc_ahb.v
     quad_core_axi_wrapper_ahb.v
@@ -240,15 +242,34 @@ set_property CONFIG.CONST_WIDTH {1} [get_bd_cells $c_flush]
 set_property CONFIG.CONST_VAL   {0} [get_bd_cells $c_flush]
 connect_bd_net [get_bd_pins $c_flush/dout] [get_bd_pins cpu0/Mmu_Flush]
 
-set c_cflush [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 CONST_CACHE_FLUSH]
-set_property CONFIG.CONST_WIDTH {1} [get_bd_cells $c_cflush]
-set_property CONFIG.CONST_VAL   {0} [get_bd_cells $c_cflush]
-connect_bd_net [get_bd_pins $c_cflush/dout] [get_bd_pins cpu0/Cache_Flush]
+puts "--> [3b] Instantiating packaged soc_dma_controller + Xilinx AXI-to-APB bridge"
 
-puts "--> [3b] Instantiating dma0 = axi_cdma"
+set ip_repo_dir [file normalize [file join $script_dir .. ip_repo]]
+set dma_component [file join $ip_repo_dir soc_dma_controller_1_0 component.xml]
+if {![file exists $dma_component]} {
+    error "Packaged DMA IP is missing. Run scripts/package_soc_dma_ip.tcl first."
+}
+set current_repos [get_property IP_REPO_PATHS [current_project]]
+set_property IP_REPO_PATHS [lsort -unique [concat $current_repos $ip_repo_dir]] [current_project]
+update_ip_catalog
 
-set dma0 [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_cdma:4.1 dma0]
-catch {set_property CONFIG.C_INCLUDE_SG {0} [get_bd_cells $dma0]}
+set dma0 [create_bd_cell -type ip -vlnv kltn.local:user:soc_dma_controller:1.0 dma0]
+set dma_cfg_bridge [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_apb_bridge:3.0 dma_cfg_bridge]
+set_property -dict [list \
+    CONFIG.C_APB_NUM_SLAVES {1} \
+    CONFIG.C_M_APB_PROTOCOL {apb4} \
+] [get_bd_cells $dma_cfg_bridge]
+connect_bd_intf_net [get_bd_intf_pins $dma_cfg_bridge/APB_M] [get_bd_intf_pins $dma0/S_APB]
+
+# The bootable wrapper ORs this DMA request with boot_ctrl's manual CACHE
+# command, so both control paths use the same global maintenance engine.
+connect_bd_net [get_bd_pins $dma0/cache_flush]       [get_bd_pins cpu0/Cache_Flush]
+connect_bd_net [get_bd_pins cpu0/Cache_Flush_Busy]  [get_bd_pins $dma0/cache_flush_busy]
+connect_bd_net [get_bd_pins cpu0/Cache_Flush_Done]  [get_bd_pins $dma0/cache_flush_done]
+connect_bd_net [get_bd_pins cpu0/Cache_Flush_Error] [get_bd_pins $dma0/cache_flush_error]
+
+create_bd_port -dir I dma_buffer_quiesced
+connect_bd_net [get_bd_ports dma_buffer_quiesced] [get_bd_pins $dma0/buffer_quiesced]
 
 #---------------------------------------------------------------
 # 4. Memory target (BRAM stand-in for DDR -- see header) and uart0
@@ -297,7 +318,8 @@ puts "--> [5] Instantiating axi_interconnect_data (3 masters -> 4 slaves)"
 set ic_data [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_data]
 set_property -dict [list CONFIG.NUM_SI {3} CONFIG.NUM_MI {4}] [get_bd_cells $ic_data]
 
-# Clock/reset for ic_data, mem_ctrl, mem_bram, uart0, dma0, cpu0, and
+# Clock/reset for ic_data, mem_ctrl, mem_bram, uart0, dma0,
+# dma_cfg_bridge, cpu0, and
 # ps0's own GP master port: left to connection automation / by-hand
 # fixup below (step 6) rather than hand-wired to a guessed PS pin name
 # here -- see the HONESTY NOTE in this file's header on why.
@@ -315,7 +337,7 @@ if {[catch {
 
 connect_bd_intf_net [get_bd_intf_pins $ic_data/M00_AXI] [get_bd_intf_pins $mem_ctrl/S_AXI]
 connect_bd_intf_net [get_bd_intf_pins $ic_data/M01_AXI] [get_bd_intf_pins $uart0/S_AXI]
-connect_bd_intf_net [get_bd_intf_pins $ic_data/M02_AXI] [get_bd_intf_pins $dma0/S_AXI_LITE]
+connect_bd_intf_net [get_bd_intf_pins $ic_data/M02_AXI] [get_bd_intf_pins $dma_cfg_bridge/AXI4_LITE]
 connect_bd_intf_net [get_bd_intf_pins $ic_data/M03_AXI] [get_bd_intf_pins cpu0/S_AXI_BOOT]
 
 #---------------------------------------------------------------
@@ -328,7 +350,7 @@ connect_bd_intf_net [get_bd_intf_pins $ic_data/M03_AXI] [get_bd_intf_pins cpu0/S
 #---------------------------------------------------------------
 puts "--> [6] Clock/reset: MUST be finished by hand (see below), not attempted automatically"
 puts "    Open the BD Diagram. Every cell added by this script (axi_interconnect_data, mem_ctrl,"
-puts "    mem_bram, uart0, dma0, cpu0) still has unconnected ACLK/ARESETN (or S_AXI_ACLK/S_AXI_ARESETN)"
+puts "    mem_bram, uart0, dma0, dma_cfg_bridge, cpu0) still has unconnected clock/reset pins"
 puts "    pins at this point -- right-click each red pin -> Run Connection Automation -> let Vivado"
 puts "    pick ps0's PL clock output and matching reset. This is the same manual step any hand-built"
 puts "    Zynq design needs in the GUI, not specific to this repo. Doing this on axi_interconnect_data's"
@@ -351,12 +373,30 @@ foreach {space_pin} {cpu0/M_AXI dma0/M_AXI} {
     }
 }
 
+set dma_cfg_seg [get_bd_addr_segs dma0/S_APB/dma_registers]
+foreach cfg_space_name {cpu0/M_AXI dma0/M_AXI} {
+    if {[catch {
+        assign_bd_address -offset 0xA0000000 -range 64K \
+            -target_address_space [get_bd_addr_spaces $cfg_space_name] $dma_cfg_seg -force
+    } err]} {
+        puts "    WARNING: could not assign DMA-control aperture for $cfg_space_name ($err)."
+    }
+}
+if {[catch {
+    set ps_cfg_space [lindex [get_bd_addr_spaces -of_objects [get_bd_intf_pins ps0/M_AXI_HPM0_FPD]] 0]
+    assign_bd_address -offset 0xA0000000 -range 64K \
+        -target_address_space $ps_cfg_space $dma_cfg_seg -force
+} err]} {
+    puts "    WARNING: could not assign PS DMA-control aperture ($err); set it in Address Editor."
+}
+
 puts "    NOTE: boot_ctrl's address as seen from cpu0/M_AXI (RISC-V side, writes REG_RESULT) and its"
 puts "    address as seen from ps0's GP master (PS side, writes GO/CACHE + reads STATUS/RESULT)"
 puts "    can legitimately be DIFFERENT numbers -- each AXI master has its own address map, assigned"
 puts "    independently -- open the Address Editor tab and note BOTH down, you need both for the"
 puts "    RISC-V program's linker script / MMIO addresses and the PS-side loader's code (see README)."
-puts "    CACHE is offset 0xC; follow docs/BOOT_DMA_PROTOCOL.md before and after every DMA transfer."
+puts "    The custom DMA control aperture is targeted at 0xA0000000 for every master on this"
+puts "    shared AXI network. Its APB register offsets are in docs/BOOT_DMA_PROTOCOL.md."
 puts "    uart0's address (bonus/debug only, see step [4]) is whatever was auto-picked for cpu0/M_AXI."
 
 #---------------------------------------------------------------

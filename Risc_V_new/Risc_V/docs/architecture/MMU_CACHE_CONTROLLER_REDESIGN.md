@@ -65,9 +65,10 @@ chu kỳ.
 
 ## 4. Luồng điều khiển chính
 
-1. Controller nhận tối đa tám yêu cầu miss/write-back: D$0..D$3 và I$0..I$3.
-2. Round-robin chọn một yêu cầu; toàn bộ transaction được serialize để tránh hai
-   giao dịch coherence cùng thay đổi một cache line.
+1. Tám AHB master adapter nhận yêu cầu miss/write-back từ D$0..D$3 và I$0..I$3.
+2. `ahb_lite_arbiter_8m1s` round-robin chọn một yêu cầu và chuyển request cùng
+   source ID vào controller. Controller chỉ xử lý một transaction coherence tại
+   một thời điểm để tránh hai giao dịch cùng thay đổi một cache line.
 3. Controller yêu cầu L2 lookup.
 4. Nếu hit, controller snoop các sharer cần downgrade/invalidate rồi cập nhật
    directory và trả line/state cho L1.

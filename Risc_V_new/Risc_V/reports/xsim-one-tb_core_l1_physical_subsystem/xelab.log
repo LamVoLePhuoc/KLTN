@@ -1,0 +1,45 @@
+Vivado Simulator v2022.2
+Copyright 1986-1999, 2001-2022 Xilinx, Inc. All Rights Reserved.
+Running: D:\Xillinx\Vivado\2022.2\bin\unwrapped\win64.o\xelab.exe -debug typical -mt off xil_defaultlib.tb_core_l1_physical_subsystem -snapshot tb_core_l1_physical_subsystem_behav 
+Turned off multi-threading.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.mux
+Compiling module xil_defaultlib.PC_module(RESET_VECTOR=32'b01000...
+Compiling module xil_defaultlib.PC_Adder
+Compiling module xil_defaultlib.fetch_stage(RESET_ADDR=32'b01000...
+Compiling module xil_defaultlib.if_id_registers
+Compiling module xil_defaultlib.Main_Decoder
+Compiling module xil_defaultlib.ALU_Decoder
+Compiling module xil_defaultlib.Control_Unit
+Compiling module xil_defaultlib.Register_File
+Compiling module xil_defaultlib.Sign_Extend
+Compiling module xil_defaultlib.sys_decoder
+Compiling module xil_defaultlib.decode_stage
+Compiling module xil_defaultlib.id_ex_registers
+Compiling module xil_defaultlib.Mux_3_by_1
+Compiling module xil_defaultlib.ALU
+Compiling module xil_defaultlib.MDU
+Compiling module xil_defaultlib.execute_stage
+Compiling module xil_defaultlib.ex_mem_registers
+Compiling module xil_defaultlib.memory_stage
+Compiling module xil_defaultlib.csr_trap_unit
+Compiling module xil_defaultlib.mem_wb_registers
+Compiling module xil_defaultlib.writeback_stage
+Compiling module xil_defaultlib.hazard_unit
+Compiling module xil_defaultlib.RV32IMA
+Compiling module xil_defaultlib.physical_core_wrapper
+Compiling module xil_defaultlib.cache_sp_ram
+Compiling module xil_defaultlib.cache_sp_ram(WIDTH=18)
+Compiling module xil_defaultlib.l1_icache_default
+Compiling module xil_defaultlib.store_unit
+Compiling module xil_defaultlib.cache_tdp_data_ram(ADDR_WIDTH=9)
+Compiling module xil_defaultlib.cache_tdp_data_ram(WIDTH=20,ADDR...
+Compiling module xil_defaultlib.l1_dcache_default
+Compiling module xil_defaultlib.core_l1_wrapper
+Compiling module xil_defaultlib.tb_core_l1_physical_subsystem
+Built simulation snapshot tb_core_l1_physical_subsystem_behav

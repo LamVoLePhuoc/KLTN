@@ -5,11 +5,16 @@ Turned off multi-threading.
 Starting static elaboration
 Pass Through NonSizing Optimizer
 WARNING: [VRFC 10-3645] port 'mem_wstrb' remains unconnected for this instance [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_error.v:37]
+WARNING: [VRFC 10-3645] port 'ext_req_valid' remains unconnected for this instance [C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/rtl/coherence/coherence_manager.v:51]
 Completed static elaboration
 Starting simulation data flow analysis
 Completed simulation data flow analysis
 Time Resolution for simulation is 1ps
-Compiling module xil_defaultlib.l2_way_data_ram
+Compiling module xil_defaultlib.l2_sync_block_ram
+Compiling module xil_defaultlib.l2_sync_block_ram(WIDTH=2)
+Compiling module xil_defaultlib.l2_sync_block_ram(WIDTH=32)
+Compiling module xil_defaultlib.l2_way_data_ram_default
+Compiling module xil_defaultlib.l2_line_slice_pipe
 Compiling module xil_defaultlib.l2_cache_default
 Compiling module xil_defaultlib.cache_controller_mmu(EXTERNAL_L2...
 Compiling module xil_defaultlib.coherence_manager

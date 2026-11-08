@@ -1,0 +1,26 @@
+#-----------------------------------------------------------
+# xsim v2022.2 (64-bit)
+# SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+# IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+# Start of session at: Sat Nov  7 23:41:14 2026
+# Process ID: 238724
+# Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-one-tb_cache_lrsc
+# Command line: xsim.exe -mode tcl -source {xsim.dir/tb_cache_lrsc_behav/xsim_script.tcl}
+# Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-one-tb_cache_lrsc/xsim.log
+# Journal file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-one-tb_cache_lrsc\xsim.jou
+# Running On: DESKTOP-750OH1D, OS: Windows, CPU Frequency: 2496 MHz, CPU Physical cores: 10, Host memory: 25439 MB
+#-----------------------------------------------------------
+source xsim.dir/tb_cache_lrsc_behav/xsim_script.tcl
+# xsim {tb_cache_lrsc_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[INFO] post-SC LW wrote x7=00000007
+[INFO] post-SC LW wrote x7=00000007
+[PASS] LR.W returned old value 21 and established a reservation
+[PASS] SC.W retained reservation through S->M and returned success
+[PASS] following LW observed SC.W value 7
+[PASS] LR cold fill and SC upgrade issued exactly BusRd then RFO
+CACHE_LRSC_TB: PASS
+$finish called at time : 5385 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_cache_lrsc.v" Line 198
+exit
+INFO: [Common 17-206] Exiting xsim at Sat Nov  7 23:41:16 2026...

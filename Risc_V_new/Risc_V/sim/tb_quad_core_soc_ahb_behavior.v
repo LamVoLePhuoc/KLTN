@@ -4,8 +4,9 @@
 //
 // Full four-core behavioral test for the active AHB subsystem.  This is above
 // the block-level cache tests: four real RV32IMA pipelines, private L1 I$/D$,
-// eight point-to-point AHB-Lite links, the shared cache controller and L2 are
-// all instantiated.  The external CPU memory port is the only testbench model.
+// eight AHB-Lite master adapters, the shared 8M1S arbiter, cache/coherence
+// controller and L2 are all instantiated.  The external CPU memory port is the
+// only testbench model.
 //
 // Expected behavior comes from the active architecture contract:
 //   * RESET_ADDR0..3 are physical fetch addresses.
@@ -48,6 +49,11 @@ module tb_quad_core_soc_ahb_behavior;
     integer errors;
     integer cycles;
     integer memory_requests;
+    integer refill_read_words;
+    integer verified_refills;
+    integer refill_sequence_errors;
+    reg     refill_active;
+    reg     l2_lookup_pending;
     reg [3:0] core_done_seen;
 
     function [31:0] enc_addi;
@@ -188,6 +194,51 @@ module tb_quad_core_soc_ahb_behavior;
         end
     end
 
+    // A controller-observed L2 miss must fetch exactly one 32-byte line as
+    // eight 32-bit memory reads before installing the line in L2.  Because the
+    // controller serializes coherence transactions, one scoreboard is enough.
+    always @(posedge clk) begin
+        if (rst) begin
+            refill_read_words      <= 0;
+            verified_refills       <= 0;
+            refill_sequence_errors <= 0;
+            refill_active          <= 1'b0;
+            l2_lookup_pending      <= 1'b0;
+        end
+        else begin
+            if (dut.l2_cmd_valid && !dut.l2_cmd_we)
+                l2_lookup_pending <= 1'b1;
+
+            // l2_resp_valid acknowledges both reads and writes.  Only a
+            // response paired with a pending lookup carries hit/miss meaning.
+            if (l2_lookup_pending && dut.l2_resp_valid) begin
+                l2_lookup_pending <= 1'b0;
+            end
+
+            if (l2_lookup_pending && dut.l2_resp_valid &&
+                !dut.l2_resp_hit) begin
+                if (refill_active)
+                    refill_sequence_errors <= refill_sequence_errors + 1;
+                refill_read_words <= 0;
+                refill_active     <= 1'b1;
+            end
+
+            if (refill_active && mem_req_valid && !mem_we)
+                refill_read_words <= refill_read_words + 1;
+
+            if (refill_active && dut.l2_cmd_valid && dut.l2_cmd_we &&
+                dut.l2_cmd_w_valid) begin
+                // The eighth request and the L2 install indication may be
+                // visible on the same sampled edge; include that request.
+                if ((refill_read_words +
+                     ((mem_req_valid && !mem_we) ? 1 : 0)) != 8)
+                    refill_sequence_errors <= refill_sequence_errors + 1;
+                verified_refills <= verified_refills + 1;
+                refill_active    <= 1'b0;
+            end
+        end
+    end
+
 `ifdef COHERENCE_TRACE
     always @(posedge clk) begin
         if (!rst) begin
@@ -233,6 +284,11 @@ module tb_quad_core_soc_ahb_behavior;
         errors = 0;
         cycles = 0;
         memory_requests = 0;
+        refill_read_words = 0;
+        verified_refills = 0;
+        refill_sequence_errors = 0;
+        refill_active = 1'b0;
+        l2_lookup_pending = 1'b0;
         core_done_seen = 4'b0;
 
         for (i = 0; i < MEM_WORDS; i = i + 1)
@@ -262,6 +318,9 @@ module tb_quad_core_soc_ahb_behavior;
         // The compatibility pin must not launch maintenance or memory traffic.
         // At this point every core is looping from its hot I$ line.
         repeat (8) @(posedge clk);
+        check_true((verified_refills > 0) &&
+                   (refill_sequence_errors == 0),
+                   "TC-SOC-007 L2 miss fetches exactly 8 words before refill");
         @(negedge clk); mmu_flush = 1'b1;
         repeat (2) @(negedge clk);
         mmu_flush = 1'b0;

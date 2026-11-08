@@ -8,7 +8,7 @@ This folder contains the presentation-ready block diagrams generated from the ac
 | `core_pipeline.svg` | RV32IMA five-stage pipeline and control | `rtl/core/` |
 | `mmu.svg` | Legacy Sv32 work, excluded from the active hierarchy | `rtl/files_sv32_legacy.f` |
 | `cache_coherence.svg` | Private L1, shared cache controller (MMU), peer L2 and MSI | `rtl/mmu/cache_controller_mmu.v`, `rtl/cache/`, `rtl/coherence/` |
-| `cache_controller_fsm.svg` | Active arbitration, L2, snoop, refill/writeback and response FSM | `rtl/mmu/cache_controller_mmu.v` |
+| `cache_controller_fsm.svg` | Active MSI, L2, snoop, refill/writeback and response FSM after AHB arbitration | `rtl/mmu/cache_controller_mmu.v` |
 | `bus_domains.svg` | AHB-Lite core domain and AXI4 system boundary | `rtl/interconnect/ahb/`, `rtl/soc/` |
 | `boot_flow.svg` | SD to DRAM boot and result writeback path | `rtl/boot/`, external Vivado IP |
 | `verification.svg` | Self-checking RTL and FPGA verification flow | `sim/`, `scripts/` |
@@ -18,9 +18,10 @@ This folder contains the presentation-ready block diagrams generated from the ac
 
 - `core` produces direct 32-bit physical instruction and data addresses and implements RV32IMA, CSR, trap and privilege behavior.
 - `physical_core_wrapper` handles cache back-pressure and access-fault timing without a TLB or page-table walker.
-- `cache_controller_mmu` is the shared Cache/Memory Management Unit for the four-core CPU. It performs round-robin arbitration, block movement, MSI and external-memory sequencing, and is a peer of `l2_cache`.
+- `ahb_lite_arbiter_8m1s` is the only active request arbiter. It selects one of the eight L1 AHB masters, holds ownership through completion, and routes the registered response only to that owner.
+- `cache_controller_mmu` is the shared Cache/Memory Management Unit for the four-core CPU. After arbitration, it performs block movement, MSI and external-memory sequencing, and is a peer of `l2_cache`.
 - `cache` contains private L1 caches and a shared L2 cache. Each D-cache stores MSI state per line.
-- `cache_controller_mmu` owns the arbitration, MSI transaction FSM, parallel-snoop scoreboard and external-memory line engine. `coherence/` now contains only the legacy facade that selects the internal-L2 compatibility mode.
+- `cache_controller_mmu` owns the MSI transaction FSM, parallel-snoop scoreboard and external-memory line engine. Its internal round-robin picker is legacy-only and is constant-disabled in the active AHB hierarchy by `EXTERNAL_REQUEST_ARBITER=1`. `coherence/` contains only the legacy facade that selects the internal-L2 compatibility mode.
 - `interconnect/ahb` translates cache-side requests to the AHB-Lite signal-level protocol used by the AHB-oriented SoC top.
 - `soc` instantiates four core/cache subsystems and exposes the external memory interface through AXI4-facing wrappers.
 - `boot` provides the control path required to load software into DRAM and release the processor at the selected entry point.

@@ -1,5 +1,9 @@
 # Boot and non-coherent DMA maintenance protocol
 
+> Historical custom-DMA protocol. The active `soc_4core_trial` Block Design now
+> uses Xilinx `axi_cdma:4.1`; this document is not an active DMA register map.
+> Only the cache-maintenance ordering requirements remain applicable.
+
 The bootable top levels expose `boot_ctrl` through AXI4-Lite. The actual base
 address is assigned by the Vivado address editor; offsets below are relative to
 that base.
@@ -52,6 +56,11 @@ MSI coherence master and software must not access the buffer during the transfer
 ### Source-level `soc_dma_controller`
 
 The RTL DMA in `rtl/dma/` automates the same ordering:
+
+In `soc_4core_trial`, software reaches its APB4 register page through the
+Xilinx AXI-to-APB bridge at AXI base `0x4000_0000`. The bootable ZU5EV script
+uses `0xA000_0000` for every master on its shared AXI network; confirm the PS
+HPM mapping in Vivado Address Editor after applying the board preset.
 
 1. Software establishes exclusive buffer ownership and the integration logic
    asserts `buffer_quiesced`.

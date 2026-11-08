@@ -1,0 +1,26 @@
+
+****** xsim v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/tb_axi_request_hold_behav/xsim_script.tcl
+# xsim {tb_axi_request_hold_behav} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+[PASS] read request pulse is latched onto ARVALID and ARADDR
+[PASS] ARVALID/address remain stable while ARREADY is low
+[PASS] ARVALID/address remain stable while ARREADY is low
+[PASS] ARVALID/address remain stable while ARREADY is low
+[PASS] AR handshake retires address phase and enables read response
+[PASS] RVALID/RREADY completion returns one clean mem_valid pulse
+[PASS] write request latches address, data and uncached byte strobe
+[PASS] AWVALID/WVALID payload remains stable under joint backpressure
+[PASS] AWVALID/WVALID payload remains stable under joint backpressure
+[PASS] independent AW handshake does not drop pending WVALID
+[PASS] independent W handshake waits for write response
+[PASS] BRESP error completes the latched request with mem_error
+AXI_REQUEST_HOLD_TB: PASS
+$finish called at time : 250 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_axi_request_hold.v" Line 133
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Nov  8 11:57:36 2026...

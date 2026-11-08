@@ -23,6 +23,7 @@
 
 # Vivado-generated products. Keep .xpr, .srcs, constraints, mem and RTL.
 **/.Xil/
+**/.ip_package_work/
 **/*.cache/
 **/*.gen/
 **/*.hw/

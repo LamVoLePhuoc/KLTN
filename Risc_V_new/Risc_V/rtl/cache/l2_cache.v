@@ -20,9 +20,9 @@
 // NOT tracked here at all (see l1_icache.v: no coherence participation).
 //
 // This module is deliberately "dumb": one blocking command in and one
-// registered response out.  A lookup is internally pipelined so the large
-// distributed directory read and the four-way tag comparison do not share
-// one timing path. All protocol decisions (snoop-before-share, eviction,
+// registered response out.  A lookup is internally pipelined so the packed
+// block-RAM directory read and the four-way tag comparison do not share one
+// timing path. All protocol decisions (snoop-before-share, eviction,
 // fetch-from-memory, directory updates) live in cache_controller_mmu
 // (implemented by the coherence_manager policy engine), which issues
 // LOOKUP/WRITE commands here the same way a CPU issues
@@ -65,7 +65,7 @@ module l2_cache #(
     output reg                     maint_line_valid,
     output reg                     maint_line_dirty,
     output reg  [32-INDEX_BITS-5-1:0] maint_line_tag,
-    output reg  [255:0]            maint_line_data,
+    output wire [255:0]            maint_line_data,
 
     output reg           resp_valid,      // pulses when the registered response is complete
     output reg           resp_hit,        // tag matched an already-valid way
@@ -74,7 +74,7 @@ module l2_cache #(
     output reg           resp_victim_valid,
     output reg           resp_victim_dirty,
     output reg  [3:0]    resp_victim_sharers,
-    output reg  [255:0]  resp_line,       // data at resp_way (hit: the requested line; miss: the victim's data)
+    output wire [255:0]  resp_line,       // data at resp_way (hit: the requested line; miss: the victim's data)
     output reg  [3:0]    resp_sharers     // sharers at resp_way (hit: current sharers; miss: victim's, same as resp_victim_sharers)
 );
 
@@ -83,6 +83,7 @@ module l2_cache #(
     localparam SETS        = (1 << INDEX_BITS);
     localparam LINE_BITS   = LINE_WORDS * 32;
     localparam WAYS        = 4;
+    localparam META_BITS   = TAG_BITS + 6; // {tag, sharers[3:0], dirty, valid}
 
     // A cache-wide synchronous clear prevents RAM inference.  Invalidate
     // one set per cycle after reset instead, and retain the single command
@@ -110,27 +111,20 @@ module l2_cache #(
     wire [TAG_BITS-1:0]   addr_tag   = active_cmd_addr[31:32-TAG_BITS];
     wire [INDEX_BITS-1:0] addr_index = active_cmd_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
 
-    // Keep each way as an independent one-dimensional memory.  Vivado
-    // 2022.2 expands the former [way][set] 3-D RAM representation into
-    // hundreds of thousands of scalar registers before optimizing it;
-    // that is the source of the multi-hour synthesis stall.  Splitting
-    // ways leaves the cache organization and lookup latency unchanged.
-    (* ram_style = "distributed" *) reg valid_way0_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg valid_way1_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg valid_way2_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg valid_way3_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg dirty_way0_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg dirty_way1_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg dirty_way2_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg dirty_way3_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [TAG_BITS-1:0] tag_way0_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [TAG_BITS-1:0] tag_way1_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [TAG_BITS-1:0] tag_way2_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [TAG_BITS-1:0] tag_way3_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [3:0] sharers_way0_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [3:0] sharers_way1_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [3:0] sharers_way2_r [0:SETS-1];
-    (* ram_style = "distributed" *) reg [3:0] sharers_way3_r [0:SETS-1];
+    // Keep each way as an independent packed metadata RAM.  The 21-bit entry
+    // maps to block RAM instead of 21 separate 4K-deep distributed arrays.
+    // Lookup/maintenance already have registered read stages, so the BRAM
+    // latency does not add another externally visible controller state.
+    wire [INDEX_BITS-1:0] meta_ram_set;
+    wire [3:0]            meta_way_we;
+    wire [META_BITS-1:0]  meta_wdata;
+    wire [META_BITS-1:0]  meta_way0_q;
+    wire [META_BITS-1:0]  meta_way1_q;
+    wire [META_BITS-1:0]  meta_way2_q;
+    wire [META_BITS-1:0]  meta_way3_q;
+    wire                  lru_we;
+    wire [1:0]            lru_wdata;
+    wire [1:0]            lru_q;
     // Store every way in its own synchronous BRAM.  All four ways read the
     // same set in parallel; the registered resp_way selects a line only after
     // the BRAM outputs are available.  This removes the former critical path
@@ -144,7 +138,6 @@ module l2_cache #(
     wire [255:0]          data_way1_q;
     wire [255:0]          data_way2_q;
     wire [255:0]          data_way3_q;
-    (* ram_style = "distributed" *) reg [1:0] lru_r [0:SETS-1];
 
     // Lookup pipeline.  The coherence controller is blocking and does not
     // issue another L2 command until resp_valid, so one in-flight lookup is
@@ -152,6 +145,7 @@ module l2_cache #(
     // removes the former req_addr -> directory -> compare -> response path.
     reg                    lookup_addr_pending;
     reg                    lookup_meta_pending;
+    reg                    lookup_select_pending;
     reg [INDEX_BITS-1:0]   lookup_index;
     reg [TAG_BITS-1:0]     lookup_tag;
     reg                    lookup_valid_way0;
@@ -171,41 +165,19 @@ module l2_cache #(
     reg [3:0]              lookup_sharers_way2;
     reg [3:0]              lookup_sharers_way3;
     reg [1:0]              lookup_lru;
+    reg                    lookup_hit_q;
+    reg [1:0]              lookup_selected_way_q;
 
     // Maintenance read pipeline.  The BRAM read is launched when the request
-    // is accepted; data and metadata are registered one cycle later so the
-    // 256-bit way mux is contained inside L2 rather than spanning into the
-    // cache controller's flush_line register bank.
+    // is accepted.  Data selection is implemented by eight independent
+    // 32-bit slice pipelines below; there is deliberately no central 256-bit
+    // register fed by all L2 BRAM columns.
     reg                    maint_pending;
     reg                    maint_data_pending;
     reg [INDEX_BITS-1:0]   maint_set_q;
     reg [1:0]              maint_way_q;
-    reg                    maint_upper_q;
-    reg [255:0]            maint_pair_low_q;
-    reg [255:0]            maint_pair_high_q;
-
-    // Lookup and maintenance are mutually exclusive at the blocking
-    // controller interface.  Explicitly mux their read address before every
-    // directory array so synthesis keeps one physical read port instead of
-    // duplicating the complete 4K-entry directory for a second port.
-    wire [INDEX_BITS-1:0] meta_read_index = maint_pending ? maint_set_q : lookup_index;
-    wire                  meta_valid_way0   = valid_way0_r[meta_read_index];
-    wire                  meta_valid_way1   = valid_way1_r[meta_read_index];
-    wire                  meta_valid_way2   = valid_way2_r[meta_read_index];
-    wire                  meta_valid_way3   = valid_way3_r[meta_read_index];
-    wire                  meta_dirty_way0   = dirty_way0_r[meta_read_index];
-    wire                  meta_dirty_way1   = dirty_way1_r[meta_read_index];
-    wire                  meta_dirty_way2   = dirty_way2_r[meta_read_index];
-    wire                  meta_dirty_way3   = dirty_way3_r[meta_read_index];
-    wire [TAG_BITS-1:0]   meta_tag_way0     = tag_way0_r[meta_read_index];
-    wire [TAG_BITS-1:0]   meta_tag_way1     = tag_way1_r[meta_read_index];
-    wire [TAG_BITS-1:0]   meta_tag_way2     = tag_way2_r[meta_read_index];
-    wire [TAG_BITS-1:0]   meta_tag_way3     = tag_way3_r[meta_read_index];
-    wire [3:0]            meta_sharers_way0 = sharers_way0_r[meta_read_index];
-    wire [3:0]            meta_sharers_way1 = sharers_way1_r[meta_read_index];
-    wire [3:0]            meta_sharers_way2 = sharers_way2_r[meta_read_index];
-    wire [3:0]            meta_sharers_way3 = sharers_way3_r[meta_read_index];
-    wire [1:0]            meta_lru          = lru_r[meta_read_index];
+    wire [255:0]           lookup_line_banked_q;
+    wire [255:0]           maint_line_banked_q;
 
     // ------------------------------------------------------
     // Lookup (combinational)
@@ -221,15 +193,77 @@ module l2_cache #(
     wire [1:0] selected_way = hit_v ? hit_way_v : lru_way;
 
     wire maint_read = !init_active && maint_valid && !maint_invalidate;
-    wire lookup_busy = lookup_addr_pending | lookup_meta_pending;
+    wire lookup_busy = lookup_addr_pending | lookup_meta_pending |
+                       lookup_select_pending;
+    // Drive the BRAM address mux from command presence, not the multi-stage
+    // lookup-busy feedback.  The interface permits only one blocking command;
+    // while a lookup is in flight the controller either holds this same
+    // address or deasserts cmd_valid, in which case lookup_index retains it.
+    // This removes a four-LUT control path into every BRAM address pin.
+    wire lookup_address_present = !init_active && !maint_valid &&
+                                  active_cmd_valid && !active_cmd_we;
     wire lookup_accept = !init_active && !maint_valid && !maint_pending &&
                          !lookup_busy && active_cmd_valid && !active_cmd_we;
     assign data_ram_we = !init_active && !maint_valid && !maint_pending &&
                          active_cmd_valid && active_cmd_we;
     assign data_ram_set = maint_read    ? maint_set   :
                           maint_pending ? maint_set_q :
-                          (lookup_accept || data_ram_we) ? addr_index : lookup_index;
+                          (lookup_address_present || data_ram_we) ? addr_index : lookup_index;
     assign data_way_we = data_ram_we ? (4'b0001 << active_cmd_way) : 4'b0000;
+
+    // Lookup and maintenance are mutually exclusive at the blocking
+    // controller interface.  One address mux therefore serves all metadata
+    // BRAMs without duplicating the directory read port.
+    wire maint_invalidate_write = !init_active && maint_valid && maint_invalidate;
+    assign meta_ram_set = init_active              ? init_index  :
+                          maint_invalidate_write   ? maint_set    :
+                          data_ram_we              ? addr_index   :
+                          maint_read               ? maint_set    :
+                          maint_pending            ? maint_set_q  :
+                          lookup_address_present   ? addr_index   : lookup_index;
+    assign meta_way_we = init_active            ? 4'b1111 :
+                         maint_invalidate_write ? (4'b0001 << maint_way) :
+                         data_ram_we            ? (4'b0001 << active_cmd_way) : 4'b0000;
+    assign meta_wdata = (init_active || maint_invalidate_write) ?
+                        {META_BITS{1'b0}} :
+                        {addr_tag, active_cmd_w_sharers,
+                         active_cmd_w_dirty, active_cmd_w_valid};
+    assign lru_we    = init_active || (data_ram_we && active_cmd_w_valid);
+    assign lru_wdata = init_active ? 2'b0 : (active_cmd_way + 2'b1);
+
+    l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way0 (
+        .clk(clk), .we(meta_way_we[0]), .addr(meta_ram_set),
+        .din(meta_wdata), .dout(meta_way0_q));
+    l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way1 (
+        .clk(clk), .we(meta_way_we[1]), .addr(meta_ram_set),
+        .din(meta_wdata), .dout(meta_way1_q));
+    l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way2 (
+        .clk(clk), .we(meta_way_we[2]), .addr(meta_ram_set),
+        .din(meta_wdata), .dout(meta_way2_q));
+    l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way3 (
+        .clk(clk), .we(meta_way_we[3]), .addr(meta_ram_set),
+        .din(meta_wdata), .dout(meta_way3_q));
+    l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(2)) u_meta_lru (
+        .clk(clk), .we(lru_we), .addr(meta_ram_set),
+        .din(lru_wdata), .dout(lru_q));
+
+    wire                  meta_valid_way0   = meta_way0_q[0];
+    wire                  meta_valid_way1   = meta_way1_q[0];
+    wire                  meta_valid_way2   = meta_way2_q[0];
+    wire                  meta_valid_way3   = meta_way3_q[0];
+    wire                  meta_dirty_way0   = meta_way0_q[1];
+    wire                  meta_dirty_way1   = meta_way1_q[1];
+    wire                  meta_dirty_way2   = meta_way2_q[1];
+    wire                  meta_dirty_way3   = meta_way3_q[1];
+    wire [3:0]            meta_sharers_way0 = meta_way0_q[5:2];
+    wire [3:0]            meta_sharers_way1 = meta_way1_q[5:2];
+    wire [3:0]            meta_sharers_way2 = meta_way2_q[5:2];
+    wire [3:0]            meta_sharers_way3 = meta_way3_q[5:2];
+    wire [TAG_BITS-1:0]   meta_tag_way0     = meta_way0_q[META_BITS-1:6];
+    wire [TAG_BITS-1:0]   meta_tag_way1     = meta_way1_q[META_BITS-1:6];
+    wire [TAG_BITS-1:0]   meta_tag_way2     = meta_way2_q[META_BITS-1:6];
+    wire [TAG_BITS-1:0]   meta_tag_way3     = meta_way3_q[META_BITS-1:6];
+    wire [1:0]            meta_lru          = lru_q;
 
     l2_way_data_ram #(.ADDR_WIDTH(INDEX_BITS)) u_data_way0 (
         .clk(clk), .we(data_way_we[0]), .addr(data_ram_set),
@@ -243,6 +277,34 @@ module l2_cache #(
     l2_way_data_ram #(.ADDR_WIDTH(INDEX_BITS)) u_data_way3 (
         .clk(clk), .we(data_way_we[3]), .addr(data_ram_set),
         .din(active_cmd_wdata), .dout(data_way3_q));
+
+    // Keep the post-BRAM mux/registers physically local to each 32-bit bank.
+    // Each slice performs a 4:1 lookup selection and the registered 2:1 + 2:1
+    // maintenance selection independently.  The line ports are only wiring
+    // concatenations of these eight local registers.
+    genvar line_bank;
+    generate
+        for (line_bank = 0; line_bank < 8; line_bank = line_bank + 1) begin : g_line_slice
+            l2_line_slice_pipe u_slice (
+                .clk                 (clk),
+                .rst                 (rst),
+                .way0_word           (data_way0_q[line_bank*32 +: 32]),
+                .way1_word           (data_way1_q[line_bank*32 +: 32]),
+                .way2_word           (data_way2_q[line_bank*32 +: 32]),
+                .way3_word           (data_way3_q[line_bank*32 +: 32]),
+                .lookup_capture      (lookup_select_pending),
+                .lookup_way          (lookup_selected_way_q),
+                .lookup_word_q       (lookup_line_banked_q[line_bank*32 +: 32]),
+                .maint_pair_capture  (maint_pending),
+                .maint_output_capture(maint_data_pending),
+                .maint_way           (maint_way_q),
+                .maint_word_q        (maint_line_banked_q[line_bank*32 +: 32])
+            );
+        end
+    endgenerate
+
+    assign resp_line       = lookup_line_banked_q;
+    assign maint_line_data = maint_line_banked_q;
 
     assign maint_ready = !init_active;
 
@@ -268,7 +330,7 @@ module l2_cache #(
         selected_valid_v   = 1'b0;
         selected_dirty_v   = 1'b0;
         selected_sharers_v = 4'b0;
-        case (selected_way)
+        case (lookup_selected_way_q)
             2'd0: begin
                 selected_tag_v     = lookup_tag_way0;
                 selected_valid_v   = lookup_valid_way0;
@@ -323,29 +385,27 @@ module l2_cache #(
             maint_line_tag     <= {TAG_BITS{1'b0}};
             lookup_addr_pending <= 1'b0;
             lookup_meta_pending <= 1'b0;
+            lookup_select_pending <= 1'b0;
             lookup_index        <= {INDEX_BITS{1'b0}};
             lookup_tag          <= {TAG_BITS{1'b0}};
+            lookup_hit_q        <= 1'b0;
+            lookup_selected_way_q <= 2'b0;
             maint_pending       <= 1'b0;
             maint_data_pending  <= 1'b0;
             maint_set_q         <= {INDEX_BITS{1'b0}};
             maint_way_q         <= 2'b0;
-            maint_upper_q       <= 1'b0;
         end
         else if (init_active) begin
             resp_valid <= 1'b0;
             maint_resp_valid <= 1'b0;
             lookup_addr_pending <= 1'b0;
             lookup_meta_pending <= 1'b0;
+            lookup_select_pending <= 1'b0;
             maint_pending <= 1'b0;
             maint_data_pending <= 1'b0;
 
-            // One write address per array per cycle is RAM-inference
-            // friendly, unlike clearing every set in one clock edge.
-            valid_way0_r[init_index] <= 1'b0;
-            valid_way1_r[init_index] <= 1'b0;
-            valid_way2_r[init_index] <= 1'b0;
-            valid_way3_r[init_index] <= 1'b0;
-            lru_r[init_index]        <= 2'b0;
+            // Packed metadata BRAMs clear all four valid bits and LRU at this
+            // one address through their explicit write ports.
 
             if (cmd_valid && !pending_valid) begin
                 pending_valid     <= 1'b1;
@@ -368,11 +428,13 @@ module l2_cache #(
         else begin
             // Pipeline-valid signals are single-cycle pulses. Writes keep the
             // legacy immediate acknowledgement; lookup data is acknowledged
-            // only after both directory stages have completed.
-            resp_valid <= lookup_meta_pending || data_ram_we;
+            // only after directory read, tag compare/way selection and local
+            // bank selection have completed.
+            resp_valid <= lookup_select_pending || data_ram_we;
             maint_resp_valid <= maint_data_pending;
             lookup_addr_pending <= lookup_accept;
             lookup_meta_pending <= lookup_addr_pending;
+            lookup_select_pending <= lookup_meta_pending;
             maint_pending <= maint_read;
             maint_data_pending <= maint_pending;
             if (pending_valid)
@@ -406,23 +468,25 @@ module l2_cache #(
                 lookup_lru          <= meta_lru;
             end
 
-            // Stage 3: register the selected directory entry and its aligned
-            // BRAM line. The BRAM address has remained at lookup_index while
-            // this blocking lookup was in flight.
+            // Stage 3: terminate tag comparison and victim-way selection at a
+            // narrow register boundary.  This prevents the tag comparators,
+            // LRU mux and four-way metadata mux from sharing one 300-MHz path.
             if (lookup_meta_pending) begin
-                resp_hit            <= hit_v;
-                resp_way            <= selected_way;
+                lookup_hit_q          <= hit_v;
+                lookup_selected_way_q <= selected_way;
+            end
+
+            // Stage 4: mux the selected directory entry from the registered
+            // way.  The eight local line slices capture their corresponding
+            // 32-bit BRAM words on this same edge.
+            if (lookup_select_pending) begin
+                resp_hit            <= lookup_hit_q;
+                resp_way            <= lookup_selected_way_q;
                 resp_victim_tag     <= selected_tag_v;
                 resp_victim_valid   <= selected_valid_v;
                 resp_victim_dirty   <= selected_dirty_v;
                 resp_victim_sharers <= selected_sharers_v;
                 resp_sharers        <= selected_sharers_v;
-                case (selected_way)
-                    2'd0: resp_line <= data_way0_q;
-                    2'd1: resp_line <= data_way1_q;
-                    2'd2: resp_line <= data_way2_q;
-                    default: resp_line <= data_way3_q;
-                endcase
             end
 
             if (maint_read) begin
@@ -430,13 +494,9 @@ module l2_cache #(
                 maint_way_q <= maint_way;
             end
 
-            // First maintenance data stage: two local 2:1 selections.  This
-            // replaces the congested four-way 256-bit mux (9.4 ns routing in
-            // the previous routed build) with two shorter registered paths.
+            // Metadata follows the first maintenance data-slice stage.  The
+            // actual word muxes/registers live in g_line_slice[*].u_slice.
             if (maint_pending) begin
-                maint_pair_low_q  <= maint_way_q[0] ? data_way1_q : data_way0_q;
-                maint_pair_high_q <= maint_way_q[0] ? data_way3_q : data_way2_q;
-                maint_upper_q     <= maint_way_q[1];
                 case (maint_way_q)
                     2'd0: begin
                         maint_line_valid <= meta_valid_way0;
@@ -461,108 +521,97 @@ module l2_cache #(
                 endcase
             end
 
-            // Second maintenance data stage: select between the two registered
-            // pairs, then assert maint_resp_valid with the complete response.
-            if (maint_data_pending)
-                maint_line_data <= maint_upper_q ? maint_pair_high_q : maint_pair_low_q;
-
-            if (maint_valid && maint_invalidate) begin
-                // Invalidate only after a dirty line has reached memory.  Data
-                // and tag RAMs need not be cleared because valid gates them.
-                case (maint_way)
-                    2'd0: begin
-                        valid_way0_r[maint_set]   <= 1'b0;
-                        dirty_way0_r[maint_set]   <= 1'b0;
-                        sharers_way0_r[maint_set] <= 4'b0;
-                    end
-                    2'd1: begin
-                        valid_way1_r[maint_set]   <= 1'b0;
-                        dirty_way1_r[maint_set]   <= 1'b0;
-                        sharers_way1_r[maint_set] <= 4'b0;
-                    end
-                    2'd2: begin
-                        valid_way2_r[maint_set]   <= 1'b0;
-                        dirty_way2_r[maint_set]   <= 1'b0;
-                        sharers_way2_r[maint_set] <= 4'b0;
-                    end
-                    default: begin
-                        valid_way3_r[maint_set]   <= 1'b0;
-                        dirty_way3_r[maint_set]   <= 1'b0;
-                        sharers_way3_r[maint_set] <= 4'b0;
-                    end
-                endcase
-            end
-            else if (data_ram_we) begin
-                // WRITE (fill / directory update / eviction-clear, at
-                // an explicit way chosen by the coherence manager --
-                // normally the same way its preceding LOOKUP reported)
-                case (active_cmd_way)
-                    2'd0: begin
-                        valid_way0_r[addr_index]   <= active_cmd_w_valid;
-                        dirty_way0_r[addr_index]   <= active_cmd_w_dirty;
-                        tag_way0_r[addr_index]     <= addr_tag;
-                        sharers_way0_r[addr_index] <= active_cmd_w_sharers;
-                    end
-                    2'd1: begin
-                        valid_way1_r[addr_index]   <= active_cmd_w_valid;
-                        dirty_way1_r[addr_index]   <= active_cmd_w_dirty;
-                        tag_way1_r[addr_index]     <= addr_tag;
-                        sharers_way1_r[addr_index] <= active_cmd_w_sharers;
-                    end
-                    2'd2: begin
-                        valid_way2_r[addr_index]   <= active_cmd_w_valid;
-                        dirty_way2_r[addr_index]   <= active_cmd_w_dirty;
-                        tag_way2_r[addr_index]     <= addr_tag;
-                        sharers_way2_r[addr_index] <= active_cmd_w_sharers;
-                    end
-                    default: begin
-                        valid_way3_r[addr_index]   <= active_cmd_w_valid;
-                        dirty_way3_r[addr_index]   <= active_cmd_w_dirty;
-                        tag_way3_r[addr_index]     <= addr_tag;
-                        sharers_way3_r[addr_index] <= active_cmd_w_sharers;
-                    end
-                endcase
-                if (active_cmd_w_valid)
-                    lru_r[addr_index] <= active_cmd_way + 2'b1;
-            end
+            // Metadata writes (fill/update/invalidate) and LRU updates are
+            // driven through the explicit block-RAM ports above.
         end
     end
 
 endmodule
 
-// Explicit single-port BRAM for one complete L2 way.  Synthesis sees one
-// 256-bit XPM memory; the behavioural implementation splits the storage into
-// eight words so no Verilog variable exceeds Vivado's elaboration-size limit.
-module l2_way_data_ram #(
-    parameter integer ADDR_WIDTH = 12
+// One 32-bit post-BRAM slice.  Keeping this register hierarchy separate for
+// every word gives placement eight small local cones instead of one 256-bit
+// mux/register cone spanning all data BRAMs.
+module l2_line_slice_pipe (
+    input  wire        clk,
+    input  wire        rst,
+    input  wire [31:0] way0_word,
+    input  wire [31:0] way1_word,
+    input  wire [31:0] way2_word,
+    input  wire [31:0] way3_word,
+    input  wire        lookup_capture,
+    input  wire [1:0]  lookup_way,
+    output reg  [31:0] lookup_word_q,
+    input  wire        maint_pair_capture,
+    input  wire        maint_output_capture,
+    input  wire [1:0]  maint_way,
+    output reg  [31:0] maint_word_q
+);
+    reg [31:0] maint_pair_low_q;
+    reg [31:0] maint_pair_high_q;
+    reg        maint_upper_q;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            lookup_word_q    <= 32'b0;
+            maint_pair_low_q  <= 32'b0;
+            maint_pair_high_q <= 32'b0;
+            maint_upper_q     <= 1'b0;
+            maint_word_q      <= 32'b0;
+        end
+        else begin
+            if (lookup_capture) begin
+                case (lookup_way)
+                    2'd0: lookup_word_q <= way0_word;
+                    2'd1: lookup_word_q <= way1_word;
+                    2'd2: lookup_word_q <= way2_word;
+                    default: lookup_word_q <= way3_word;
+                endcase
+            end
+            if (maint_pair_capture) begin
+                maint_pair_low_q  <= maint_way[0] ? way1_word : way0_word;
+                maint_pair_high_q <= maint_way[0] ? way3_word : way2_word;
+                maint_upper_q     <= maint_way[1];
+            end
+            if (maint_output_capture)
+                maint_word_q <= maint_upper_q ? maint_pair_high_q : maint_pair_low_q;
+        end
+    end
+endmodule
+
+// Packed synchronous metadata/LRU storage.  XPM makes the intended physical
+// primitive explicit in synthesis; the behavioral model preserves read-first,
+// one-cycle semantics for XSIM.
+module l2_sync_block_ram #(
+    parameter integer ADDR_WIDTH = 12,
+    parameter integer WIDTH = 21
 ) (
     input  wire                  clk,
     input  wire                  we,
     input  wire [ADDR_WIDTH-1:0] addr,
-    input  wire [255:0]          din,
-    output wire [255:0]          dout
+    input  wire [WIDTH-1:0]      din,
+    output wire [WIDTH-1:0]      dout
 );
 `ifdef SYNTHESIS
     xpm_memory_spram #(
         .ADDR_WIDTH_A       (ADDR_WIDTH),
         .AUTO_SLEEP_TIME    (0),
-        .BYTE_WRITE_WIDTH_A (256),
+        .BYTE_WRITE_WIDTH_A (WIDTH),
         .CASCADE_HEIGHT     (0),
         .ECC_MODE           ("no_ecc"),
         .MEMORY_INIT_FILE   ("none"),
         .MEMORY_INIT_PARAM  ("0"),
         .MEMORY_OPTIMIZATION("true"),
         .MEMORY_PRIMITIVE   ("block"),
-        .MEMORY_SIZE        (256 * (1 << ADDR_WIDTH)),
+        .MEMORY_SIZE        (WIDTH * (1 << ADDR_WIDTH)),
         .MESSAGE_CONTROL    (0),
-        .READ_DATA_WIDTH_A  (256),
+        .READ_DATA_WIDTH_A  (WIDTH),
         .READ_LATENCY_A     (1),
         .READ_RESET_VALUE_A ("0"),
         .RST_MODE_A         ("SYNC"),
         .SIM_ASSERT_CHK     (0),
         .USE_MEM_INIT       (0),
         .WAKEUP_TIME        ("disable_sleep"),
-        .WRITE_DATA_WIDTH_A (256),
+        .WRITE_DATA_WIDTH_A (WIDTH),
         .WRITE_MODE_A       ("read_first"),
         .WRITE_PROTECT      (1)
     ) u_xpm (
@@ -572,32 +621,43 @@ module l2_way_data_ram #(
         .douta(dout), .sbiterra(), .dbiterra()
     );
 `else
-    reg [31:0] mem_word0 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word1 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word2 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word3 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word4 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word5 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word6 [0:(1 << ADDR_WIDTH)-1];
-    reg [31:0] mem_word7 [0:(1 << ADDR_WIDTH)-1];
-    reg [255:0] dout_r;
+    reg [WIDTH-1:0] mem [0:(1 << ADDR_WIDTH)-1];
+    reg [WIDTH-1:0] dout_r;
 
     assign dout = dout_r;
     always @(posedge clk) begin
-        if (we) begin
-            mem_word0[addr] <= din[31:0];
-            mem_word1[addr] <= din[63:32];
-            mem_word2[addr] <= din[95:64];
-            mem_word3[addr] <= din[127:96];
-            mem_word4[addr] <= din[159:128];
-            mem_word5[addr] <= din[191:160];
-            mem_word6[addr] <= din[223:192];
-            mem_word7[addr] <= din[255:224];
-        end
-        dout_r <= {
-            mem_word7[addr], mem_word6[addr], mem_word5[addr], mem_word4[addr],
-            mem_word3[addr], mem_word2[addr], mem_word1[addr], mem_word0[addr]
-        };
+        if (we)
+            mem[addr] <= din;
+        dout_r <= mem[addr];
     end
 `endif
+endmodule
+
+// Explicit single-port data store for one L2 way.  Eight independent 32-bit
+// memories make the physical banking visible to synthesis and placement; the
+// old 256-bit XPM encouraged a single wide cone spanning every BRAM column.
+module l2_way_data_ram #(
+    parameter integer ADDR_WIDTH = 12
+) (
+    input  wire                  clk,
+    input  wire                  we,
+    input  wire [ADDR_WIDTH-1:0] addr,
+    input  wire [255:0]          din,
+    output wire [255:0]          dout
+);
+    genvar word_bank;
+    generate
+        for (word_bank = 0; word_bank < 8; word_bank = word_bank + 1) begin : g_word_bank
+            l2_sync_block_ram #(
+                .ADDR_WIDTH(ADDR_WIDTH),
+                .WIDTH     (32)
+            ) u_word_ram (
+                .clk (clk),
+                .we  (we),
+                .addr(addr),
+                .din (din[word_bank*32 +: 32]),
+                .dout(dout[word_bank*32 +: 32])
+            );
+        end
+    endgenerate
 endmodule
