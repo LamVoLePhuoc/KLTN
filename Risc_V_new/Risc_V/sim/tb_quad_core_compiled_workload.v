@@ -14,6 +14,8 @@ module tb_quad_core_compiled_workload #(
     localparam MEM_WORDS  = 16384;
     localparam BOOT_ADDR  = 32'h0000_1000;
     localparam SIG_BASE   = 32'hC000_0100;
+    localparam ETOM_BASE  = 32'h0000_7000;
+    localparam ETOM_LIMIT = 32'h0000_7080;
     localparam MAX_CYCLES = 500_000;
 
     reg clk;
@@ -65,6 +67,10 @@ module tb_quad_core_compiled_workload #(
     integer axi_burst_writes;
     integer ahb_transfer_cycles;
     integer ahb_occupied_cycles;
+    integer etom_read_requests;
+    integer etom_rfo_requests;
+    integer etom_s_grants;
+    integer etom_e_grants;
     reg     first_controller_error_seen;
 
     reg [63:0] total_retired;
@@ -121,6 +127,15 @@ module tb_quad_core_compiled_workload #(
         end
     endfunction
 
+    function is_etom_line;
+        input [31:0] address;
+        begin
+            is_etom_line = (address >= ETOM_BASE) &&
+                           (address < ETOM_LIMIT) &&
+                           (address[4:0] == 5'b0);
+        end
+    endfunction
+
     always @(posedge clk) begin
         if (!resetn) begin
             cycles                 <= 0;
@@ -150,6 +165,10 @@ module tb_quad_core_compiled_workload #(
             axi_burst_writes       <= 0;
             ahb_transfer_cycles    <= 0;
             ahb_occupied_cycles    <= 0;
+            etom_read_requests     <= 0;
+            etom_rfo_requests      <= 0;
+            etom_s_grants          <= 0;
+            etom_e_grants          <= 0;
             first_controller_error_seen <= 1'b0;
             signature_seen         <= 4'b0;
             for (i = 0; i < 4; i = i + 1)
@@ -162,6 +181,53 @@ module tb_quad_core_compiled_workload #(
                 ahb_transfer_cycles <= ahb_transfer_cycles + 1;
             if (dut.soc.shared_htrans != 2'b00)
                 ahb_occupied_cycles <= ahb_occupied_cycles + 1;
+
+            // Count accepted controller transactions only, not the cycles for
+            // which a blocking L1 holds valid high. Source IDs 0..3 are D$.
+            if (dut.soc.shared_req_valid && dut.soc.shared_req_ready &&
+                !dut.soc.ahb_grant_source[2] &&
+                is_etom_line(dut.soc.shared_req_addr)) begin
+                if (dut.soc.shared_req_type == 2'b00)
+                    etom_read_requests <= etom_read_requests + 1;
+                else if (dut.soc.shared_req_type == 2'b01)
+                    etom_rfo_requests <= etom_rfo_requests + 1;
+            end
+
+            // The read response proves which stable state was installed. The
+            // request address/type remain held by the blocking D$ until this
+            // response pulse, so RFO responses cannot be miscounted as grants.
+            if (dut.soc.core0.dbus_resp_valid &&
+                (dut.soc.core0.dbus_req_type == 2'b00) &&
+                is_etom_line(dut.soc.core0.dbus_req_addr)) begin
+                if (dut.soc.core0.dbus_resp_state == 2'b01)
+                    etom_s_grants <= etom_s_grants + 1;
+                else if (dut.soc.core0.dbus_resp_state == 2'b10)
+                    etom_e_grants <= etom_e_grants + 1;
+            end
+            if (dut.soc.core1.dbus_resp_valid &&
+                (dut.soc.core1.dbus_req_type == 2'b00) &&
+                is_etom_line(dut.soc.core1.dbus_req_addr)) begin
+                if (dut.soc.core1.dbus_resp_state == 2'b01)
+                    etom_s_grants <= etom_s_grants + 1;
+                else if (dut.soc.core1.dbus_resp_state == 2'b10)
+                    etom_e_grants <= etom_e_grants + 1;
+            end
+            if (dut.soc.core2.dbus_resp_valid &&
+                (dut.soc.core2.dbus_req_type == 2'b00) &&
+                is_etom_line(dut.soc.core2.dbus_req_addr)) begin
+                if (dut.soc.core2.dbus_resp_state == 2'b01)
+                    etom_s_grants <= etom_s_grants + 1;
+                else if (dut.soc.core2.dbus_resp_state == 2'b10)
+                    etom_e_grants <= etom_e_grants + 1;
+            end
+            if (dut.soc.core3.dbus_resp_valid &&
+                (dut.soc.core3.dbus_req_type == 2'b00) &&
+                is_etom_line(dut.soc.core3.dbus_req_addr)) begin
+                if (dut.soc.core3.dbus_resp_state == 2'b01)
+                    etom_s_grants <= etom_s_grants + 1;
+                else if (dut.soc.core3.dbus_resp_state == 2'b10)
+                    etom_e_grants <= etom_e_grants + 1;
+            end
 
 
             if (arvalid && arready) begin
@@ -325,25 +391,37 @@ module tb_quad_core_compiled_workload #(
                            ((ahb_occupied_cycles * 1_000_000) / cycles) : 0;
 
             if (MESI_ENABLE)
-                $display("QUAD_WORKLOAD_STATS protocol=MESI cycles=%0d retired=%0d ipc_milli=%0d l1_accesses=%0d l1_hits=%0d l1_misses=%0d miss_rate_ppm=%0d ahb_transfer_cycles=%0d ahb_occupied_cycles=%0d ahb_util_ppm=%0d axi_read_txn=%0d axi_write_txn=%0d axi_read_beats=%0d axi_write_beats=%0d axi_burst_reads=%0d axi_burst_writes=%0d l2_hits=%0d l2_misses=%0d snoops=%0d",
+                $display("QUAD_WORKLOAD_STATS protocol=MESI cycles=%0d retired=%0d ipc_milli=%0d l1_accesses=%0d l1_hits=%0d l1_misses=%0d miss_rate_ppm=%0d ahb_transfer_cycles=%0d ahb_occupied_cycles=%0d ahb_util_ppm=%0d axi_read_txn=%0d axi_write_txn=%0d axi_read_beats=%0d axi_write_beats=%0d axi_burst_reads=%0d axi_burst_writes=%0d d_reads=%0d rfos=%0d writebacks=%0d l2_hits=%0d l2_misses=%0d snoops=%0d controller_busy_cycles=%0d etom_reads=%0d etom_rfos=%0d etom_s_grants=%0d etom_e_grants=%0d",
                          cycles, total_retired, ipc_milli, total_l1_accesses,
                          total_l1_hits, total_l1_misses, miss_rate_ppm,
                          ahb_transfer_cycles, ahb_occupied_cycles, ahb_util_ppm,
                          axi_read_transactions, axi_write_transactions,
                          axi_read_beats, axi_write_beats,
                          axi_burst_reads, axi_burst_writes,
+                         dut.soc.cache_perf_d_bus_reads,
+                         dut.soc.cache_perf_d_rfos,
+                         dut.soc.cache_perf_d_writebacks,
                          dut.soc.cache_perf_l2_hits, dut.soc.cache_perf_l2_misses,
-                         dut.soc.cache_perf_snoop_requests);
+                         dut.soc.cache_perf_snoop_requests,
+                         dut.soc.cache_perf_busy_cycles,
+                         etom_read_requests, etom_rfo_requests,
+                         etom_s_grants, etom_e_grants);
             else
-                $display("QUAD_WORKLOAD_STATS protocol=MSI cycles=%0d retired=%0d ipc_milli=%0d l1_accesses=%0d l1_hits=%0d l1_misses=%0d miss_rate_ppm=%0d ahb_transfer_cycles=%0d ahb_occupied_cycles=%0d ahb_util_ppm=%0d axi_read_txn=%0d axi_write_txn=%0d axi_read_beats=%0d axi_write_beats=%0d axi_burst_reads=%0d axi_burst_writes=%0d l2_hits=%0d l2_misses=%0d snoops=%0d",
+                $display("QUAD_WORKLOAD_STATS protocol=MSI cycles=%0d retired=%0d ipc_milli=%0d l1_accesses=%0d l1_hits=%0d l1_misses=%0d miss_rate_ppm=%0d ahb_transfer_cycles=%0d ahb_occupied_cycles=%0d ahb_util_ppm=%0d axi_read_txn=%0d axi_write_txn=%0d axi_read_beats=%0d axi_write_beats=%0d axi_burst_reads=%0d axi_burst_writes=%0d d_reads=%0d rfos=%0d writebacks=%0d l2_hits=%0d l2_misses=%0d snoops=%0d controller_busy_cycles=%0d etom_reads=%0d etom_rfos=%0d etom_s_grants=%0d etom_e_grants=%0d",
                          cycles, total_retired, ipc_milli, total_l1_accesses,
                          total_l1_hits, total_l1_misses, miss_rate_ppm,
                          ahb_transfer_cycles, ahb_occupied_cycles, ahb_util_ppm,
                          axi_read_transactions, axi_write_transactions,
                          axi_read_beats, axi_write_beats,
                          axi_burst_reads, axi_burst_writes,
+                         dut.soc.cache_perf_d_bus_reads,
+                         dut.soc.cache_perf_d_rfos,
+                         dut.soc.cache_perf_d_writebacks,
                          dut.soc.cache_perf_l2_hits, dut.soc.cache_perf_l2_misses,
-                         dut.soc.cache_perf_snoop_requests);
+                         dut.soc.cache_perf_snoop_requests,
+                         dut.soc.cache_perf_busy_cycles,
+                         etom_read_requests, etom_rfo_requests,
+                         etom_s_grants, etom_e_grants);
         end
     endtask
 
@@ -444,6 +522,27 @@ module tb_quad_core_compiled_workload #(
         if (axi_burst_reads == 0 || axi_read_beats < (axi_burst_reads * 8)) begin
             errors = errors + 1;
             $display("[FAIL] no complete eight-beat AXI read burst observed");
+        end
+        if (etom_read_requests != 4) begin
+            errors = errors + 1;
+            $display("[FAIL] E->M phase accepted %0d cold reads, expected 4",
+                     etom_read_requests);
+        end
+        if (MESI_ENABLE) begin
+            if (etom_rfo_requests != 0 || etom_s_grants != 0 ||
+                etom_e_grants != 4) begin
+                errors = errors + 1;
+                $display("[FAIL] MESI E->M evidence rfos=%0d S=%0d E=%0d expected 0/0/4",
+                         etom_rfo_requests, etom_s_grants, etom_e_grants);
+            end
+        end
+        else begin
+            if (etom_rfo_requests != 4 || etom_s_grants != 4 ||
+                etom_e_grants != 0) begin
+                errors = errors + 1;
+                $display("[FAIL] MSI read-then-write evidence rfos=%0d S=%0d E=%0d expected 4/4/0",
+                         etom_rfo_requests, etom_s_grants, etom_e_grants);
+            end
         end
         report_statistics;
         if ((^total_l1_accesses) === 1'bx || (^total_retired) === 1'bx) begin

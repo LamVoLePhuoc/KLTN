@@ -10,6 +10,7 @@
 #define BARRIER2_BASE      ((volatile uint32_t *)0x00008400u)
 #define TURN_WORD          (*(volatile uint32_t *)0x00008600u)
 #define HOT_WORDS          ((volatile uint32_t *)0x00008620u)
+#define ETOM_WORD(h)       (*(volatile uint32_t *)(0x00007000u + ((h) << 5)))
 #define PRIVATE_BASE(h)    ((volatile uint32_t *)(0x00009000u + ((h) << 12)))
 #define MMIO_SIGNATURE(h)  (*(volatile uint32_t *)(0xC0000100u + ((h) << 2)))
 
@@ -30,6 +31,8 @@ void workload_main(uint32_t hart)
     uint32_t i;
     uint32_t checksum = 0u;
     uint32_t failed = 0u;
+    uint32_t etom_before;
+    uint32_t etom_expected;
 
     if (hart == 0u) {
         TURN_WORD = 0u;
@@ -40,6 +43,18 @@ void workload_main(uint32_t hart)
         while (BOOT_FLAG == 0u)
             __asm__ volatile ("nop");
     }
+
+    /* MESI discriminator. Each hart cold-loads a different 32-byte line, so
+       no peer can become a sharer. MSI must install S and issue an RFO for the
+       following store; MESI may install E and promote E->M without bus traffic.
+       The volatile readback prevents this from becoming a synthetic traffic-
+       only test: the architectural data result is checked as well. */
+    etom_before = ETOM_WORD(hart);
+    etom_expected = etom_before ^ (0xE7000000u | hart);
+    ETOM_WORD(hart) = etom_expected;
+    if (ETOM_WORD(hart) != etom_expected)
+        failed = 1u;
+    checksum ^= etom_expected;
 
     /* Private streaming phase: 32 cold lines followed by 224 line hits. */
     for (i = 0; i < PRIVATE_WORDS; ++i)

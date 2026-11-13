@@ -538,6 +538,69 @@ The corresponding evidence is in
 `reports/xsim-behavior-hierarchy-20261113-171935/summary.md`, and
 `reports/xsim-quad-workload-20261113-172105/summary.md`.
 
+## Checkpoint 15 — full-SoC MSI route and measured MESI E-to-M benefit
+
+An apples-to-apples hierarchical MSI build was routed with the same Vivado
+2022.2 flow, `xcvu29p-fsga2577-2L-e` part and 4.000 ns constraint as the
+Checkpoint 14 MESI build. Both implementations meet setup and hold timing and
+have no routing errors:
+
+| Protocol | Setup WNS | Hold | Timing-derived estimate | CLB LUT | CLB FF | BRAM tiles | DSP |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| MSI | +0.066 ns | +0.039 ns | 254.194 MHz | 43,463 | 39,421 | 242.5 | 16 |
+| MESI | +0.158 ns | +0.040 ns | 260.281 MHz | 43,470 | 39,419 | 242.5 | 16 |
+
+The MSI route contains 72,647 routable nets and all 72,647 are fully routed.
+Its critical data path is inside core 0 from MEM/WB destination-register state
+to an EX/MEM ALU-result register: 3.915 ns, nine logic levels, with 2.936 ns
+(75.0%) in routing. MESI uses seven more LUTs and two fewer FFs in these runs,
+but has 0.092 ns more setup margin. Therefore there is no evidence here that
+replacing MESI with MSI improves timing or area materially.
+
+Both variants have the same 330 methodology warnings: one unbuffered top-level
+ACLK warning, 16 D-cache LRU arrays mapped to distributed RAM, 16 wide
+multiplier warnings and 297 missing external input/output delays. The internal
+clocked paths are constrained and meet timing, but the unbuffered ACLK and
+missing I/O delays mean these results remain internal `-no_iobuf` route
+evidence, not VCU129 board sign-off.
+
+Evidence: `reports/hier-ppa-quad-core-soc-20261113-225829/summary.md` for MSI
+and `reports/hier-ppa-quad-core-soc-20261113-173613/summary.md` for MESI. Each
+directory also contains the detailed timing, utilization, route-status and
+methodology reports and the routed DCP.
+
+The compiled RV32IMA workload was then extended with a protocol discriminator.
+Each hart cold-loads a different aligned 32-byte line, stores a checked value to
+that same line, and reads it back. Testbench counters observe accepted
+coherence-controller transactions and installed read-response states for only
+those four lines. The test fails unless MSI installs S and later issues four
+RFOs, while MESI installs E and performs all four E-to-M transitions without an
+RFO. Both variants passed:
+
+| Metric | MSI | MESI | Measured MESI delta |
+|---|---:|---:|---:|
+| Target cold reads | 4 | 4 | 0 |
+| Target S grants | 4 | 0 | -4 |
+| Target E grants | 0 | 4 | +4 |
+| Target RFOs | 4 | 0 | -4 |
+| Complete-workload RFOs | 407 | 403 | -4 (-0.98%) |
+| L1 misses | 850 | 846 | -4 |
+| Controller busy cycles | 45,018 | 44,874 | -144 (-0.32%) |
+| AHB transfer cycles | 7,556 | 7,524 | -32 (-0.42%) |
+| Total cycles | 67,238 | 67,082 | -156 (-0.23%) |
+| Retired instructions | 22,191 | 22,191 | 0 |
+| Aggregate IPC (three decimals) | 0.330 | 0.330 | no visible change |
+
+The four saved RFOs account for the complete-workload RFO difference and make
+the E-to-M silent upgrade directly observable. The benefit is real but small in
+this workload: 156 cycles, or 0.23%, and not enough to change IPC rounded to
+three decimals. This result supports retaining MESI for traffic reduction; it
+does not support a claim of a large throughput or power improvement. No SAIF or
+power estimate was produced in this run.
+
+Evidence: `reports/xsim-quad-workload-20261113-234509/summary.md`; the MSI and
+MESI run logs in the same directory contain the raw counters and PASS markers.
+
 ## Measurement record template
 
 ### `<module>` — `<date>`

@@ -89,6 +89,16 @@ if {$requested_protocol ne ""} {
 }
 set results {}
 set pass_count 0
+
+proc workload_stat {stats key} {
+    foreach token [split $stats " "] {
+        if {[string match "${key}=*" $token]} {
+            return [string range $token [expr {[string length $key] + 1}] end]
+        }
+    }
+    return "NA"
+}
+
 foreach test $tests {
     lassign $test protocol top
     set snapshot "${top}_behav"
@@ -164,6 +174,32 @@ foreach result $results {
 }
 puts $fd ""
 puts $fd "> `ipc_milli=1000` means aggregate IPC=1.000; rates ending in `_ppm` are parts per million."
+
+array set protocol_stats {}
+foreach result $results {
+    lassign $result protocol status stats
+    if {$status eq "PASS"} { set protocol_stats($protocol) $stats }
+}
+if {[info exists protocol_stats(MSI)] && [info exists protocol_stats(MESI)]} {
+    puts $fd ""
+    puts $fd "## Exclusive-to-Modified evidence"
+    puts $fd ""
+    puts $fd "Each hart cold-loads one private 32-byte line, then stores to that same line."
+    puts $fd "Counters below are accepted controller transactions/read grants for only those four lines."
+    puts $fd ""
+    puts $fd "| Protocol | Cold reads | S grants | E grants | RFOs | Total cycles | Total RFOs |"
+    puts $fd "|---|---:|---:|---:|---:|---:|---:|"
+    foreach protocol {MSI MESI} {
+        set stats $protocol_stats($protocol)
+        puts $fd "| $protocol | [workload_stat $stats etom_reads] | [workload_stat $stats etom_s_grants] | [workload_stat $stats etom_e_grants] | [workload_stat $stats etom_rfos] | [workload_stat $stats cycles] | [workload_stat $stats rfos] |"
+    }
+    set target_rfo_saved [expr {[workload_stat $protocol_stats(MSI) etom_rfos] -
+                                [workload_stat $protocol_stats(MESI) etom_rfos]}]
+    set total_rfo_saved [expr {[workload_stat $protocol_stats(MSI) rfos] -
+                               [workload_stat $protocol_stats(MESI) rfos]}]
+    puts $fd ""
+    puts $fd "> Measured MESI reduction: `$target_rfo_saved` RFOs in the isolated E-to-M phase and `$total_rfo_saved` RFOs over the complete workload."
+}
 close $fd
 cd $old_dir
 
