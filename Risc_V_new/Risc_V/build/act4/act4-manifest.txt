@@ -1,0 +1,5 @@
+ACT4_COMMIT=792e55702c6ffff5c8432670086f126f40b88c9e
+ACT4_GCC_VERSION=15.2.0
+ACT4_SAIL_VERSION=0.16
+ACT4_ELF_DIR=/mnt/c/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/build/act4/work/kltn-rv32ima/elfs
+ACT4_ELF_COUNT=65

@@ -43,3 +43,4 @@ soc/quad_core_axi_wrapper.v
 soc/quad_core_axi_wrapper_ahb.v
 soc/quad_core_axi_wrapper_bootable.v
 soc/quad_core_axi_wrapper_ahb_bootable.v
+common/reset_sync.v

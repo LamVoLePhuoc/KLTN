@@ -1,5 +1,11 @@
 `timescale 1ns / 1ps
 
+`ifdef PPA_NO_MARK_DEBUG
+`define KLTN_DEBUG_ATTR
+`else
+`define KLTN_DEBUG_ATTR (* mark_debug = "true" *)
+`endif
+
 // ============================================================
 // quad_core_soc
 //
@@ -117,24 +123,24 @@ module quad_core_soc #(
 
     // Kept internal to preserve the stable board-facing port list,
     // but marked for direct ILA probing during cache bring-up.
-    (* mark_debug = "true" *) wire [31:0] cache_perf_total_requests;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_d_bus_reads;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_d_rfos;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_d_writebacks;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_i_reads;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_hits;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_misses;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_snoop_requests;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_read_words;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_write_words;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_busy_cycles;
-    (* mark_debug = "true" *) wire        cache_protocol_error;
-    (* mark_debug = "true" *) wire        cache_timeout_error;
-    (* mark_debug = "true" *) wire        cache_memory_error;
-    (* mark_debug = "true" *) wire [95:0] cache_debug_trace_entry0;
-    (* mark_debug = "true" *) wire [4:0]  cache_debug_trace_count;
-    (* mark_debug = "true" *) wire [3:0]  cache_debug_trace_write_index;
-    (* mark_debug = "true" *) wire [3:0]  cache_debug_controller_state;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_total_requests;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_d_bus_reads;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_d_rfos;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_d_writebacks;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_i_reads;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_l2_hits;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_l2_misses;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_snoop_requests;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_mem_read_words;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_mem_write_words;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_busy_cycles;
+    `KLTN_DEBUG_ATTR wire        cache_protocol_error;
+    `KLTN_DEBUG_ATTR wire        cache_timeout_error;
+    `KLTN_DEBUG_ATTR wire        cache_memory_error;
+    `KLTN_DEBUG_ATTR wire [95:0] cache_debug_trace_entry0;
+    `KLTN_DEBUG_ATTR wire [4:0]  cache_debug_trace_count;
+    `KLTN_DEBUG_ATTR wire [3:0]  cache_debug_trace_write_index;
+    `KLTN_DEBUG_ATTR wire [3:0]  cache_debug_controller_state;
 
     // Explicit controller <-> shared-L2 control/status boundary.
     wire         l2_cmd_valid;
@@ -328,3 +334,5 @@ module quad_core_soc #(
     );
 
 endmodule
+
+`undef KLTN_DEBUG_ATTR

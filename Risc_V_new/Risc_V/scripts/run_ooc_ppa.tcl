@@ -2,7 +2,7 @@
 #
 # Usage:
 #   vivado -mode batch -source scripts/run_ooc_ppa.tcl -tclargs \
-#       <top> <clock_port> <period_ns> <synth|impl>
+#       <top> <clock_port> <period_ns> <synth|impl> ?<MESI_ENABLE>?
 #
 # Example:
 #   vivado -mode batch -source scripts/run_ooc_ppa.tcl -tclargs \
@@ -21,19 +21,23 @@ if {![regexp {<Option Name="Part" Val="([^"]+)"} $project_xml -> part_name]} {
     error "Cannot resolve target part from Risc_V.xpr"
 }
 
-if {$argc < 1 || $argc > 4} {
-    error "Usage: run_ooc_ppa.tcl <top> <clock_port> <period_ns> <synth|impl>"
+if {$argc < 1 || $argc > 5} {
+    error "Usage: run_ooc_ppa.tcl <top> <clock_port> <period_ns> <synth|impl> ?<MESI_ENABLE>?"
 }
 
 set top_name     [lindex $argv 0]
 set clock_port   [expr {$argc >= 2 ? [lindex $argv 1] : "clk"}]
 set period_ns    [expr {$argc >= 3 ? double([lindex $argv 2]) : 9.800}]
 set flow_mode    [expr {$argc >= 4 ? [string tolower [lindex $argv 3]] : "impl"}]
+set mesi_override [expr {$argc >= 5 ? [lindex $argv 4] : ""}]
 if {$flow_mode ni {synth impl}} {
     error "Flow mode must be 'synth' or 'impl', got '$flow_mode'"
 }
 if {$period_ns <= 0.0} {
     error "Clock period must be positive, got '$period_ns'"
+}
+if {$mesi_override ne "" && $mesi_override ni {0 1}} {
+    error "MESI_ENABLE override must be 0 or 1, got '$mesi_override'"
 }
 
 set stamp      [clock format [clock seconds] -format "%Y%m%d-%H%M%S"]
@@ -76,11 +80,18 @@ puts "Part: $part_name"
 puts [format "Clock: %s, %.3f ns (%.3f MHz target)" \
     $clock_port $period_ns [expr {1000.0 / $period_ns}]]
 puts "Flow: $flow_mode"
+if {$mesi_override ne ""} { puts "MESI_ENABLE: $mesi_override" }
 puts "Reports: $report_dir"
+
+# Vivado 2022.2 intermittently crashes its parallel synthesis worker on this
+# large XPM-heavy hierarchy ("TclStackFree"/worker died).  A single worker is
+# slower but deterministic and preserves the exact same synthesis strategy.
+set_param general.maxThreads 1
 
 create_project -in_memory -part $part_name
 set_property TARGET_LANGUAGE Verilog [current_project]
 set_property XPM_LIBRARIES {XPM_MEMORY} [current_project]
+set_property verilog_define {PPA_NO_MARK_DEBUG} [current_fileset]
 
 foreach source_path [read_active_manifest $rtl_dir] {
     read_verilog $source_path
@@ -99,8 +110,21 @@ puts $xdc_fd [format {set_property HD.CLK_SRC BUFGCTRL_X0Y0 [get_ports {%s}]} \
 close $xdc_fd
 read_xdc $xdc_path
 
-synth_design -top $top_name -part $part_name -mode out_of_context \
-    -flatten_hierarchy rebuilt
+set synth_args [list -top $top_name -part $part_name -mode out_of_context \
+                     -flatten_hierarchy rebuilt]
+if {$mesi_override ne ""} {
+    lappend synth_args -generic "MESI_ENABLE=$mesi_override"
+}
+synth_design {*}$synth_args
+
+set mark_debug_nets [get_nets -quiet -hier -filter {MARK_DEBUG == 1}]
+set mark_debug_count [llength $mark_debug_nets]
+if {$mark_debug_count != 0} {
+    set debug_report [open [file join $report_dir unexpected_mark_debug_nets.rpt] w]
+    foreach debug_net $mark_debug_nets { puts $debug_report $debug_net }
+    close $debug_report
+    error "PPA build retained $mark_debug_count MARK_DEBUG nets"
+}
 
 if {[llength [get_ports -quiet $clock_port]] != 1} {
     error "Expected one top-level clock port '$clock_port' on $top_name"
@@ -109,12 +133,18 @@ if {[llength [get_clocks -quiet ooc_clk]] != 1} {
     error "OOC clock constraint was not applied to $top_name/$clock_port"
 }
 
-report_utilization -file [file join $report_dir utilization_synth.rpt]
-report_utilization -hierarchical -hierarchical_depth 5 \
-    -file [file join $report_dir utilization_hierarchical_synth.rpt]
-report_timing_summary -delay_type min_max -report_unconstrained \
-    -check_timing_verbose -max_paths 20 \
-    -file [file join $report_dir timing_synth.rpt]
+# Detailed synthesis reports temporarily add almost 1 GiB to Vivado's resident
+# set on this hierarchy.  In implementation mode they are redundant with the
+# routed reports and can make the placer fail for lack of memory.  Keep them for
+# synth-only characterization; defer all reporting until after route otherwise.
+if {$flow_mode eq "synth"} {
+    report_utilization -file [file join $report_dir utilization_synth.rpt]
+    report_utilization -hierarchical -hierarchical_depth 5 \
+        -file [file join $report_dir utilization_hierarchical_synth.rpt]
+    report_timing_summary -delay_type min_max -report_unconstrained \
+        -check_timing_verbose -max_paths 20 \
+        -file [file join $report_dir timing_synth.rpt]
+}
 
 set route_status "not-run"
 if {$flow_mode eq "impl"} {
@@ -156,9 +186,11 @@ puts $summary ""
 puts $summary "- Generated: [clock format [clock seconds]]"
 puts $summary "- Part: `$part_name`"
 puts $summary "- Flow: `$flow_mode`"
+if {$mesi_override ne ""} { puts $summary "- MESI_ENABLE: `$mesi_override`" }
 puts $summary [format "- Target: `%.3f ns` (`%.3f MHz`) on `%s`" \
     $period_ns [expr {1000.0 / $period_ns}] $clock_port]
 puts $summary "- Route status: `$route_status`"
+puts $summary "- MARK_DEBUG nets after synthesis: `$mark_debug_count`"
 puts $summary [format "- Setup WNS: `%.3f ns`" $setup_slack]
 puts $summary [format "- Hold slack: `%.3f ns`" $hold_slack]
 puts $summary [format "- Timing-derived Fmax estimate: `%.3f MHz`" $estimated_fmax_mhz]
@@ -180,12 +212,12 @@ close $summary
 
 set csv_path [file join $report_dir summary.csv]
 set csv [open $csv_path w]
-puts $csv "top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,report_dir"
+puts $csv "top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,mark_debug_nets,report_dir"
 puts $csv [join [list $top_name $part_name $flow_mode $clock_port \
     [format %.3f $period_ns] [format %.3f [expr {1000.0 / $period_ns}]] \
     [format %.3f $setup_slack] [format %.3f $hold_slack] \
     [format %.3f $estimated_fmax_mhz] $lut_count $ff_count $ramb36_count \
-    $ramb18_count $bram_tiles $ramd64_count $report_dir] ,]
+    $ramb18_count $bram_tiles $ramd64_count $mark_debug_count $report_dir] ,]
 close $csv
 
 puts [format "OOC_PPA_RESULT top=%s WNS=%.3fns estimated_Fmax=%.3fMHz LUT=%d FF=%d BRAM_tiles=%d" \

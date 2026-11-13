@@ -85,6 +85,7 @@ module RV32IMA #(
     // IF / ID
     wire [31:0] PCPlus4F;
     wire [31:0] InstrD, PCD, PCPlus4D;
+    wire        ValidD;
     wire        FetchPageFaultD;               // NEW
     wire        FetchAccessFaultD;
 
@@ -123,6 +124,7 @@ module RV32IMA #(
     wire [6:0]  OpE;
     wire [8:0]  ExcFlagsE;     // NEW
     wire [31:0] InstrE;        // NEW
+    wire        ValidE;
 
     wire [31:0] RD1_E, RD2_E, Imm_Ext_E, PCE, PCPlus4E;
 
@@ -143,9 +145,10 @@ module RV32IMA #(
     wire [4:0]  AmoOpM;        // NEW: RV32A funct5 in MEM
     wire [8:0]  ExcFlagsM;     // NEW
     wire [31:0] InstrM;        // NEW
+    wire        ValidM;
     wire [31:0] CsrWDataM;     // NEW
 
-    assign FenceI_M = Fence_M && (InstrM[14:12] == 3'b001);
+    assign FenceI_M = ValidM && Fence_M && (InstrM[14:12] == 3'b001);
 
     wire [4:0]  RD_M;
     wire [31:0] PCPlus4M, ALUResultM, WriteDataM;
@@ -199,7 +202,7 @@ module RV32IMA #(
         if (rst) begin
             BranchTypeE <= 3'b000;
         end
-        else if (FlushE) begin
+        else if (FlushE && !Stall_Core_External) begin
             BranchTypeE <= 3'b000;
         end
         else if (!(StallE | Stall_Core_External)) begin
@@ -221,9 +224,23 @@ module RV32IMA #(
     // needs to change -- their existing 2-way muxes already do
     // exactly what's needed once these upstream signals are correct.
     // =========================================================
-    wire        PCSrcE_eff    = PCSrcE | TrapTakenM;
-    wire [31:0] PCTargetE_eff = TrapTakenM ? TrapPCM : PCTargetE;
-    wire        FlushD_eff    = FlushD | TrapTakenM;
+    // A cache miss holds ID/EX, including the resolving branch/jump.  Do not
+    // flush that instruction until the external stall releases: fetch_stage
+    // intentionally blocks PC writes while bus_ready=0, so accepting PCSrcE
+    // during the stall would discard the redirect and execute fall-through.
+    wire        PCSrcE_commit = PCSrcE & ~Stall_Core_External;
+    // FENCE.I is observed in M while core_l1_wrapper freezes the pipeline,
+    // writes back dirty D$ lines and invalidates I$.  Instructions younger
+    // than the fence may already be resident in E/D and therefore still hold
+    // pre-invalidation instruction words.  On the first cycle after cache
+    // maintenance releases the core, discard those younger stages and refetch
+    // from the instruction immediately following the fence.  Flushing the M
+    // slot below also makes this restart a one-cycle event.
+    wire        fence_i_restart = FenceI_M & ~Stall_Core_External;
+    wire        PCSrcE_eff    = PCSrcE_commit | fence_i_restart | TrapTakenM;
+    wire [31:0] PCTargetE_eff = TrapTakenM      ? TrapPCM :
+                                      fence_i_restart ? PCPlus4M : PCTargetE;
+    wire        FlushD_eff    = FlushD | fence_i_restart | TrapTakenM;
 
     // NEW (bug found reviewing tb_csr_trap.v, before it was ever run):
     // the existing "forward from M" path (execute_stage.v's
@@ -252,7 +269,19 @@ module RV32IMA #(
 
     wire StallF_eff = StallF | csr_load_use_hazard;
     wire StallD_eff = StallD | csr_load_use_hazard;
-    wire FlushE_eff = FlushE | TrapTakenM | csr_load_use_hazard;
+    // Like a branch redirect, a load/CSR-use bubble must not be injected
+    // while EX/MEM is unable to accept the current E-stage instruction.
+    // Otherwise ID/EX clears the producer while EX/MEM holds its old value.
+    wire hazard_flush_e_commit = FlushE & ~Stall_Core_External;
+    wire csr_hazard_commit = csr_load_use_hazard & ~Stall_Core_External;
+    wire FlushE_eff = hazard_flush_e_commit | fence_i_restart |
+                      TrapTakenM | csr_hazard_commit;
+    // hazard_unit requests FlushM while a multicycle MDU instruction is held
+    // in E, so EX/MEM receives bubbles until the result is ready.  EX/MEM's
+    // flush has priority over its stall; applying FlushM during a cache stall
+    // would therefore erase the older instruction already resident in M while
+    // MEM/WB is unable to accept it.  Commit the bubble only when M can advance.
+    wire FlushM_eff = (FlushM & ~Stall_Core_External) | fence_i_restart;
 
     // =========================================================
     // 1. FETCH
@@ -286,6 +315,7 @@ module RV32IMA #(
         .InstrD         (InstrD),
         .PCD            (PCD),
         .PCPlus4D       (PCPlus4D),
+        .ValidD         (ValidD),
         .FetchPageFaultD(FetchPageFaultD),
         .FetchAccessFaultD(FetchAccessFaultD)
     );
@@ -360,6 +390,7 @@ module RV32IMA #(
 
         .ExcFlagsD   (ExcFlagsD),   // NEW
         .InstrD      (InstrD),      // NEW
+        .ValidD      (ValidD),
 
         .RegWriteD   (RegWriteD),
         .ALUSrcD     (ALUSrcD),
@@ -405,6 +436,7 @@ module RV32IMA #(
 
         .ExcFlagsE   (ExcFlagsE),   // NEW
         .InstrE      (InstrE),      // NEW
+        .ValidE      (ValidE),
 
         .RD1_E       (RD1_E),
         .RD2_E       (RD2_E),
@@ -423,6 +455,7 @@ module RV32IMA #(
     execute_stage execute_unit (
         .clk          (clk),
         .rst          (rst),
+        .Stall_Core_External(Stall_Core_External),
 
         .RD1_E        (RD1_E),
         .RD2_E        (RD2_E),
@@ -476,7 +509,7 @@ module RV32IMA #(
         // end of a trap handler can immediately raise a second illegal-
         // instruction trap).  FlushD_eff/FlushE_eff only clear IF/ID and
         // ID/EX; this EX/MEM flush is what makes the redirect precise.
-        .flush       (FlushM | TrapTakenM),
+        .flush       (FlushM_eff | TrapTakenM),
 
         .RegWriteE   (RegWriteE),
         .MemWriteE   (MemWriteE),
@@ -490,6 +523,7 @@ module RV32IMA #(
 
         .ExcFlagsE   (ExcFlagsE),   // NEW
         .InstrE      (InstrE),      // NEW
+        .ValidE      (ValidE),
         .CsrWDataE   (CsrWDataE),   // NEW
 
         .RD_E        (RD_E),
@@ -509,6 +543,7 @@ module RV32IMA #(
 
         .ExcFlagsM   (ExcFlagsM),   // NEW
         .InstrM      (InstrM),      // NEW
+        .ValidM      (ValidM),
         .CsrWDataM   (CsrWDataM),   // NEW
 
         .RD_M        (RD_M),
@@ -565,6 +600,25 @@ module RV32IMA #(
              IsSretM, IsSfenceVmaM, IsPrivIllegalM, IsIllegalOpM } = ExcFlagsM;
 
     assign PCM = PCPlus4M - 32'd4;
+
+    // Simulation-visible workload counters. ValidM distinguishes a real
+    // architectural instruction from bubbles; testing InstrM against the NOP
+    // encoding would incorrectly discard genuine NOP instructions.  These
+    // counters are not CSRs and have no production consumer, so synthesis may
+    // trim them from a normal PPA build.
+    reg [63:0] perf_cycle_count;
+    reg [63:0] perf_retired_instructions;
+    always @(posedge clk) begin
+        if (rst) begin
+            perf_cycle_count          <= 64'b0;
+            perf_retired_instructions <= 64'b0;
+        end
+        else begin
+            perf_cycle_count <= perf_cycle_count + 64'd1;
+            if (ValidM && !Stall_Core_External && !TrapTakenM)
+                perf_retired_instructions <= perf_retired_instructions + 64'd1;
+        end
+    end
 
     csr_trap_unit #(
         .HART_ID(HART_ID)
@@ -666,7 +720,7 @@ module RV32IMA #(
         .MemReadE     (MemReadE),
         .RegWriteE    (RegWriteE),
 
-        .PCSrcE       (PCSrcE),
+        .PCSrcE       (PCSrcE_commit),
         .Stall_MDU_Req(Stall_MDU_Req),
 
         .RegWriteM    (RegWriteM),

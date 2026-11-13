@@ -1,5 +1,11 @@
 `timescale 1ns / 1ps
 
+`ifdef PPA_NO_MARK_DEBUG
+`define KLTN_DEBUG_ATTR
+`else
+`define KLTN_DEBUG_ATTR (* mark_debug = "true" *)
+`endif
+
 // ============================================================
 // quad_core_soc_ahb
 //
@@ -52,16 +58,17 @@
 // only more complicated. This matches ahb_lite_l1_adapter.v's own
 // documented scope (request/response traffic only).
 //
-// MSI maps directly onto this bridge: every read fill is S, and an
-// RFO/upgrade is marked with HMASTLOCK so the slave reconstructs the
-// ownership request before forwarding it to cache_controller_mmu.
+// MSI/MESI maps directly onto this bridge: RFO/upgrade is marked with
+// HMASTLOCK, while HRUSER carries the granted S/E/M response state.
 // ============================================================
 module quad_core_soc_ahb #(
     parameter [31:0] RESET_ADDR0 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR1 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR2 = 32'h0000_1000,
     parameter [31:0] RESET_ADDR3 = 32'h0000_1000,
-    parameter        CACHE_DEBUG_TRACE_ENABLE = 0
+    parameter        CACHE_DEBUG_TRACE_ENABLE = 0,
+    parameter        MESI_ENABLE = 1,
+    parameter        MEM_BURST_ENABLE = 0
 )(
     input  wire        clk,
     input  wire        rst,
@@ -76,13 +83,17 @@ module quad_core_soc_ahb #(
     output wire         Fetch_PageFault0, output wire Fetch_PageFault1, output wire Fetch_PageFault2, output wire Fetch_PageFault3,
     output wire         Data_PageFault0,  output wire Data_PageFault1,  output wire Data_PageFault2,  output wire Data_PageFault3,
 
-    // ---- CPU Memory Port (single word, real handshake -- see cache_controller_mmu.v) ----
+    // ---- CPU Memory Port. Cached lines may use one 256-bit transaction;
+    // uncached/MMIO requests always use the 32-bit word channel. ----
     output wire         mem_req_valid,
     output wire         mem_we,
     output wire [31:0]  mem_addr,
     output wire [31:0]  mem_wdata,
     output wire [3:0]   mem_wstrb,
+    output wire         mem_req_burst,
+    output wire [255:0] mem_wline,
     input  wire [31:0]  mem_rdata,
+    input  wire [255:0] mem_rline,
     input  wire         mem_valid,
     input  wire         mem_error
 );
@@ -120,24 +131,24 @@ module quad_core_soc_ahb #(
     wire [1:0]  fpc_unused0, fpc_unused1, fpc_unused2, fpc_unused3;
     wire [1:0]  dpc_unused0, dpc_unused1, dpc_unused2, dpc_unused3;
 
-    (* mark_debug = "true" *) wire [31:0] cache_perf_total_requests;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_d_bus_reads;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_d_rfos;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_d_writebacks;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_i_reads;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_hits;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_l2_misses;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_snoop_requests;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_read_words;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_mem_write_words;
-    (* mark_debug = "true" *) wire [31:0] cache_perf_busy_cycles;
-    (* mark_debug = "true" *) wire        cache_protocol_error;
-    (* mark_debug = "true" *) wire        cache_timeout_error;
-    (* mark_debug = "true" *) wire        cache_memory_error;
-    (* mark_debug = "true" *) wire [95:0] cache_debug_trace_entry0;
-    (* mark_debug = "true" *) wire [4:0]  cache_debug_trace_count;
-    (* mark_debug = "true" *) wire [3:0]  cache_debug_trace_write_index;
-    (* mark_debug = "true" *) wire [3:0]  cache_debug_controller_state;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_total_requests;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_d_bus_reads;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_d_rfos;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_d_writebacks;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_i_reads;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_l2_hits;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_l2_misses;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_snoop_requests;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_mem_read_words;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_mem_write_words;
+    `KLTN_DEBUG_ATTR wire [31:0] cache_perf_busy_cycles;
+    `KLTN_DEBUG_ATTR wire        cache_protocol_error;
+    `KLTN_DEBUG_ATTR wire        cache_timeout_error;
+    `KLTN_DEBUG_ATTR wire        cache_memory_error;
+    `KLTN_DEBUG_ATTR wire [95:0] cache_debug_trace_entry0;
+    `KLTN_DEBUG_ATTR wire [4:0]  cache_debug_trace_count;
+    `KLTN_DEBUG_ATTR wire [3:0]  cache_debug_trace_write_index;
+    `KLTN_DEBUG_ATTR wire [3:0]  cache_debug_controller_state;
 
     // Explicit controller <-> shared-L2 control/status boundary.
     wire         l2_cmd_valid;
@@ -180,8 +191,10 @@ module quad_core_soc_ahb #(
     wire [31:0] i_hrdata  [0:3];
     wire        i_hready  [0:3];
     wire [1:0]  i_hresp   [0:3];
+    wire [1:0]  i_hruser  [0:3];
     wire        i_hmastlock [0:3];
     wire [2:0]  i_hsize   [0:3];
+    wire [2:0]  i_hburst  [0:3];
     wire [3:0]  i_hprot   [0:3];
     wire        i_req_active [0:3];
 
@@ -192,8 +205,10 @@ module quad_core_soc_ahb #(
     wire [31:0] d_hrdata  [0:3];
     wire        d_hready  [0:3];
     wire [1:0]  d_hresp   [0:3];
+    wire [1:0]  d_hruser  [0:3];
     wire        d_hmastlock [0:3];
     wire [2:0]  d_hsize   [0:3];
+    wire [2:0]  d_hburst  [0:3];
     wire [3:0]  d_hprot   [0:3];
     wire        d_req_active [0:3];
 
@@ -201,6 +216,7 @@ module quad_core_soc_ahb #(
     wire [255:0] ahb_m_haddr;
     wire [7:0]   ahb_m_hwrite;
     wire [23:0]  ahb_m_hsize;
+    wire [23:0]  ahb_m_hburst;
     wire [15:0]  ahb_m_htrans;
     wire [255:0] ahb_m_hwdata;
     wire [31:0]  ahb_m_hprot;
@@ -210,10 +226,12 @@ module quad_core_soc_ahb #(
     wire [7:0]   ahb_m_hready;
     wire [255:0] ahb_m_hrdata;
     wire [15:0]  ahb_m_hresp;
+    wire [15:0]  ahb_m_hruser;
 
     wire [31:0] shared_haddr;
     wire        shared_hwrite;
     wire [2:0]  shared_hsize;
+    wire [2:0]  shared_hburst;
     wire [1:0]  shared_htrans;
     wire [31:0] shared_hwdata;
     wire [3:0]  shared_hprot;
@@ -222,6 +240,7 @@ module quad_core_soc_ahb #(
     wire        shared_hready;
     wire [31:0] shared_hrdata;
     wire [1:0]  shared_hresp;
+    wire [1:0]  shared_hruser;
     wire        ahb_grant_valid;
     wire [2:0]  ahb_grant_source;
 
@@ -288,7 +307,8 @@ module quad_core_soc_ahb #(
     // ------------------------------------------------------
     // Core 0
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0), .HART_ID(32'd0)) core0 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR0), .HART_ID(32'd0),
+                      .MESI_ENABLE(MESI_ENABLE)) core0 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[0]), .Cache_Flush_Done(cache_flush_core_done[0]), .Cache_Flush_Error(cache_flush_core_error[0]),
@@ -311,8 +331,8 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[0]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[0]), .bus_resp_error(ibus_resp_error[0]), .bus_resp_line(ibus_resp_line[0]), .bus_resp_state(),
         .HADDR(i_haddr[0]), .HWRITE(i_hwrite[0]), .HSIZE(i_hsize[0]), .HTRANS(i_htrans[0]),
-        .HWDATA(i_hwdata[0]), .HBURST(), .HPROT(i_hprot[0]), .HMASTLOCK(i_hmastlock[0]),
-        .HRDATA(i_hrdata[0]), .HREADY(i_hready[0]), .HRESP(i_hresp[0]),
+        .HWDATA(i_hwdata[0]), .HBURST(i_hburst[0]), .HPROT(i_hprot[0]), .HMASTLOCK(i_hmastlock[0]),
+        .HRDATA(i_hrdata[0]), .HREADY(i_hready[0]), .HRESP(i_hresp[0]), .HRUSER(i_hruser[0]),
         .REQ_ACTIVE(i_req_active[0])
     );
     ahb_lite_l1_adapter u0_d_ahb_m (
@@ -321,15 +341,16 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[0]), .bus_req_line(dbus_req_line[0]),
         .bus_resp_valid(dbus_resp_valid[0]), .bus_resp_error(dbus_resp_error[0]), .bus_resp_line(dbus_resp_line[0]), .bus_resp_state(dbus_resp_state[0]),
         .HADDR(d_haddr[0]), .HWRITE(d_hwrite[0]), .HSIZE(d_hsize[0]), .HTRANS(d_htrans[0]),
-        .HWDATA(d_hwdata[0]), .HBURST(), .HPROT(d_hprot[0]), .HMASTLOCK(d_hmastlock[0]),
-        .HRDATA(d_hrdata[0]), .HREADY(d_hready[0]), .HRESP(d_hresp[0]),
+        .HWDATA(d_hwdata[0]), .HBURST(d_hburst[0]), .HPROT(d_hprot[0]), .HMASTLOCK(d_hmastlock[0]),
+        .HRDATA(d_hrdata[0]), .HREADY(d_hready[0]), .HRESP(d_hresp[0]), .HRUSER(d_hruser[0]),
         .REQ_ACTIVE(d_req_active[0])
     );
 
     // ------------------------------------------------------
     // Core 1
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR1), .HART_ID(32'd1)) core1 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR1), .HART_ID(32'd1),
+                      .MESI_ENABLE(MESI_ENABLE)) core1 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[1]), .Cache_Flush_Done(cache_flush_core_done[1]), .Cache_Flush_Error(cache_flush_core_error[1]),
@@ -352,8 +373,8 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[1]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[1]), .bus_resp_error(ibus_resp_error[1]), .bus_resp_line(ibus_resp_line[1]), .bus_resp_state(),
         .HADDR(i_haddr[1]), .HWRITE(i_hwrite[1]), .HSIZE(i_hsize[1]), .HTRANS(i_htrans[1]),
-        .HWDATA(i_hwdata[1]), .HBURST(), .HPROT(i_hprot[1]), .HMASTLOCK(i_hmastlock[1]),
-        .HRDATA(i_hrdata[1]), .HREADY(i_hready[1]), .HRESP(i_hresp[1]),
+        .HWDATA(i_hwdata[1]), .HBURST(i_hburst[1]), .HPROT(i_hprot[1]), .HMASTLOCK(i_hmastlock[1]),
+        .HRDATA(i_hrdata[1]), .HREADY(i_hready[1]), .HRESP(i_hresp[1]), .HRUSER(i_hruser[1]),
         .REQ_ACTIVE(i_req_active[1])
     );
     ahb_lite_l1_adapter u1_d_ahb_m (
@@ -362,15 +383,16 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[1]), .bus_req_line(dbus_req_line[1]),
         .bus_resp_valid(dbus_resp_valid[1]), .bus_resp_error(dbus_resp_error[1]), .bus_resp_line(dbus_resp_line[1]), .bus_resp_state(dbus_resp_state[1]),
         .HADDR(d_haddr[1]), .HWRITE(d_hwrite[1]), .HSIZE(d_hsize[1]), .HTRANS(d_htrans[1]),
-        .HWDATA(d_hwdata[1]), .HBURST(), .HPROT(d_hprot[1]), .HMASTLOCK(d_hmastlock[1]),
-        .HRDATA(d_hrdata[1]), .HREADY(d_hready[1]), .HRESP(d_hresp[1]),
+        .HWDATA(d_hwdata[1]), .HBURST(d_hburst[1]), .HPROT(d_hprot[1]), .HMASTLOCK(d_hmastlock[1]),
+        .HRDATA(d_hrdata[1]), .HREADY(d_hready[1]), .HRESP(d_hresp[1]), .HRUSER(d_hruser[1]),
         .REQ_ACTIVE(d_req_active[1])
     );
 
     // ------------------------------------------------------
     // Core 2
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR2), .HART_ID(32'd2)) core2 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR2), .HART_ID(32'd2),
+                      .MESI_ENABLE(MESI_ENABLE)) core2 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[2]), .Cache_Flush_Done(cache_flush_core_done[2]), .Cache_Flush_Error(cache_flush_core_error[2]),
@@ -393,8 +415,8 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[2]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[2]), .bus_resp_error(ibus_resp_error[2]), .bus_resp_line(ibus_resp_line[2]), .bus_resp_state(),
         .HADDR(i_haddr[2]), .HWRITE(i_hwrite[2]), .HSIZE(i_hsize[2]), .HTRANS(i_htrans[2]),
-        .HWDATA(i_hwdata[2]), .HBURST(), .HPROT(i_hprot[2]), .HMASTLOCK(i_hmastlock[2]),
-        .HRDATA(i_hrdata[2]), .HREADY(i_hready[2]), .HRESP(i_hresp[2]),
+        .HWDATA(i_hwdata[2]), .HBURST(i_hburst[2]), .HPROT(i_hprot[2]), .HMASTLOCK(i_hmastlock[2]),
+        .HRDATA(i_hrdata[2]), .HREADY(i_hready[2]), .HRESP(i_hresp[2]), .HRUSER(i_hruser[2]),
         .REQ_ACTIVE(i_req_active[2])
     );
     ahb_lite_l1_adapter u2_d_ahb_m (
@@ -403,15 +425,16 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[2]), .bus_req_line(dbus_req_line[2]),
         .bus_resp_valid(dbus_resp_valid[2]), .bus_resp_error(dbus_resp_error[2]), .bus_resp_line(dbus_resp_line[2]), .bus_resp_state(dbus_resp_state[2]),
         .HADDR(d_haddr[2]), .HWRITE(d_hwrite[2]), .HSIZE(d_hsize[2]), .HTRANS(d_htrans[2]),
-        .HWDATA(d_hwdata[2]), .HBURST(), .HPROT(d_hprot[2]), .HMASTLOCK(d_hmastlock[2]),
-        .HRDATA(d_hrdata[2]), .HREADY(d_hready[2]), .HRESP(d_hresp[2]),
+        .HWDATA(d_hwdata[2]), .HBURST(d_hburst[2]), .HPROT(d_hprot[2]), .HMASTLOCK(d_hmastlock[2]),
+        .HRDATA(d_hrdata[2]), .HREADY(d_hready[2]), .HRESP(d_hresp[2]), .HRUSER(d_hruser[2]),
         .REQ_ACTIVE(d_req_active[2])
     );
 
     // ------------------------------------------------------
     // Core 3
     // ------------------------------------------------------
-    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR3), .HART_ID(32'd3)) core3 (
+    core_l1_wrapper #(.RESET_ADDR(RESET_ADDR3), .HART_ID(32'd3),
+                      .MESI_ENABLE(MESI_ENABLE)) core3 (
         .clk(clk), .rst(rst),
         .Mmu_Flush(Mmu_Flush), .Cache_Flush(l1_flush_request),
         .Cache_Flush_Busy(cache_flush_core_busy[3]), .Cache_Flush_Done(cache_flush_core_done[3]), .Cache_Flush_Error(cache_flush_core_error[3]),
@@ -434,8 +457,8 @@ module quad_core_soc_ahb #(
         .bus_req_addr(ibus_req_addr[3]), .bus_req_line(256'b0),
         .bus_resp_valid(ibus_resp_valid[3]), .bus_resp_error(ibus_resp_error[3]), .bus_resp_line(ibus_resp_line[3]), .bus_resp_state(),
         .HADDR(i_haddr[3]), .HWRITE(i_hwrite[3]), .HSIZE(i_hsize[3]), .HTRANS(i_htrans[3]),
-        .HWDATA(i_hwdata[3]), .HBURST(), .HPROT(i_hprot[3]), .HMASTLOCK(i_hmastlock[3]),
-        .HRDATA(i_hrdata[3]), .HREADY(i_hready[3]), .HRESP(i_hresp[3]),
+        .HWDATA(i_hwdata[3]), .HBURST(i_hburst[3]), .HPROT(i_hprot[3]), .HMASTLOCK(i_hmastlock[3]),
+        .HRDATA(i_hrdata[3]), .HREADY(i_hready[3]), .HRESP(i_hresp[3]), .HRUSER(i_hruser[3]),
         .REQ_ACTIVE(i_req_active[3])
     );
     ahb_lite_l1_adapter u3_d_ahb_m (
@@ -444,8 +467,8 @@ module quad_core_soc_ahb #(
         .bus_req_addr(dbus_req_addr[3]), .bus_req_line(dbus_req_line[3]),
         .bus_resp_valid(dbus_resp_valid[3]), .bus_resp_error(dbus_resp_error[3]), .bus_resp_line(dbus_resp_line[3]), .bus_resp_state(dbus_resp_state[3]),
         .HADDR(d_haddr[3]), .HWRITE(d_hwrite[3]), .HSIZE(d_hsize[3]), .HTRANS(d_htrans[3]),
-        .HWDATA(d_hwdata[3]), .HBURST(), .HPROT(d_hprot[3]), .HMASTLOCK(d_hmastlock[3]),
-        .HRDATA(d_hrdata[3]), .HREADY(d_hready[3]), .HRESP(d_hresp[3]),
+        .HWDATA(d_hwdata[3]), .HBURST(d_hburst[3]), .HPROT(d_hprot[3]), .HMASTLOCK(d_hmastlock[3]),
+        .HRDATA(d_hrdata[3]), .HREADY(d_hready[3]), .HRESP(d_hresp[3]), .HRUSER(d_hruser[3]),
         .REQ_ACTIVE(d_req_active[3])
     );
 
@@ -458,6 +481,8 @@ module quad_core_soc_ahb #(
                                 d_hwrite[3], d_hwrite[2], d_hwrite[1], d_hwrite[0]};
     assign ahb_m_hsize       = {i_hsize[3], i_hsize[2], i_hsize[1], i_hsize[0],
                                 d_hsize[3], d_hsize[2], d_hsize[1], d_hsize[0]};
+    assign ahb_m_hburst      = {i_hburst[3], i_hburst[2], i_hburst[1], i_hburst[0],
+                                d_hburst[3], d_hburst[2], d_hburst[1], d_hburst[0]};
     assign ahb_m_htrans      = {i_htrans[3], i_htrans[2], i_htrans[1], i_htrans[0],
                                 d_htrans[3], d_htrans[2], d_htrans[1], d_htrans[0]};
     assign ahb_m_hwdata      = {i_hwdata[3], i_hwdata[2], i_hwdata[1], i_hwdata[0],
@@ -481,20 +506,25 @@ module quad_core_soc_ahb #(
     assign d_hresp[2] = ahb_m_hresp[2*2 +: 2]; assign d_hresp[3] = ahb_m_hresp[3*2 +: 2];
     assign i_hresp[0] = ahb_m_hresp[4*2 +: 2]; assign i_hresp[1] = ahb_m_hresp[5*2 +: 2];
     assign i_hresp[2] = ahb_m_hresp[6*2 +: 2]; assign i_hresp[3] = ahb_m_hresp[7*2 +: 2];
+    assign d_hruser[0] = ahb_m_hruser[0*2 +: 2]; assign d_hruser[1] = ahb_m_hruser[1*2 +: 2];
+    assign d_hruser[2] = ahb_m_hruser[2*2 +: 2]; assign d_hruser[3] = ahb_m_hruser[3*2 +: 2];
+    assign i_hruser[0] = ahb_m_hruser[4*2 +: 2]; assign i_hruser[1] = ahb_m_hruser[5*2 +: 2];
+    assign i_hruser[2] = ahb_m_hruser[6*2 +: 2]; assign i_hruser[3] = ahb_m_hruser[7*2 +: 2];
 
     ahb_lite_arbiter_8m1s u_ahb_arbiter (
         .HCLK(clk), .HRESETn(HRESETn),
         .M_REQ_ACTIVE(ahb_m_req_active), .M_HADDR(ahb_m_haddr),
-        .M_HWRITE(ahb_m_hwrite), .M_HSIZE(ahb_m_hsize),
+        .M_HWRITE(ahb_m_hwrite), .M_HSIZE(ahb_m_hsize), .M_HBURST(ahb_m_hburst),
         .M_HTRANS(ahb_m_htrans), .M_HWDATA(ahb_m_hwdata),
         .M_HPROT(ahb_m_hprot), .M_HMASTLOCK(ahb_m_hmastlock),
         .M_HGRANT(ahb_m_hgrant), .M_HREADY(ahb_m_hready),
-        .M_HRDATA(ahb_m_hrdata), .M_HRESP(ahb_m_hresp),
+        .M_HRDATA(ahb_m_hrdata), .M_HRESP(ahb_m_hresp), .M_HRUSER(ahb_m_hruser),
         .S_HADDR(shared_haddr), .S_HWRITE(shared_hwrite),
-        .S_HSIZE(shared_hsize), .S_HTRANS(shared_htrans),
+        .S_HSIZE(shared_hsize), .S_HBURST(shared_hburst), .S_HTRANS(shared_htrans),
         .S_HWDATA(shared_hwdata), .S_HPROT(shared_hprot),
         .S_HMASTLOCK(shared_hmastlock), .S_REQ_ACTIVE(shared_req_active),
         .S_HREADY(shared_hready), .S_HRDATA(shared_hrdata), .S_HRESP(shared_hresp),
+        .S_HRUSER(shared_hruser),
         .GRANT_VALID(ahb_grant_valid), .GRANT_SOURCE(ahb_grant_source)
     );
 
@@ -502,8 +532,9 @@ module quad_core_soc_ahb #(
         .HCLK(clk), .HRESETn(HRESETn),
         .HADDR(shared_haddr), .HWRITE(shared_hwrite), .HTRANS(shared_htrans),
         .HWDATA(shared_hwdata), .HMASTLOCK(shared_hmastlock),
-        .HSIZE(shared_hsize), .HPROT(shared_hprot), .REQ_ACTIVE(shared_req_active),
+        .HSIZE(shared_hsize), .HBURST(shared_hburst), .HPROT(shared_hprot), .REQ_ACTIVE(shared_req_active),
         .HREADYOUT(shared_hready), .HRDATA(shared_hrdata), .HRESP(shared_hresp),
+        .HRUSER(shared_hruser),
         .dreq_valid(shared_req_valid), .dreq_type(shared_req_type),
         .dreq_addr(shared_req_addr), .dreq_line(shared_req_line),
         .dresp_valid(shared_resp_valid), .dresp_error(shared_resp_error),
@@ -537,7 +568,9 @@ module quad_core_soc_ahb #(
     cache_controller_mmu #(
         .DEBUG_TRACE_ENABLE(CACHE_DEBUG_TRACE_ENABLE),
         .REQUEST_QUEUE_ENABLE(0),
-        .EXTERNAL_REQUEST_ARBITER(1)
+        .EXTERNAL_REQUEST_ARBITER(1),
+        .MESI_ENABLE(MESI_ENABLE),
+        .MEM_BURST_ENABLE(MEM_BURST_ENABLE)
     ) u_cache_controller_mmu (
         .clk(clk), .rst(rst),
 
@@ -578,7 +611,8 @@ module quad_core_soc_ahb #(
         .ext_req_addr(shared_req_addr), .ext_req_line(shared_req_line),
 
         .mem_req_valid(mem_req_valid), .mem_we(mem_we), .mem_addr(mem_addr), .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),
-        .mem_rdata(mem_rdata), .mem_valid(mem_valid), .mem_error(mem_error),
+        .mem_req_burst(mem_req_burst), .mem_wline(mem_wline),
+        .mem_rdata(mem_rdata), .mem_rline(mem_rline), .mem_valid(mem_valid), .mem_error(mem_error),
         .perf_total_requests(cache_perf_total_requests), .perf_d_bus_reads(cache_perf_d_bus_reads),
         .perf_d_rfos(cache_perf_d_rfos), .perf_d_writebacks(cache_perf_d_writebacks),
         .perf_i_reads(cache_perf_i_reads), .perf_l2_hits(cache_perf_l2_hits),
@@ -631,3 +665,5 @@ module quad_core_soc_ahb #(
     );
 
 endmodule
+
+`undef KLTN_DEBUG_ATTR

@@ -21,6 +21,7 @@ module if_id_registers #(
     output reg [31:0] InstrD,
     output reg [31:0] PCD,
     output reg [31:0] PCPlus4D,
+    output reg        ValidD,
     input         FetchAccessFaultF,
     output reg        FetchPageFaultD,
     output reg        FetchAccessFaultD
@@ -33,6 +34,7 @@ module if_id_registers #(
             InstrD          <= NOP_INSTRUCTION;
             PCD             <= RESET_VECTOR;
             PCPlus4D        <= RESET_VECTOR + 32'h4;
+            ValidD          <= 1'b0;
             FetchPageFaultD <= 1'b0;
             FetchAccessFaultD <= 1'b0;
         end
@@ -40,6 +42,7 @@ module if_id_registers #(
             InstrD          <= NOP_INSTRUCTION;
             PCD             <= 32'h0;
             PCPlus4D        <= 32'h0;
+            ValidD          <= 1'b0;
             FetchPageFaultD <= 1'b0;
             FetchAccessFaultD <= 1'b0;
         end
@@ -47,6 +50,7 @@ module if_id_registers #(
             InstrD          <= InstrF;
             PCD             <= PCF;
             PCPlus4D        <= PCPlus4F;
+            ValidD          <= 1'b1;
             FetchPageFaultD <= FetchPageFaultF;
             FetchAccessFaultD <= FetchAccessFaultF;
         end

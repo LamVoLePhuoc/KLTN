@@ -14,13 +14,12 @@
 // -- matches the core, which has no mechanism for more than one
 // in-flight memory access at a time).
 //
-// Coherence: participates in the system's MSI protocol via a
+// Coherence: participates in the system's parameterized MSI/MESI protocol via a
 // request port (to coherence_manager.v, for misses/upgrades/
 // evictions) and a snoop port (from coherence_manager.v, for other
 // cores' requests that need this cache to invalidate or downgrade).
-// State per line: 2'b00=I, 2'b01=S, 2'b11=M. 2'b10 is deliberately
-// unused so an old MESI Exclusive value cannot silently become a
-// writable line after the protocol conversion.
+// State per line: 2'b00=I, 2'b01=S, 2'b10=E, 2'b11=M. E is used only
+// when MESI_ENABLE=1; the default MSI configuration never installs it.
 //
 // bus_req_type: 2'b00=READ (want S), 2'b01=RFO (want M,
 // read-for-ownership/upgrade), 2'b10=WRITEBACK (voluntary eviction
@@ -64,6 +63,7 @@
 module l1_dcache #(
     parameter INDEX_BITS  = 9,     // 512 sets (32KB, 2-way, 32B line)
     parameter LINE_WORDS  = 8,     // 32B line = 8 x 32-bit words
+    parameter MESI_ENABLE = 0,
     // Physical 0xC000_0000..0xFFFF_FFFF is the MMIO/reserved region
     // selected by mmu_region_decode.v.  Keep the decode parameterized
     // so a board integration can move the device window coherently.
@@ -98,7 +98,7 @@ module l1_dcache #(
     input  wire                       bus_resp_valid,
     input  wire                       bus_resp_error,
     input  wire [LINE_WORDS*32-1:0]   bus_resp_line,
-    input  wire [1:0]                 bus_resp_state, // granted MSI state (S/M) -- ignored for WRITEBACK acks
+    input  wire [1:0]                 bus_resp_state, // granted MSI/MESI state -- ignored for WRITEBACK acks
 
     // ---- Snoop side (from coherence_manager.v) ----
     input  wire         snoop_valid,
@@ -122,7 +122,8 @@ module l1_dcache #(
     localparam LINE_BITS    = LINE_WORDS * 32;
     localparam META_BITS    = TAG_BITS + 2;
 
-    localparam [1:0] ST_I = 2'b00, ST_S = 2'b01, ST_M = 2'b11;
+    localparam [1:0] ST_I = 2'b00, ST_S = 2'b01,
+                     ST_E = 2'b10, ST_M = 2'b11;
     localparam [1:0] REQ_READ = 2'b00, REQ_RFO = 2'b01,
                      REQ_WRITEBACK = 2'b10, REQ_UNCACHED = 2'b11;
 
@@ -242,9 +243,29 @@ module l1_dcache #(
     reg hit_read_done_pulse;
     reg fsm_amo;
 
+    // Simulation-visible performance counters.  These count completed CPU
+    // operations rather than cycles with cpu_re/cpu_we asserted, because the
+    // blocking core deliberately holds a request throughout a miss.  Keeping
+    // the counters internal avoids changing the cache interface; synthesis
+    // removes them when no debug/CSR consumer observes them.
+    reg [31:0] perf_cpu_accesses;
+    reg [31:0] perf_l1_hits;
+    reg [31:0] perf_l1_misses;
+    reg [31:0] perf_l1_read_misses;
+    reg [31:0] perf_l1_write_misses;
+    reg [31:0] perf_uncached_accesses;
+    reg        perf_uncached_inflight;
+
+    // A normal store may silently promote an exclusive clean copy E->M.
+    // AMOs deliberately still issue an RFO: the shared controller is the
+    // system-wide serialization point required by atomic read/modify/write.
     wire access_ok = tag_hit_v & ~snoop_conflict &
-                      (cpu_we ? (tag_hit_state_v == ST_M)
-                               : (tag_hit_state_v == ST_S || tag_hit_state_v == ST_M));
+                      (cpu_we ? ((tag_hit_state_v == ST_M) ||
+                                 (MESI_ENABLE && !cpu_amo &&
+                                  (tag_hit_state_v == ST_E)))
+                               : ((tag_hit_state_v == ST_S) ||
+                                  (MESI_ENABLE && (tag_hit_state_v == ST_E)) ||
+                                  (tag_hit_state_v == ST_M)));
 
     // Data is registered in its final, architecturally formatted form before
     // cpu_valid is asserted.  In particular, live cpu_addr/cpu_memop signals
@@ -588,6 +609,24 @@ module l1_dcache #(
         bus_resp_line;
     wire [LINE_BITS-1:0] data_write_line = cache_write_line;
 
+    // Gate the BRAM ports when the blocking cache has no useful access.  The
+    // previous XPM wrappers forced ENA/ENB high, so both 256-bit data ways and
+    // both metadata ways performed a read on every clock even while idle.
+    // Enables are aligned with the existing synchronous lookup/snoop launch
+    // edges; no pipeline stage or externally visible latency is added.
+    wire core_lookup_launch = (state == S_IDLE) && (cpu_re | cpu_we) &&
+                              !uncached_access;
+    // S_FLUSH_GAP advances to the next set after a dirty writeback.  Prefetch
+    // that set during the mandatory low-valid bubble; otherwise
+    // core_data_index can name the new set while the gated BRAM output still
+    // contains the previous set, causing the first line after a writeback to
+    // be classified from stale metadata and potentially dropped as clean.
+    wire flush_lookup_launch = (state == S_FLUSH_SCAN) ||
+                               (state == S_FLUSH_GAP);
+    wire data_port_a_en = core_lookup_launch | flush_lookup_launch |
+                          data_write_en;
+    wire data_port_b_en = snoop_valid;
+
     // Metadata port A follows the core/flush lookup; port B follows the
     // independent snoop lookup.  A snoop has priority if both ports attempt
     // to update the same way/set on one edge, matching the old sequential
@@ -620,6 +659,9 @@ module l1_dcache #(
     wire snoop_meta_we_way1 = snoop_meta_write &&  snoop_hit_way_v;
     wire [META_BITS-1:0] snoop_meta_din =
         {snoop_lookup_tag, snoop_next_state};
+    wire meta_port_a_en = init_active | data_port_a_en |
+                          flush_wb_invalidate;
+    wire meta_port_b_en = snoop_valid | snoop_meta_write;
 
     // core_read_index already selects flush_set in every maintenance state.
     // Only a registered cache commit needs to override it; keeping the flush
@@ -650,10 +692,12 @@ module l1_dcache #(
         .ADDR_WIDTH(INDEX_BITS)
     ) u_data_way0 (
         .clk   (clk),
+        .en_a  (data_port_a_en),
         .we_a  (data_write_en && (data_write_way == 1'b0)),
         .addr_a(data_port_a_index),
         .din_a (data_write_line),
         .dout_a(core_way0_line),
+        .en_b  (data_port_b_en),
         .we_b  (1'b0),
         .addr_b(snoop_index),
         .din_b ({LINE_BITS{1'b0}}),
@@ -665,10 +709,12 @@ module l1_dcache #(
         .ADDR_WIDTH(INDEX_BITS)
     ) u_data_way1 (
         .clk   (clk),
+        .en_a  (data_port_a_en),
         .we_a  (data_write_en && (data_write_way == 1'b1)),
         .addr_a(data_port_a_index),
         .din_a (data_write_line),
         .dout_a(core_way1_line),
+        .en_b  (data_port_b_en),
         .we_b  (1'b0),
         .addr_b(snoop_index),
         .din_b ({LINE_BITS{1'b0}}),
@@ -680,10 +726,12 @@ module l1_dcache #(
         .ADDR_WIDTH(INDEX_BITS)
     ) u_meta_way0 (
         .clk   (clk),
+        .en_a  (meta_port_a_en),
         .we_a  (meta_a_we_way0),
         .addr_a(meta_port_a_index),
         .din_a (meta_a_din),
         .dout_a(core_meta_way0),
+        .en_b  (meta_port_b_en),
         .we_b  (snoop_meta_we_way0),
         .addr_b(snoop_index),
         .din_b (snoop_meta_din),
@@ -695,10 +743,12 @@ module l1_dcache #(
         .ADDR_WIDTH(INDEX_BITS)
     ) u_meta_way1 (
         .clk   (clk),
+        .en_a  (meta_port_a_en),
         .we_a  (meta_a_we_way1),
         .addr_a(meta_port_a_index),
         .din_a (meta_a_din),
         .dout_a(core_meta_way1),
+        .en_b  (meta_port_b_en),
         .we_b  (snoop_meta_we_way1),
         .addr_b(snoop_index),
         .din_b (snoop_meta_din),
@@ -791,6 +841,13 @@ module l1_dcache #(
             miss_error_pulse <= 1'b0;
             hit_write_done_pulse <= 1'b0;
             hit_read_done_pulse <= 1'b0;
+            perf_cpu_accesses       <= 32'b0;
+            perf_l1_hits            <= 32'b0;
+            perf_l1_misses          <= 32'b0;
+            perf_l1_read_misses     <= 32'b0;
+            perf_l1_write_misses    <= 32'b0;
+            perf_uncached_accesses  <= 32'b0;
+            perf_uncached_inflight  <= 1'b0;
             flush_pending   <= 1'b0;
             flush_seen      <= 1'b0;
             flush_done      <= 1'b0;
@@ -824,6 +881,30 @@ module l1_dcache #(
             init_index      <= {INDEX_BITS{1'b0}};
         end
         else begin
+            // The completion pulses are one cycle wide and already encode the
+            // final outcome after all retries.  Count them before scheduling
+            // their default-low assignments below.  MMIO accesses bypass the
+            // cache and are reported separately, so they cannot distort the
+            // L1 miss-rate denominator.
+            if (cpu_valid) begin
+                if (perf_uncached_inflight) begin
+                    perf_uncached_accesses <= perf_uncached_accesses + 32'd1;
+                end
+                else if (hit_read_done_pulse || hit_write_done_pulse) begin
+                    perf_cpu_accesses <= perf_cpu_accesses + 32'd1;
+                    perf_l1_hits      <= perf_l1_hits + 32'd1;
+                end
+                else if (miss_done_pulse || miss_error_pulse) begin
+                    perf_cpu_accesses <= perf_cpu_accesses + 32'd1;
+                    perf_l1_misses    <= perf_l1_misses + 32'd1;
+                    if (fsm_we)
+                        perf_l1_write_misses <= perf_l1_write_misses + 32'd1;
+                    else
+                        perf_l1_read_misses <= perf_l1_read_misses + 32'd1;
+                end
+                perf_uncached_inflight <= 1'b0;
+            end
+
             miss_done_pulse <= 1'b0;
             miss_error_pulse <= 1'b0;
             hit_write_done_pulse <= 1'b0;
@@ -908,6 +989,7 @@ module l1_dcache #(
                     else if (!miss_done_pulse && !miss_error_pulse &&
                              !hit_write_done_pulse && !hit_read_done_pulse &&
                              (cpu_re | cpu_we) && uncached_access) begin
+                        perf_uncached_inflight <= 1'b1;
                         // Device accesses are strongly ordered by this
                         // blocking cache and bypass both tag/data arrays.
                         // AMOs require an atomic-capable system bus, which
@@ -1083,7 +1165,8 @@ module l1_dcache #(
                             cache_write_way      <= fsm_way;
                             cache_write_set      <= fsm_index;
                             cache_write_tag      <= fsm_tag;
-                            cache_write_state    <= fsm_we ? ST_M : ST_S;
+                            cache_write_state    <= fsm_we ? ST_M :
+                                                    (MESI_ENABLE ? bus_resp_state : ST_S);
                             cache_write_from_hit <= 1'b0;
                             if (fsm_we && fsm_amo)
                                 cpu_response_data <=
@@ -1092,8 +1175,8 @@ module l1_dcache #(
                                 cpu_response_data <= format_load(
                                     bus_resp_line[fsm_word_off[4:2]*32 +: 32],
                                     fsm_word_off[1:0], fsm_memop);
-                            // MSI has no Exclusive state: every read fill is
-                            // Shared even when this is the only copy.
+                            // With MESI enabled, the controller returns E only
+                            // when the requester is the directory's sole holder.
                             state <= S_CACHE_WRITE;
                         end
                         if (bus_resp_error)
@@ -1297,10 +1380,12 @@ module cache_tdp_data_ram #(
     parameter integer ADDR_WIDTH = 6
 ) (
     input  wire                  clk,
+    input  wire                  en_a,
     input  wire                  we_a,
     input  wire [ADDR_WIDTH-1:0] addr_a,
     input  wire [WIDTH-1:0]      din_a,
     output wire [WIDTH-1:0]      dout_a,
+    input  wire                  en_b,
     input  wire                  we_b,
     input  wire [ADDR_WIDTH-1:0] addr_b,
     input  wire [WIDTH-1:0]      din_b,
@@ -1346,7 +1431,7 @@ module cache_tdp_data_ram #(
         .sleep          (1'b0),
         .clka           (clk),
         .rsta           (1'b0),
-        .ena            (1'b1),
+        .ena            (en_a),
         .regcea         (1'b1),
         .wea            (we_a),
         .addra          (addr_a),
@@ -1358,7 +1443,7 @@ module cache_tdp_data_ram #(
         .dbiterra       (),
         .clkb           (clk),
         .rstb           (1'b0),
-        .enb            (1'b1),
+        .enb            (en_b),
         .regceb         (1'b1),
         .web            (we_b),
         .addrb          (addr_b),
@@ -1379,12 +1464,14 @@ module cache_tdp_data_ram #(
     assign dout_b = dout_b_r;
 
     always @(posedge clk) begin
-        if (we_a)
+        if (en_a && we_a)
             mem[addr_a] <= din_a;
-        if (we_b)
+        if (en_b && we_b)
             mem[addr_b] <= din_b;
-        dout_a_r <= mem[addr_a];
-        dout_b_pipe_r <= mem[addr_b];
+        if (en_a)
+            dout_a_r <= mem[addr_a];
+        if (en_b)
+            dout_b_pipe_r <= mem[addr_b];
         dout_b_r      <= dout_b_pipe_r;
     end
 `endif

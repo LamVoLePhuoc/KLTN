@@ -25,11 +25,14 @@ module tb_quad_core_axi_ahb_behavior;
     wire data_pf0, data_pf1, data_pf2, data_pf3;
 
     wire [31:0] awaddr, wdata, araddr;
+    wire [7:0] awlen, arlen;
+    wire [2:0] awsize, arsize;
+    wire [1:0] awburst, arburst;
     wire [3:0]  wstrb;
-    wire awvalid, wvalid, bready, arvalid, rready;
+    wire awvalid, wvalid, wlast, bready, arvalid, rready;
     wire awready, wready, arready;
     reg [1:0] bresp, rresp;
-    reg bvalid, rvalid;
+    reg bvalid, rvalid, rlast;
     reg [31:0] rdata;
 
     reg [31:0] memory [0:MEM_WORDS-1];
@@ -38,13 +41,21 @@ module tb_quad_core_axi_ahb_behavior;
     integer cycles;
     integer axi_reads;
     integer axi_writes;
+    integer axi_read_beats;
+    integer axi_write_beats;
+    integer axi_burst_reads;
+    integer axi_burst_writes;
     reg [3:0] core_done_seen;
 
     reg        read_pending;
     reg [31:0] read_addr;
+    reg [7:0]  read_len;
+    reg [7:0]  read_beat;
     integer    read_delay;
     reg        aw_captured;
     reg [31:0] write_addr;
+    reg [7:0]  write_len;
+    reg [7:0]  write_beat;
     reg        w_captured;
     reg [31:0] write_data;
     reg [3:0]  write_strb;
@@ -147,13 +158,15 @@ module tb_quad_core_axi_ahb_behavior;
         .Fetch_PageFault2(fetch_pf2), .Fetch_PageFault3(fetch_pf3),
         .Data_PageFault0(data_pf0), .Data_PageFault1(data_pf1),
         .Data_PageFault2(data_pf2), .Data_PageFault3(data_pf3),
-        .M_AXI_AWADDR(awaddr), .M_AXI_AWVALID(awvalid),
+        .M_AXI_AWADDR(awaddr), .M_AXI_AWLEN(awlen),
+        .M_AXI_AWSIZE(awsize), .M_AXI_AWBURST(awburst), .M_AXI_AWVALID(awvalid),
         .M_AXI_AWREADY(awready), .M_AXI_WDATA(wdata),
-        .M_AXI_WSTRB(wstrb), .M_AXI_WVALID(wvalid), .M_AXI_WREADY(wready),
+        .M_AXI_WSTRB(wstrb), .M_AXI_WVALID(wvalid), .M_AXI_WLAST(wlast), .M_AXI_WREADY(wready),
         .M_AXI_BRESP(bresp), .M_AXI_BVALID(bvalid), .M_AXI_BREADY(bready),
-        .M_AXI_ARADDR(araddr), .M_AXI_ARVALID(arvalid),
+        .M_AXI_ARADDR(araddr), .M_AXI_ARLEN(arlen),
+        .M_AXI_ARSIZE(arsize), .M_AXI_ARBURST(arburst), .M_AXI_ARVALID(arvalid),
         .M_AXI_ARREADY(arready), .M_AXI_RDATA(rdata),
-        .M_AXI_RRESP(rresp), .M_AXI_RVALID(rvalid), .M_AXI_RREADY(rready)
+        .M_AXI_RRESP(rresp), .M_AXI_RVALID(rvalid), .M_AXI_RLAST(rlast), .M_AXI_RREADY(rready)
     );
 
     always #(CLK_PERIOD/2) clk = ~clk;
@@ -162,19 +175,24 @@ module tb_quad_core_axi_ahb_behavior;
     // retain VALID and payload until each independent AXI handshake.
     assign arready = resetn && !read_pending && !rvalid && (cycles[1:0] != 2'b00);
     assign awready = resetn && !aw_captured && !bvalid && cycles[0];
-    assign wready  = resetn && !w_captured && !bvalid && cycles[1];
+    assign wready  = resetn && aw_captured && !w_captured && !bvalid && cycles[1];
 
     always @(posedge clk) begin
         if (!resetn) begin
             cycles       <= 0;
             read_pending <= 1'b0;
             read_addr    <= 32'b0;
+            read_len     <= 8'b0;
+            read_beat    <= 8'b0;
             read_delay   <= 0;
             rvalid       <= 1'b0;
             rdata        <= 32'b0;
             rresp        <= 2'b00;
+            rlast        <= 1'b0;
             aw_captured  <= 1'b0;
             write_addr   <= 32'b0;
+            write_len    <= 8'b0;
+            write_beat   <= 8'b0;
             w_captured   <= 1'b0;
             write_data   <= 32'b0;
             write_strb   <= 4'b0;
@@ -183,6 +201,10 @@ module tb_quad_core_axi_ahb_behavior;
             bresp        <= 2'b00;
             axi_reads    <= 0;
             axi_writes   <= 0;
+            axi_read_beats <= 0;
+            axi_write_beats <= 0;
+            axi_burst_reads <= 0;
+            axi_burst_writes <= 0;
             ar_waiting   <= 1'b0;
             aw_waiting   <= 1'b0;
             w_waiting    <= 1'b0;
@@ -245,27 +267,60 @@ module tb_quad_core_axi_ahb_behavior;
             if (arvalid && arready) begin
                 read_pending <= 1'b1;
                 read_addr    <= araddr;
+                read_len     <= arlen;
+                read_beat    <= 8'b0;
                 read_delay   <= 2;
                 axi_reads    <= axi_reads + 1;
+                if (arlen == 8'd7 && arsize == 3'b010 && arburst == 2'b01)
+                    axi_burst_reads <= axi_burst_reads + 1;
             end
             else if (read_pending && read_delay > 0)
                 read_delay <= read_delay - 1;
             else if (read_pending && !rvalid) begin
                 rdata  <= (read_addr[31:16] == 16'b0) ?
-                          memory[read_addr[15:2]] : 32'b0;
+                          memory[(read_addr[15:2] + read_beat)] : 32'b0;
                 rresp  <= (read_addr[31:16] == 16'b0) ? 2'b00 : 2'b10;
+                rlast  <= (read_beat == read_len);
                 rvalid <= 1'b1;
-                read_pending <= 1'b0;
             end
-            if (rvalid && rready)
+            if (rvalid && rready) begin
                 rvalid <= 1'b0;
+                axi_read_beats <= axi_read_beats + 1;
+                if (rlast) begin
+                    read_pending <= 1'b0;
+                    read_beat <= 8'b0;
+                end
+                else begin
+                    read_beat <= read_beat + 8'd1;
+                    read_delay <= cycles[0];
+                end
+            end
 
             if (awvalid && awready) begin
                 aw_captured <= 1'b1;
                 write_addr  <= awaddr;
+                write_len   <= awlen;
+                write_beat  <= 8'b0;
+                if (awlen == 8'd7 && awsize == 3'b010 && awburst == 2'b01)
+                    axi_burst_writes <= axi_burst_writes + 1;
             end
             if (wvalid && wready) begin
-                w_captured <= 1'b1;
+                if (wstrb[0]) memory[(write_addr[15:2] + write_beat)][7:0]   <= wdata[7:0];
+                if (wstrb[1]) memory[(write_addr[15:2] + write_beat)][15:8]  <= wdata[15:8];
+                if (wstrb[2]) memory[(write_addr[15:2] + write_beat)][23:16] <= wdata[23:16];
+                if (wstrb[3]) memory[(write_addr[15:2] + write_beat)][31:24] <= wdata[31:24];
+                axi_write_beats <= axi_write_beats + 1;
+                if (wlast) begin
+                    w_captured <= 1'b1;
+                    if (write_beat != write_len) begin
+                        errors = errors + 1;
+                        $display("[FAIL] AXI WLAST beat mismatch got=%0d expected=%0d",
+                                 write_beat, write_len);
+                    end
+                end
+                else begin
+                    write_beat <= write_beat + 8'd1;
+                end
                 write_data <= wdata;
                 write_strb <= wstrb;
             end
@@ -275,10 +330,6 @@ module tb_quad_core_axi_ahb_behavior;
                 write_delay <= write_delay - 1;
             else if ((write_delay == 0) && !bvalid) begin
                 if (write_addr[31:16] == 16'b0) begin
-                    if (write_strb[0]) memory[write_addr[15:2]][7:0]   <= write_data[7:0];
-                    if (write_strb[1]) memory[write_addr[15:2]][15:8]  <= write_data[15:8];
-                    if (write_strb[2]) memory[write_addr[15:2]][23:16] <= write_data[23:16];
-                    if (write_strb[3]) memory[write_addr[15:2]][31:24] <= write_data[31:24];
                     bresp <= 2'b00;
                 end
                 else
@@ -291,6 +342,7 @@ module tb_quad_core_axi_ahb_behavior;
                 bvalid <= 1'b0;
                 aw_captured <= 1'b0;
                 w_captured <= 1'b0;
+                write_beat <= 8'b0;
                 // Do not restart the response delay from the old captured
                 // flags on the B-handshake edge.  All conditions above see
                 // pre-edge values, so without this final-priority assignment
@@ -340,6 +392,8 @@ module tb_quad_core_axi_ahb_behavior;
                    "TC-AXI-SYS-001 four cores execute through the board AXI boundary");
         check_true(axi_reads > 0,
                    "TC-AXI-SYS-002 AXI read traffic completed under backpressure");
+        check_true(axi_burst_reads > 0 && axi_read_beats >= (axi_burst_reads * 8),
+                   "TC-AXI-SYS-002 cached fills used eight-beat AXI INCR bursts");
 
         repeat (8) @(posedge clk);
         @(negedge clk); mmu_flush = 1'b1;
@@ -361,6 +415,8 @@ module tb_quad_core_axi_ahb_behavior;
         repeat (3) @(posedge clk);
         check_true(axi_writes > 0,
                    "TC-AXI-SYS-005 dirty cache data used AXI write channel");
+        check_true(axi_burst_writes > 0 && axi_write_beats >= (axi_burst_writes * 8),
+                   "TC-AXI-SYS-005 dirty lines used eight-beat AXI write bursts");
 
         check_word(DATA_BASE + 32'd0, 32'h0000_0155,
                    "TC-AXI-SYS-006 core0 coherent signature reached AXI memory");

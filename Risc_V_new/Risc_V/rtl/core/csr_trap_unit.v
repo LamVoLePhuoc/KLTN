@@ -117,6 +117,8 @@ module csr_trap_unit #(
         CSR_MIDELEG  = 12'h303,
         CSR_MIE      = 12'h304,
         CSR_MTVEC    = 12'h305,
+        CSR_MHPMEVENT3  = 12'h323,
+        CSR_MHPMEVENT31 = 12'h33F,
         CSR_MSCRATCH = 12'h340,
         CSR_MEPC     = 12'h341,
         CSR_MCAUSE   = 12'h342,
@@ -211,7 +213,15 @@ module csr_trap_unit #(
     // ------------------------------------------------------
     wire [1:0] csr_min_priv   = CsrAddrM[9:8];
     wire       csr_readonly   = (CsrAddrM[11:10] == 2'b11);
-    wire       csr_known      = (CsrAddrM == CSR_SSTATUS)  || (CsrAddrM == CSR_SIE)     ||
+    // Privileged ISA 1.11 permits unimplemented HPM event selectors to be
+    // hardwired zero.  They remain legal WARL CSRs: reads return zero and
+    // writes are ignored by the default write-case below.  Treating them as
+    // nonexistent incorrectly traps the standard ACT boot sequence before
+    // any instruction-under-test executes.
+    wire       csr_is_mhpmevent = (CsrAddrM >= CSR_MHPMEVENT3) &&
+                                  (CsrAddrM <= CSR_MHPMEVENT31);
+    wire       csr_known      = csr_is_mhpmevent ||
+                                (CsrAddrM == CSR_SSTATUS)  || (CsrAddrM == CSR_SIE)     ||
                                  (CsrAddrM == CSR_STVEC)    || (CsrAddrM == CSR_SSCRATCH)||
                                  (CsrAddrM == CSR_SEPC)     || (CsrAddrM == CSR_SCAUSE)  ||
                                  (CsrAddrM == CSR_STVAL)    || (CsrAddrM == CSR_SIP)     ||

@@ -4,7 +4,7 @@
 // cache_controller_mmu
 //
 // Protocol engine used by the shared cache controller.  It contains the
-// atomic MSI transaction FSM and the external-memory line-transfer engine.
+// atomic MSI/MESI transaction FSM and the external-memory line-transfer engine.
 // IMPORTANT ARBITRATION OWNERSHIP:
 //   * The active AHB hierarchy sets EXTERNAL_REQUEST_ARBITER=1.  In that
 //     configuration this module DOES NOT decide which L1 may issue.  The
@@ -49,7 +49,9 @@
 //
 // DIRECTORY INVARIANT: the directory stores a sharer bitmap but no
 // separate dirty-owner ID. Under MSI every transition S->M is an RFO
-// observed here, so an M line has exactly one directory bit set. A
+// observed here. Under MESI, E->M is silent but the E grant is made only
+// when exactly one directory bit is set, so an M line still has exactly
+// one directory bit set. A
 // BusRd/BusRdX snoops every other listed holder; an M holder returns
 // the authoritative line and then moves to S/I. This keeps L2 data
 // coherent without relying on MESI's silent E->M transition.
@@ -68,7 +70,7 @@
 // changes):
 //   dreq_type:  2'b00=READ, 2'b01=RFO, 2'b10=WRITEBACK,
 //               2'b11=UNCACHED single-word bypass
-//   dresp_state: 2'b01=S, 2'b11=M (2'b10 is unused)
+//   dresp_state: 2'b01=S, 2'b10=E (MESI only), 2'b11=M
 //   snoop_type: 1'b0=INVALIDATE, 1'b1=DOWNGRADE
 //
 // EXTERNAL MEMORY ERRORS: mem_error is sampled only with mem_valid and
@@ -89,7 +91,13 @@ module cache_controller_mmu #(
     parameter integer WATCHDOG_LIMIT = 8192,
     parameter EXTERNAL_L2 = 1,
     parameter REQUEST_QUEUE_ENABLE = 0,
-    parameter EXTERNAL_REQUEST_ARBITER = 0
+    parameter EXTERNAL_REQUEST_ARBITER = 0,
+    parameter MESI_ENABLE = 0,
+    // When enabled, cached 32-byte fills/writebacks cross the external
+    // memory boundary as one line transaction.  Uncached/MMIO requests
+    // remain single-word operations.  The default preserves legacy test
+    // harnesses; the board-facing AXI wrapper enables this mode.
+    parameter MEM_BURST_ENABLE = 0
 )(
     input  wire clk,
     input  wire rst,
@@ -141,7 +149,10 @@ module cache_controller_mmu #(
     output reg  [31:0]  mem_addr,
     output reg  [31:0]  mem_wdata,
     output reg  [3:0]   mem_wstrb,
+    output reg          mem_req_burst,
+    output reg  [LINE_WORDS*32-1:0] mem_wline,
     input  wire [31:0]  mem_rdata,
+    input  wire [LINE_WORDS*32-1:0] mem_rline,
     input  wire         mem_valid,
     input  wire         mem_error,
 
@@ -650,6 +661,8 @@ module cache_controller_mmu #(
             mem_addr      <= 32'b0;
             mem_wdata     <= 32'b0;
             mem_wstrb     <= 4'b0;
+            mem_req_burst <= 1'b0;
+            mem_wline     <= {LINE_BITS{1'b0}};
             mem_word_idx  <= 3'd0;
             mem_line_addr <= 32'b0;
             mem_line_buf  <= {LINE_BITS{1'b0}};
@@ -715,6 +728,7 @@ module cache_controller_mmu #(
             end
             mem_req_valid <= 1'b0;
             mem_wstrb     <= 4'b0;
+            mem_req_burst <= 1'b0;
             trace_cycle <= trace_cycle + 32'd1;
             cache_flush_done <= 1'b0;
 
@@ -804,12 +818,16 @@ module cache_controller_mmu #(
                         if (!mem_waiting) begin
                             mem_req_valid <= 1'b1;
                             mem_we        <= 1'b1;
-                            mem_addr      <= mem_line_addr + (mem_word_idx << 2);
+                            mem_req_burst <= MEM_BURST_ENABLE;
+                            mem_addr      <= MEM_BURST_ENABLE ? mem_line_addr :
+                                             mem_line_addr + (mem_word_idx << 2);
                             mem_wdata     <= flush_line[mem_word_idx*32 +: 32];
                             mem_wstrb     <= 4'b1111;
+                            mem_wline     <= flush_line;
                             mem_waiting   <= 1'b1;
                             if (PERF_COUNTER_ENABLE)
-                                perf_mem_write_words <= perf_mem_write_words + 32'd1;
+                                perf_mem_write_words <= perf_mem_write_words +
+                                                        (MEM_BURST_ENABLE ? 32'd8 : 32'd1);
                         end
                         else if (mem_valid) begin
                             mem_waiting <= 1'b0;
@@ -823,7 +841,7 @@ module cache_controller_mmu #(
                                 flush_pending     <= 1'b0;
                                 flush_state       <= F_IDLE;
                             end
-                            else if (mem_word_idx == 3'd7) begin
+                            else if (MEM_BURST_ENABLE || (mem_word_idx == 3'd7)) begin
                                 mem_word_idx <= 3'd0;
                                 flush_state  <= F_CLEAR;
                             end
@@ -1089,12 +1107,16 @@ module cache_controller_mmu #(
                     else if (!mem_waiting) begin
                         mem_req_valid <= 1'b1;
                         mem_we        <= 1'b1;
-                        mem_addr      <= mem_line_addr + (mem_word_idx << 2);
+                        mem_req_burst <= MEM_BURST_ENABLE;
+                        mem_addr      <= MEM_BURST_ENABLE ? mem_line_addr :
+                                         mem_line_addr + (mem_word_idx << 2);
                         mem_wdata     <= line_data[mem_word_idx*32 +: 32];
                         mem_wstrb     <= 4'b1111;
+                        mem_wline     <= line_data;
                         mem_waiting   <= 1'b1;
                         if (PERF_COUNTER_ENABLE)
-                            perf_mem_write_words <= perf_mem_write_words + 32'd1;
+                            perf_mem_write_words <= perf_mem_write_words +
+                                                    (MEM_BURST_ENABLE ? 32'd8 : 32'd1);
                     end
                     else if (mem_valid) begin
                         mem_waiting <= 1'b0;
@@ -1108,7 +1130,7 @@ module cache_controller_mmu #(
                             recovery_dirty    <= 1'b1;
                             state             <= S_ERROR_RESTORE_L2;
                         end
-                        else if (mem_word_idx == 3'd7) begin
+                        else if (MEM_BURST_ENABLE || (mem_word_idx == 3'd7)) begin
                             mem_word_idx  <= 3'd0;
                             state         <= S_FETCH_MEM;
                         end
@@ -1122,11 +1144,14 @@ module cache_controller_mmu #(
                     if (!mem_waiting) begin
                         mem_req_valid <= 1'b1;
                         mem_we        <= 1'b0;
-                        mem_addr      <= req_addr + (mem_word_idx << 2);
+                        mem_req_burst <= MEM_BURST_ENABLE;
+                        mem_addr      <= MEM_BURST_ENABLE ? req_addr :
+                                         req_addr + (mem_word_idx << 2);
                         mem_wstrb     <= 4'b0000;
                         mem_waiting   <= 1'b1;
                         if (PERF_COUNTER_ENABLE)
-                            perf_mem_read_words <= perf_mem_read_words + 32'd1;
+                            perf_mem_read_words <= perf_mem_read_words +
+                                                   (MEM_BURST_ENABLE ? 32'd8 : 32'd1);
                     end
                     else if (mem_valid) begin
                         mem_waiting <= 1'b0;
@@ -1140,6 +1165,13 @@ module cache_controller_mmu #(
                             transaction_error <= 1'b1;
                             recovery_dirty    <= 1'b0;
                             state             <= victim_valid ? S_ERROR_RESTORE_L2 : S_RESPOND;
+                        end
+                        else if (MEM_BURST_ENABLE) begin
+                            mem_line_buf <= mem_rline;
+                            line_data    <= mem_rline;
+                            line_dirty   <= 1'b0;
+                            mem_word_idx <= 3'd0;
+                            state        <= S_L2_FILL;
                         end
                         else begin
                             mem_line_buf[mem_word_idx*32 +: 32] <= mem_rdata;
@@ -1231,9 +1263,11 @@ module cache_controller_mmu #(
                         dresp_error_r[req_core[1:0]] <= transaction_error;
                         dresp_line_r[req_core[1:0]]  <= line_data;
                         dresp_state_r[req_core[1:0]] <=
-                            (req_type == 2'b10) ? 2'b00 :          // WRITEBACK ack, state field unused
-                            (req_type == 2'b01) ? 2'b11 :          // RFO -> M
-                                                  2'b01;           // every MSI read fill -> S
+                            (req_type == 2'b10) ? 2'b00 : // WRITEBACK ack, state field unused
+                            (req_type == 2'b01) ? 2'b11 : // RFO -> M
+                            (MESI_ENABLE && (line_sharers == req_bit)) ?
+                                                  2'b10 : // sole clean holder -> E
+                                                  2'b01;  // shared read fill -> S
                     end
                     else begin
                         iresp_valid_r[req_core[1:0]] <= 1'b1;

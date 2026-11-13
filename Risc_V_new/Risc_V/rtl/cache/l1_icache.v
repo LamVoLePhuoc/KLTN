@@ -167,24 +167,28 @@ module l1_icache #(
 
     wire fill_write_en = (state == S_MISS) && bus_resp_valid &&
                          !bus_resp_error && !flush_pending && !flush;
+    // The fetch port is intentionally always active while idle, but it does
+    // not need to toggle four BRAMs throughout a blocking miss.  A refill
+    // re-enables the selected write port on its commit edge.
+    wire ram_en = (state == S_IDLE) | fill_write_en;
     wire [INDEX_BITS-1:0] result_index =
         lookup_result_addr[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
     wire [INDEX_BITS-1:0] ram_index = fill_write_en ? miss_index : addr_index;
 
     cache_sp_ram #(.WIDTH(LINE_BITS), .ADDR_WIDTH(INDEX_BITS)) u_data_way0 (
-        .clk(clk), .we(fill_write_en && !miss_way), .addr(ram_index),
+        .clk(clk), .en(ram_en), .we(fill_write_en && !miss_way), .addr(ram_index),
         .din(bus_resp_line), .dout(way0_line)
     );
     cache_sp_ram #(.WIDTH(LINE_BITS), .ADDR_WIDTH(INDEX_BITS)) u_data_way1 (
-        .clk(clk), .we(fill_write_en && miss_way), .addr(ram_index),
+        .clk(clk), .en(ram_en), .we(fill_write_en && miss_way), .addr(ram_index),
         .din(bus_resp_line), .dout(way1_line)
     );
     cache_sp_ram #(.WIDTH(TAG_BITS), .ADDR_WIDTH(INDEX_BITS)) u_meta_way0 (
-        .clk(clk), .we(fill_write_en && !miss_way),
+        .clk(clk), .en(ram_en), .we(fill_write_en && !miss_way),
         .addr(ram_index), .din(miss_tag), .dout(way0_tag)
     );
     cache_sp_ram #(.WIDTH(TAG_BITS), .ADDR_WIDTH(INDEX_BITS)) u_meta_way1 (
-        .clk(clk), .we(fill_write_en && miss_way),
+        .clk(clk), .en(ram_en), .we(fill_write_en && miss_way),
         .addr(ram_index), .din(miss_tag), .dout(way1_tag)
     );
 
@@ -367,6 +371,7 @@ module cache_sp_ram #(
     parameter integer ADDR_WIDTH = 9
 ) (
     input  wire                  clk,
+    input  wire                  en,
     input  wire                  we,
     input  wire [ADDR_WIDTH-1:0] addr,
     input  wire [WIDTH-1:0]      din,
@@ -396,7 +401,7 @@ module cache_sp_ram #(
         .WRITE_MODE_A       ("read_first"),
         .WRITE_PROTECT      (1)
     ) u_xpm (
-        .sleep(1'b0), .clka(clk), .rsta(1'b0), .ena(1'b1),
+        .sleep(1'b0), .clka(clk), .rsta(1'b0), .ena(en),
         .regcea(1'b1), .wea(we), .addra(addr), .dina(din),
         .injectsbiterra(1'b0), .injectdbiterra(1'b0),
         .douta(dout), .sbiterra(), .dbiterra()
@@ -407,9 +412,10 @@ module cache_sp_ram #(
     reg [WIDTH-1:0] dout_r;
     assign dout = dout_r;
     always @(posedge clk) begin
-        if (we)
+        if (en && we)
             mem[addr] <= din;
-        read_pipe_r <= mem[addr];
+        if (en)
+            read_pipe_r <= mem[addr];
         dout_r <= read_pipe_r;
     end
 `endif

@@ -20,7 +20,7 @@
 // several times over. This adapter instead sits at the OTHER
 // natural AHB boundary in the diagram -- the "CORE -> HIGH-SPEED
 // BUS" link -- as a new, small, self-contained file: it changes
-// nothing about coherence_manager.v's arbitration or MSI logic,
+// nothing about coherence_manager.v's arbitration or MSI/MESI logic,
 // only the wire protocol one core's cache uses to reach it. Wire
 // core_l1_wrapper.v's l1_icache/l1_dcache bus_req/bus_resp ports
 // through this adapter, and the far end presents literal AHB-Lite
@@ -46,8 +46,9 @@
 //     session's "provable by hand, not by simulator" bias argues
 //     against). One line fill/writeback is 8 sequential, fully
 //     non-overlapped word transfers -- correct, AHB-Lite-legal,
-//     just not maximally fast. A real burst (HBURST=3'b101, INCR8)
-//     is a well-defined future optimization once this is simulated.
+//     just not maximally fast. Cached line traffic is nevertheless one legal
+//     fixed-length INCR8 burst: beat 0 is NONSEQ, beats 1..7 are SEQ, and the
+//     non-overlapped data cycles use BUSY rather than terminating the burst.
 //     An uncached/MMIO request is exactly one transfer and uses HPROT[3]
 //     plus HSIZE to retain non-cacheable and byte/half/word semantics.
 //   - Any non-OKAY HRESP terminates the current line transaction and
@@ -73,9 +74,7 @@ module ahb_lite_l1_adapter (
     output reg          bus_resp_valid,
     output reg          bus_resp_error,
     output reg  [255:0] bus_resp_line,
-    output reg  [1:0]   bus_resp_state, // MSI read fills are always S; write/RFO
-                                          // completion is promoted to M locally by
-                                          // l1_dcache after the locked request returns.
+    output reg  [1:0]   bus_resp_state, // MSI/MESI grant returned over HRUSER
     output wire         REQ_ACTIVE,     // internal completion sideband: remains
                                         // high until L1 commits the returned line
 
@@ -85,17 +84,19 @@ module ahb_lite_l1_adapter (
     output wire [2:0]    HSIZE,
     output reg  [1:0]    HTRANS,
     output reg  [31:0]   HWDATA,
-    output wire [2:0]    HBURST,     // tied SINGLE (3'b000) -- see header
+    output wire [2:0]    HBURST,
     output wire [3:0]    HPROT,
     output wire          HMASTLOCK,  // asserted for every RFO/upgrade transfer
     input  wire [31:0]   HRDATA,
     input  wire          HREADY,
-    input  wire [1:0]    HRESP
+    input  wire [1:0]    HRESP,
+    input  wire [1:0]    HRUSER       // user response sideband: I/S/E/M grant
 );
 
-    localparam [1:0] TRANS_IDLE = 2'b00, TRANS_NONSEQ = 2'b10;
+    localparam [1:0] TRANS_IDLE = 2'b00, TRANS_BUSY = 2'b01,
+                     TRANS_NONSEQ = 2'b10, TRANS_SEQ = 2'b11;
+    localparam [2:0] BURST_SINGLE = 3'b000, BURST_INCR8 = 3'b101;
 
-    assign HBURST    = 3'b000;      // SINGLE (see header)
     assign REQ_ACTIVE = bus_req_valid;
 
     wire HRESETn_sync = HRESETn;    // kept as its own wire so the intent (active-low
@@ -117,6 +118,8 @@ module ahb_lite_l1_adapter (
     reg         is_write;
     reg         is_rfo;
     reg         is_uncached;
+
+    assign HBURST = is_uncached ? BURST_SINGLE : BURST_INCR8;
 
     function [2:0] uncached_hsize;
         input [3:0] strb;
@@ -148,6 +151,7 @@ module ahb_lite_l1_adapter (
             is_uncached    <= 1'b0;
             bus_resp_valid <= 1'b0;
             bus_resp_error <= 1'b0;
+            bus_resp_state <= 2'b00;
         end
         else begin
             bus_resp_valid <= 1'b0; // 1-cycle pulse, default low
@@ -194,11 +198,12 @@ module ahb_lite_l1_adapter (
                     if (is_write) begin
                         HWDATA <= wr_line_buf[word_idx*32 +: 32];
                     end
-                    // No address pipelining: the following cycle is
-                    // only this transfer's data phase, so advertise
-                    // IDLE rather than letting the slave interpret the
-                    // same NONSEQ address more than once.
-                    HTRANS <= TRANS_IDLE;
+                    // No address pipelining: BUSY retains the fixed INCR8
+                    // burst between cached beats without creating another
+                    // transfer.  The final beat and uncached SINGLE end in
+                    // IDLE because there is no following address phase.
+                    HTRANS <= (is_uncached || (word_idx == 3'd7)) ?
+                              TRANS_IDLE : TRANS_BUSY;
                     state <= S_DATA;
                 end
 
@@ -211,6 +216,7 @@ module ahb_lite_l1_adapter (
                             HTRANS         <= TRANS_IDLE;
                             bus_resp_valid <= 1'b1;
                             bus_resp_error <= 1'b1;
+                            bus_resp_state <= 2'b00;
                             word_idx       <= 3'd0;
                             state          <= S_WAIT_REQ_DROP;
                         end
@@ -237,7 +243,7 @@ module ahb_lite_l1_adapter (
                                 bus_resp_valid <= 1'b1;
                                 bus_resp_line  <= is_write ? wr_line_buf
                                                             : { HRDATA, rd_line_buf[223:0] };
-                                bus_resp_state <= 2'b01; // S -- see port comment
+                                bus_resp_state <= is_write ? 2'b00 : HRUSER;
                                 word_idx       <= 3'd0;
                                 state          <= S_WAIT_REQ_DROP;
                             end
@@ -246,7 +252,7 @@ module ahb_lite_l1_adapter (
                                 // line_addr stays pinned at the line base.
                                 word_idx <= word_idx + 3'd1;
                                 HADDR    <= line_addr + ((word_idx + 3'd1) << 2);
-                                HTRANS   <= TRANS_NONSEQ;
+                                HTRANS   <= TRANS_SEQ;
                                 state    <= S_ADDR;
                             end
                         end

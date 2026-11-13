@@ -422,6 +422,122 @@ objective, but application throughput must be measured before claiming a net
 performance gain. A future throughput-oriented step should decouple the fetch
 request/response handshake or allow pipelined outstanding fetch addresses.
 
+## Checkpoint 13 — VCU129 250 MHz core/L1 and MSI–MESI workload comparison
+
+The active RTL was retargeted to the VCU129 project part
+`xcvu29p-fsga2577-2L-e`. The PPA flow defines `PPA_NO_MARK_DEBUG`, rejects any
+remaining `MARK_DEBUG` net after synthesis and uses one Vivado worker to stay
+within the available host-memory envelope. Both protocol variants completed
+place and route at a 4.000 ns constraint with zero failed routes and positive
+setup/hold slack:
+
+| Protocol | Setup WNS | Hold | Timing-derived estimate | LUT | FF | BRAM tiles |
+|---|---:|---:|---:|---:|---:|---:|
+| MSI | +0.295 ns | +0.011 ns | 269.906 MHz | 10,618 | 6,769 | 26 |
+| MESI | +0.143 ns | +0.004 ns | 259.269 MHz | 10,619 | 6,769 | 26 |
+
+Evidence:
+
+- MSI routed checkpoint and reports:
+  `reports/ooc-ppa-core_l1_wrapper-20261110-224555/summary.md`.
+- MESI routed checkpoint and reports:
+  `reports/ooc-ppa-core_l1_wrapper-20261110-220827/summary.md`.
+- Active directed/random regression: 25/25 PASS:
+  `reports/xsim-active-cache-20261110-132613/summary.md`.
+- IP-to-board-wrapper hierarchy regression: 5/5 PASS:
+  `reports/xsim-behavior-hierarchy-20261110-133202/summary.md`.
+
+The same compiled RV32IMA binary then ran on four harts in both modes. Both
+variants completed in 66,486 cycles with 22,074 retired instructions
+(aggregate IPC 0.332), 4,242 L1 accesses, 837 L1 misses (19.7312%), 169 AXI
+eight-beat read bursts and 4 single-beat writes. The identical counters mean
+this workload does not contain enough private-read-then-write traffic to expose
+MESI's E-to-M silent upgrade at the system bus. The randomized coherence test
+independently checks that E is granted only to a sole reader and that E-to-M
+does not issue an RFO.
+
+Evidence: `reports/xsim-quad-workload-20261110-230607/summary.md`.
+
+Workload activity was captured cycle-accurately at a 10 ns simulation period.
+Because XSIM 2022.2 crashed when retaining the full four-core debug database at
+4 ns, `scripts/scale_saif_clock.ps1` scales every SAIF `T0/T1/TX/TZ/TB` value
+by 4/10 while preserving transition counts. This keeps state probabilities
+unchanged and raises toggle rates by exactly 2.5 for the routed 250 MHz clock.
+Vivado matched 5,118/21,319 MSI nets and 5,121/21,321 MESI nets (24%) and used
+probabilistic propagation for optimized/unmatched nets.
+
+| Protocol | Dynamic | Clock | CLB logic | Signals | BRAM | DSP | Confidence |
+|---|---:|---:|---:|---:|---:|---:|---|
+| MSI | 0.126 W | 0.040 W | 0.009 W | 0.010 W | 0.066 W | 0.001 W | Medium |
+| MESI | 0.127 W | 0.041 W | 0.009 W | 0.009 W | 0.066 W | 0.001 W | Medium |
+
+These are routed **one-core plus private L1** estimates, not full-SoC power.
+The 1 mW delta is below the useful resolution/confidence of this experiment;
+there is no evidence that MESI reduces power for the current workload. The
+SAIF also contains unknown values on the D-cache request-line payload while
+the payload is protocol-invalid, so these reports must not replace a full-SoC
+post-route SAIF run with clean reset and board constraints.
+
+At this checkpoint, the full four-core implementation remained unproven at
+250 MHz because Vivado exhausted host memory during flat full-wrapper
+synthesis. Checkpoint 14 supersedes this limitation with a bottom-up
+hierarchical implementation.
+
+## Checkpoint 14 — full four-core route and official ACT4 closure
+
+The full `quad_core_axi_wrapper_ahb` design was implemented bottom-up to avoid
+the flat-flow memory failure. Four HART-specific, currently synthesized
+`core_l1_wrapper` checkpoints were inserted as `HD.PARTITION` children into the
+parent AHB/coherence/L2/AXI netlist. All black boxes were resolved before
+implementation and `MARK_DEBUG` was absent.
+
+The complete internal SoC route meets the 4.000 ns (250 MHz) constraint:
+
+| Metric | Routed result |
+|---|---:|
+| Setup WNS | +0.158 ns |
+| Hold slack | +0.040 ns |
+| Timing-derived estimate | 260.281 MHz |
+| Fully routed nets | 72,666 / 72,666 |
+| Routing errors | 0 |
+| CLB LUTs | 43,470 (2.52%) |
+| CLB registers | 39,419 (1.14%) |
+| BRAM tiles | 242.5 (9.02%) |
+| DSPs | 16 (0.13%) |
+
+The critical data path is 3.824 ns with 12 logic levels; routing contributes
+2.859 ns (74.8%). It is inside core 0, from an EX/MEM destination-register bit
+to an EX/MEM ALU-result bit. Evidence is in
+`reports/hier-ppa-quad-core-soc-20261113-173613/summary.md`, with detailed
+timing, utilization, route-status, methodology reports and the routed DCP in
+the same directory.
+
+This proves the current four-core RTL can be routed at 250 MHz on the selected
+`xcvu29p-fsga2577-2L-e` part. The 260.281 MHz value is an estimate from slack,
+not a separately routed frequency. This run uses `-no_iobuf` and only an
+internal ACLK constraint, so it is not yet board-pin sign-off: final VCU129
+integration must use the actual Clocking Wizard/BUFG path and add external AXI
+input/output-delay constraints.
+
+Architectural closure was performed with the official ACT4 source pinned to
+commit `792e55702c6ffff5c8432670086f126f40b88c9e`, GCC 15.2.0 and Sail 0.16.
+All 65 generated unprivileged RV32 `I`, `M`, `Zaamo`, `Zalrsc`, `Zicsr` and
+`Zifencei` ELF tests passed. The Sail profile was corrected to match this DUT:
+unsupported compressed/floating-point extensions are disabled, `IALIGN=32`,
+and `mstatus.FS` is read-only zero. Evidence is in
+`reports/xsim-riscv-arch-test-20261113-170438/summary.md`; privileged
+certification remains explicitly out of scope.
+
+After the CSR, external-stall/MDU and `FENCE.I` pipeline-restart fixes, the
+independent regressions also pass: active cache/protocol/coherence 25/25,
+IP-to-board-wrapper hierarchy 5/5, and compiled four-core MSI/MESI workload
+2/2. The workload still completes in 66,486 cycles with aggregate IPC 0.332,
+showing that the functional fixes did not change its measured throughput.
+The corresponding evidence is in
+`reports/xsim-active-cache-20261113-171547/summary.md`,
+`reports/xsim-behavior-hierarchy-20261113-171935/summary.md`, and
+`reports/xsim-quad-workload-20261113-172105/summary.md`.
+
 ## Measurement record template
 
 ### `<module>` — `<date>`

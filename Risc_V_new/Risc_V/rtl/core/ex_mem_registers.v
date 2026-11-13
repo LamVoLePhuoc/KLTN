@@ -23,6 +23,7 @@ module ex_mem_registers(
     // see that file), not threaded from D at all ---
     input  wire [8:0]  ExcFlagsE,
     input  wire [31:0] InstrE,
+    input  wire        ValidE,
     input  wire [31:0] CsrWDataE,
 
     // --- Data Signals from Execute (E) ---
@@ -44,6 +45,7 @@ module ex_mem_registers(
 
     output reg  [8:0]  ExcFlagsM,
     output reg  [31:0] InstrM,
+    output reg         ValidM,
     output reg  [31:0] CsrWDataM,
 
     output reg  [4:0]  RD_M,
@@ -65,6 +67,7 @@ module ex_mem_registers(
             Fence_M     <= 1'b0;
             ExcFlagsM   <= 9'b0;
             InstrM      <= 32'h00000013;
+            ValidM      <= 1'b0;
             CsrWDataM   <= 32'b0;
 
             RD_M        <= 5'b00000;
@@ -85,6 +88,7 @@ module ex_mem_registers(
             Fence_M     <= 1'b0;
             ExcFlagsM   <= 9'b0;
             InstrM      <= 32'h00000013;
+            ValidM      <= 1'b0;
             CsrWDataM   <= 32'b0;
 
             RD_M        <= 5'b00000;
@@ -104,6 +108,7 @@ module ex_mem_registers(
             Fence_M     <= Fence_E;
             ExcFlagsM   <= ExcFlagsE;
             InstrM      <= InstrE;
+            ValidM      <= ValidE;
             CsrWDataM   <= CsrWDataE;
 
             RD_M        <= RD_E;

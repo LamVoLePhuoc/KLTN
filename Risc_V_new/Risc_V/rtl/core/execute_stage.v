@@ -3,6 +3,7 @@
 module execute_stage(
     input  wire        clk,
     input  wire        rst,
+    input  wire        Stall_Core_External,
 
     // ==========================================
     // INTEGER PATH
@@ -110,10 +111,12 @@ module execute_stage(
         (ALUControlE == ALU_REMU);
 
     // Start MDU đúng 1 lần khi lệnh M đứng ở EX
-    assign mdu_start_pulse = IsMResultE && !mdu_issued && !MDU_BusyE && !MDU_DoneE;
+    assign mdu_start_pulse = IsMResultE && !mdu_issued && !MDU_BusyE;
 
-    // Stall toàn pipeline cho tới khi MDU xong
-    assign Stall_MDU_Req = IsMResultE && !MDU_DoneE;
+    // Once issued, busy=0 denotes a completed result.  Keep that result valid
+    // if an unrelated cache stall still holds this instruction in E, rather
+    // than reissuing the same operation after MDU_DoneE's one-cycle pulse.
+    assign Stall_MDU_Req = IsMResultE && (!mdu_issued || MDU_BusyE);
 
     // ==========================================
     // INTEGER FORWARDING
@@ -202,7 +205,9 @@ module execute_stage(
         else if (!IsMResultE) begin
             mdu_issued <= 1'b0;
         end
-        else if (MDU_DoneE) begin
+        else if (mdu_issued && !MDU_BusyE && !Stall_Core_External) begin
+            // The completed instruction advances out of E on this edge.
+            // Clearing now also permits a back-to-back M instruction to issue.
             mdu_issued <= 1'b0;
         end
         else if (mdu_start_pulse) begin

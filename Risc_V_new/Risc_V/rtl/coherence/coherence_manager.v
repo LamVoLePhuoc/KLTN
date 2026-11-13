@@ -7,7 +7,8 @@ module coherence_manager #(
     parameter LINE_WORDS = 8,
     parameter PERF_COUNTER_ENABLE = 1,
     parameter DEBUG_TRACE_ENABLE = 0,
-    parameter integer WATCHDOG_LIMIT = 8192
+    parameter integer WATCHDOG_LIMIT = 8192,
+    parameter MESI_ENABLE = 0
 )(
     input wire clk, input wire rst,
     input wire c0_dreq_valid, input wire [1:0] c0_dreq_type, input wire [31:0] c0_dreq_addr, input wire [255:0] c0_dreq_line,
@@ -51,7 +52,8 @@ module coherence_manager #(
     cache_controller_mmu #(
         .LINE_WORDS(LINE_WORDS), .PERF_COUNTER_ENABLE(PERF_COUNTER_ENABLE),
         .DEBUG_TRACE_ENABLE(DEBUG_TRACE_ENABLE), .WATCHDOG_LIMIT(WATCHDOG_LIMIT),
-        .EXTERNAL_L2(0), .REQUEST_QUEUE_ENABLE(0)
+        .EXTERNAL_L2(0), .REQUEST_QUEUE_ENABLE(0),
+        .MESI_ENABLE(MESI_ENABLE)
     ) u_cache_controller_mmu (
         .clk(clk), .rst(rst),
 

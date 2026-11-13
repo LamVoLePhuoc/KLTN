@@ -1,0 +1,174 @@
+# Build and execute the same compiled four-hart workload in MSI and MESI mode.
+# Each run emits a self-checking log and machine-readable performance
+# statistics.  Workload SAIF is a separate debug-instrumented run because
+# XSIM cannot open a SAIF database from a -debug off snapshot.
+
+set script_dir  [file dirname [file normalize [info script]]]
+set project_dir [file normalize [file join $script_dir ..]]
+set rtl_dir     [file join $project_dir rtl]
+set sim_dir     [file join $project_dir sim]
+set build_ps1   [file join $script_dir build_quad_cache_workload.ps1]
+set image_src   [file join $project_dir build workloads quad_cache quad_cache_workload.mem]
+set collect_saif 0
+set requested_protocol ""
+foreach arg $argv {
+    set upper [string toupper $arg]
+    if {$upper eq "SAIF"} {
+        set collect_saif 1
+    } elseif {$upper eq "MSI" || $upper eq "MESI"} {
+        set requested_protocol $upper
+    } else {
+        error "Optional arguments are MSI, MESI and SAIF; got '$arg'"
+    }
+}
+set stamp       [clock format [clock seconds] -format "%Y%m%d-%H%M%S"]
+set report_kind [expr {$collect_saif ? "xsim-quad-workload-saif" : "xsim-quad-workload"}]
+set report_dir  [file join $project_dir reports "$report_kind-$stamp"]
+file mkdir $report_dir
+
+if {[catch {exec powershell -ExecutionPolicy Bypass -File $build_ps1} build_output]} {
+    set fd [open [file join $report_dir build-workload.log] w]
+    puts $fd $build_output
+    close $fd
+    error "Compiled workload build failed. See $report_dir/build-workload.log"
+}
+set fd [open [file join $report_dir build-workload.log] w]
+puts $fd $build_output
+close $fd
+if {![file exists $image_src]} {
+    error "Workload builder did not create $image_src"
+}
+file copy -force $image_src [file join $report_dir quad_cache_workload.mem]
+
+set rtl_files {}
+set manifest [open [file join $rtl_dir files.f] r]
+while {[gets $manifest line] >= 0} {
+    set line [string trim $line]
+    if {$line eq "" || [string index $line 0] eq "#"} { continue }
+    lappend rtl_files [file normalize [file join $rtl_dir $line]]
+}
+close $manifest
+
+set old_dir [pwd]
+cd $report_dir
+if {[catch {exec xvlog -work xil_defaultlib {*}$rtl_files} rtl_output]} {
+    set fd [open compile-rtl.log w]; puts $fd $rtl_output; close $fd
+    cd $old_dir
+    error "RTL compile failed. See $report_dir/compile-rtl.log"
+}
+set fd [open compile-rtl.log w]; puts $fd $rtl_output; close $fd
+
+set tb_file [file join $sim_dir tb_quad_core_compiled_workload.v]
+if {[catch {exec xvlog -work xil_defaultlib $tb_file} tb_output]} {
+    set fd [open compile-tb.log w]; puts $fd $tb_output; close $fd
+    cd $old_dir
+    error "Workload testbench compile failed. See $report_dir/compile-tb.log"
+}
+set fd [open compile-tb.log w]; puts $fd $tb_output; close $fd
+
+set tests {
+    {MSI  tb_quad_core_compiled_workload_msi}
+    {MESI tb_quad_core_compiled_workload_mesi}
+}
+if {$collect_saif} {
+    set tests {
+        {MSI  tb_quad_core_compiled_workload_msi_250}
+        {MESI tb_quad_core_compiled_workload_mesi_250}
+    }
+}
+if {$requested_protocol ne ""} {
+    if {$requested_protocol eq "MSI"} {
+        set top [expr {$collect_saif ? "tb_quad_core_compiled_workload_msi_250" :
+                                      "tb_quad_core_compiled_workload_msi"}]
+        set tests [list [list MSI $top]]
+    } elseif {$requested_protocol eq "MESI"} {
+        set top [expr {$collect_saif ? "tb_quad_core_compiled_workload_mesi_250" :
+                                      "tb_quad_core_compiled_workload_mesi"}]
+        set tests [list [list MESI $top]]
+    }
+}
+set results {}
+set pass_count 0
+foreach test $tests {
+    lassign $test protocol top
+    set snapshot "${top}_behav"
+    set elab_log [file join $report_dir "elab-$protocol.log"]
+    set run_log  [file join $report_dir "run-$protocol.log"]
+    set sim_tcl  [file join $report_dir "run-$protocol.tcl"]
+    set saif_out [file join $report_dir "workload-$protocol.saif"]
+
+    # Four complete cores exceed the practical memory envelope of XSIM 2022.2
+    # when "typical" waveform instrumentation is enabled.  SAIF is collected
+    # explicitly by log_saif, so generic waveform debug is unnecessary here.
+    set debug_mode [expr {$collect_saif ? "typical" : "off"}]
+    catch {exec xelab -debug $debug_mode -mt off "xil_defaultlib.$top" -snapshot $snapshot} elab_output
+    set fd [open $elab_log w]; puts $fd $elab_output; close $fd
+    set snapshot_exe [file join $report_dir xsim.dir $snapshot xsimk.exe]
+    if {![file exists $snapshot_exe]} {
+        lappend results [list $protocol TOOL_ERROR ""]
+        continue
+    }
+
+    set fd [open $sim_tcl w]
+    if {$collect_saif} {
+        puts $fd "open_saif \{$saif_out\}"
+        puts $fd "log_saif \[get_objects -r /$top/test/dut/*\]"
+    }
+    puts $fd "run all"
+    if {$collect_saif} {
+        puts $fd "close_saif"
+    }
+    puts $fd "quit"
+    close $fd
+
+    catch {exec xsim $snapshot -tclbatch $sim_tcl} run_output
+    set fd [open $run_log w]; puts $fd $run_output; close $fd
+
+    set status DUT_FAIL
+    set stats ""
+    foreach line [split $run_output "\n"] {
+        if {[string first "QUAD_WORKLOAD_STATS" $line] >= 0} {
+            set stats [string trim $line]
+        }
+    }
+    if {[string first "QUAD_CORE_COMPILED_WORKLOAD_TB: PASS" $run_output] >= 0 &&
+        [string first "QUAD_CORE_COMPILED_WORKLOAD_TB: FAIL" $run_output] < 0 &&
+        $stats ne "" &&
+        (!$collect_saif || ([file exists $saif_out] && [file size $saif_out] > 0))} {
+        set status PASS
+        incr pass_count
+    }
+    lappend results [list $protocol $status $stats]
+    puts [format "%-5s %s" $protocol $status]
+}
+
+set summary [file join $report_dir summary.md]
+set fd [open $summary w]
+puts $fd "# Compiled four-core workload"
+puts $fd ""
+puts $fd "Generated: [clock format [clock seconds]]"
+puts $fd ""
+puts $fd "- Result: $pass_count/[llength $tests] PASS"
+puts $fd "- Program image: `quad_cache_workload.mem` (RV32IMA, four harts at 0x1000)"
+puts $fd "- Workload SAIF: [expr {$collect_saif ? "enabled (DUT hierarchy only)" : "disabled"}]"
+if {$collect_saif} { puts $fd "- SAIF simulation clock: `4.000 ns` (`250 MHz`)" }
+puts $fd ""
+puts $fd "| Protocol | Status | Statistics | SAIF bytes |"
+puts $fd "|---|---:|---|---:|"
+foreach result $results {
+    lassign $result protocol status stats
+    set saif_bytes 0
+    set saif_file [file join $report_dir "workload-$protocol.saif"]
+    if {[file exists $saif_file]} { set saif_bytes [file size $saif_file] }
+    puts $fd "| $protocol | $status | `$stats` | $saif_bytes |"
+}
+puts $fd ""
+puts $fd "> `ipc_milli=1000` means aggregate IPC=1.000; rates ending in `_ppm` are parts per million."
+close $fd
+cd $old_dir
+
+puts "=== RESULT: $pass_count/[llength $tests] workload runs PASS ==="
+puts "Evidence: $summary"
+if {$pass_count != [llength $tests]} {
+    error "Compiled workload gate failed. Inspect $summary and per-protocol logs."
+}

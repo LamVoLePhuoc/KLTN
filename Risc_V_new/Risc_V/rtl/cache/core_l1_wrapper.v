@@ -1,5 +1,11 @@
 `timescale 1ns / 1ps
 
+`ifdef PPA_NO_MARK_DEBUG
+`define KLTN_DEBUG_ATTR
+`else
+`define KLTN_DEBUG_ATTR (* mark_debug = "true" *)
+`endif
+
 // ============================================================
 // core_l1_wrapper
 //
@@ -31,6 +37,7 @@
 module core_l1_wrapper #(
     parameter [31:0] RESET_ADDR = 32'h0000_1000,
     parameter [31:0] HART_ID    = 32'd0,
+    parameter        MESI_ENABLE = 0,
     // Deprecated compatibility parameters. They intentionally have no
     // effect now that address translation is outside the thesis scope.
     parameter        MMU_REGION_POLICY_ENABLE = 0,
@@ -104,8 +111,8 @@ module core_l1_wrapper #(
     wire [31:0] Mem_ReadDataM;
     wire        Mem_DataValid;
     wire        Mem_DataError;
-    (* mark_debug = "true" *) wire Fetch_AccessFault;
-    (* mark_debug = "true" *) wire Data_AccessFault;
+    `KLTN_DEBUG_ATTR wire Fetch_AccessFault;
+    `KLTN_DEBUG_ATTR wire Data_AccessFault;
 
     wire [31:0] snoop_addr_to_core;
     wire        snoop_we_to_core;
@@ -123,7 +130,7 @@ module core_l1_wrapper #(
     wire        dcache_flush_error;
     wire        icache_flush_busy;
     wire        icache_flush_done;
-    (* mark_debug = "true" *) reg cache_maintenance_error;
+    `KLTN_DEBUG_ATTR reg cache_maintenance_error;
 
     wire cache_flush_trigger = (Cache_Flush && !cache_flush_seen) ||
                                (fence_i_m && !fence_i_seen);
@@ -269,7 +276,7 @@ module core_l1_wrapper #(
         .bus_resp_line  (ibus_resp_line)
     );
 
-    l1_dcache u_dcache (
+    l1_dcache #(.MESI_ENABLE(MESI_ENABLE)) u_dcache (
         .clk            (clk),
         .rst            (rst),
         .flush          (dcache_flush_pulse),
@@ -317,3 +324,5 @@ module core_l1_wrapper #(
     assign snoop_we_to_core   = dsnoop_valid & ~dsnoop_type;
 
 endmodule
+
+`undef KLTN_DEBUG_ATTR

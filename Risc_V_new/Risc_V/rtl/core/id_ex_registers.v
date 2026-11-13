@@ -33,6 +33,7 @@ module id_ex_registers(
     // signals there, where csr_trap_unit.v actually consumes them).
     input  wire [8:0]   ExcFlagsD,
     input  wire [31:0]  InstrD,
+    input  wire         ValidD,
 
     // --- Integer data từ Decode stage ---
     input  wire [31:0]  RD1_D,
@@ -69,6 +70,7 @@ module id_ex_registers(
     // --- NEW: see the matching input above ---
     output reg  [8:0]   ExcFlagsE,
     output reg  [31:0]  InstrE,
+    output reg          ValidE,
 
     // --- Integer data sang Execute stage ---
     output reg  [31:0]  RD1_E,
@@ -106,6 +108,7 @@ module id_ex_registers(
             OpE         <= 7'b0000000;
             ExcFlagsE   <= 9'b0;
             InstrE      <= 32'h00000013;
+            ValidE      <= 1'b0;
 
             // =====================================================
             // RESET: clear integer data
@@ -148,6 +151,7 @@ module id_ex_registers(
             Fence_E     <= 1'b0;
             OpE         <= 7'b0000000;
             ExcFlagsE   <= 9'b0;
+            ValidE      <= 1'b0;
 
             // InstrE, register operands/indices, immediate and PC fields
             // intentionally hold their previous values for this bubble.
@@ -180,6 +184,7 @@ module id_ex_registers(
             OpE         <= OpD;
             ExcFlagsE   <= ExcFlagsD;
             InstrE      <= InstrD;
+            ValidE      <= ValidD;
 
             // --- integer data ---
             RD1_E       <= RD1_D;

@@ -19,6 +19,7 @@ module tb_ahb_error_sideband;
     wire [31:0] haddr, hwdata, hrdata;
     wire hwrite, hready, hmastlock;
     wire [1:0] htrans, hresp;
+    wire [1:0] hruser;
     wire [2:0] hsize;
     wire [3:0] hprot;
     wire req_active;
@@ -38,7 +39,7 @@ module tb_ahb_error_sideband;
         .bus_resp_line(bus_resp_line), .bus_resp_state(bus_resp_state),
         .HADDR(haddr), .HWRITE(hwrite), .HSIZE(hsize), .HTRANS(htrans),
         .HWDATA(hwdata), .HBURST(), .HPROT(hprot), .HMASTLOCK(hmastlock),
-        .HRDATA(hrdata), .HREADY(hready), .HRESP(hresp),
+        .HRDATA(hrdata), .HREADY(hready), .HRESP(hresp), .HRUSER(hruser),
         .REQ_ACTIVE(req_active)
     );
 
@@ -47,7 +48,7 @@ module tb_ahb_error_sideband;
         .HADDR(haddr), .HWRITE(hwrite), .HTRANS(htrans),
         .HWDATA(hwdata), .HMASTLOCK(hmastlock), .HSIZE(hsize), .HPROT(hprot),
         .REQ_ACTIVE(req_active),
-        .HREADYOUT(hready), .HRDATA(hrdata), .HRESP(hresp),
+        .HREADYOUT(hready), .HRDATA(hrdata), .HRESP(hresp), .HRUSER(hruser),
         .dreq_valid(dreq_valid), .dreq_type(dreq_type),
         .dreq_addr(dreq_addr), .dreq_line(dreq_line),
         .dresp_valid(dresp_valid), .dresp_error(dresp_error),

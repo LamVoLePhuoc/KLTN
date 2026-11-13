@@ -1,0 +1,19 @@
+.tools/
+build/
+third_party/
+
+# Local Vivado/XSIM products. Curated text summaries can still be force-added
+# when they are needed as reproducible thesis evidence.
+*.dcp
+*.jou
+*.log
+*.saif
+*.str
+*.wdb
+hs_err_pid*.dmp
+reports/hier-ppa-*/
+reports/ooc-ppa-*/
+reports/power-*/
+reports/signoff-*/
+reports/timing-*/
+reports/xsim-*/

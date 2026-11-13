@@ -31,7 +31,9 @@
 // what this file is for.
 //
 // ============================================================
-module tb_coherence;
+module tb_coherence #(
+    parameter MESI_ENABLE = 0
+);
 
     localparam CLK_PERIOD = 10;
     localparam LINE_ADDR  = 32'h0000_1000;
@@ -113,7 +115,7 @@ module tb_coherence;
     genvar gi;
     generate
         for (gi = 0; gi < 4; gi = gi + 1) begin : DCACHES
-            l1_dcache u_dc (
+            l1_dcache #(.MESI_ENABLE(MESI_ENABLE)) u_dc (
                 .clk(clk), .rst(rst), .flush(c_flush[gi]),
                 .flush_busy(c_flush_busy[gi]), .flush_done(c_flush_done[gi]),
                 .cpu_addr(c_addr[gi]), .cpu_wdata(c_wdata[gi]),
@@ -176,7 +178,8 @@ module tb_coherence;
     // ------------------------------------------------------
     // DUT
     // ------------------------------------------------------
-    cache_controller_mmu #(.DEBUG_TRACE_ENABLE(1), .REQUEST_QUEUE_ENABLE(1)) u_cm (
+    cache_controller_mmu #(.DEBUG_TRACE_ENABLE(1), .REQUEST_QUEUE_ENABLE(1),
+                           .MESI_ENABLE(MESI_ENABLE)) u_cm (
         .clk(clk), .rst(rst),
 
         .c0_dreq_valid(dreq_valid[0]), .c0_dreq_ready(dreq_ready[0]), .c0_dreq_type(dreq_type[0]), .c0_dreq_addr(dreq_addr[0]), .c0_dreq_line(dreq_line[0]),
@@ -551,10 +554,13 @@ module tb_coherence;
         do_read(0, LINE_ADDR, rd);
         check_eq32("A: core0 initial read", rd, 32'h0000_0000);
 
-        $display("MSI B: S write must issue RFO before entering M");
+        $display("B: clean private/shared write transition");
         snap_rfo = rfo_count;
         do_write(0, LINE_ADDR, 32'hAAAA_0001);
-        check_true("B: S->M generated exactly one RFO", rfo_count == snap_rfo + 1);
+        if (MESI_ENABLE)
+            check_true("B: E->M promotion avoided an RFO", rfo_count == snap_rfo);
+        else
+            check_true("B: S->M generated exactly one RFO", rfo_count == snap_rfo + 1);
 
         $display("MSI C: BusRd snoops M, forwards new data, M->S, no DRAM read");
         snap_reads = dram_read_words;
@@ -719,7 +725,7 @@ module tb_coherence;
         // externally visible value against a transaction-level scoreboard.
         // Periodic private-cache flushes exercise dirty writeback and stale
         // directory pruning in the middle of the sequence.
-        for (stress_i = 0; stress_i < 160; stress_i = stress_i + 1) begin
+        for (stress_i = 0; stress_i < 1000; stress_i = stress_i + 1) begin
             stress_lfsr = {stress_lfsr[30:0],
                            stress_lfsr[31] ^ stress_lfsr[21] ^
                            stress_lfsr[1] ^ stress_lfsr[0]};
@@ -766,7 +772,7 @@ module tb_coherence;
                 errors = errors + 1;
             end
         end
-        check_true("L: randomized MSI scoreboard stayed coherent",
+        check_true("L: 1000-op randomized scoreboard stayed coherent",
                    stress_failures == 0);
 
         check_true("M: CM performance counters observed all D requests",
@@ -778,23 +784,37 @@ module tb_coherence;
         check_true("M: CM external-memory error flag stayed clean", !memory_error);
         check_true("M: optional CM trace buffer captured events", debug_trace_count != 0);
 
-        check_true("MSI never granted removed Exclusive state", e_grant_count == 0);
+        if (MESI_ENABLE)
+            check_true("MESI exercised an Exclusive grant", e_grant_count != 0);
+        else
+            check_true("MSI never granted removed Exclusive state", e_grant_count == 0);
 
         $display("---------------------------------------------");
         if (errors == 0) begin
-            $display("MSI_COHERENCE_TB: PASS");
+            if (MESI_ENABLE) $display("MESI_COHERENCE_RANDOM_TB: PASS");
+            else             $display("MSI_COHERENCE_TB: PASS");
         end
         else begin
-            $display("MSI_COHERENCE_TB: FAIL (%0d check(s) failed)", errors);
+            if (MESI_ENABLE)
+                $display("MESI_COHERENCE_RANDOM_TB: FAIL (%0d check(s) failed)", errors);
+            else
+                $display("MSI_COHERENCE_TB: FAIL (%0d check(s) failed)", errors);
         end
         $display("---------------------------------------------");
         $finish;
     end
 
     initial begin
-        #(CLK_PERIOD * 60000);
-        $display("MSI_COHERENCE_TB: FAIL (global timeout -- dump coherence FSM waves)");
+        #(CLK_PERIOD * 300000);
+        if (MESI_ENABLE)
+            $display("MESI_COHERENCE_RANDOM_TB: FAIL (global timeout -- dump coherence FSM waves)");
+        else
+            $display("MSI_COHERENCE_TB: FAIL (global timeout -- dump coherence FSM waves)");
         $finish;
     end
 
+endmodule
+
+module tb_coherence_mesi_random;
+    tb_coherence #(.MESI_ENABLE(1)) test();
 endmodule

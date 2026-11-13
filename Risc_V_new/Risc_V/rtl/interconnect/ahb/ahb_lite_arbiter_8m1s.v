@@ -23,6 +23,7 @@ module ahb_lite_arbiter_8m1s (
     input  wire [255:0] M_HADDR,
     input  wire [7:0]   M_HWRITE,
     input  wire [23:0]  M_HSIZE,
+    input  wire [23:0]  M_HBURST,
     input  wire [15:0]  M_HTRANS,
     input  wire [255:0] M_HWDATA,
     input  wire [31:0]  M_HPROT,
@@ -32,10 +33,12 @@ module ahb_lite_arbiter_8m1s (
     output reg  [7:0]   M_HREADY,
     output reg  [255:0] M_HRDATA,
     output reg  [15:0]  M_HRESP,
+    output reg  [15:0]  M_HRUSER,
 
     output reg  [31:0]  S_HADDR,
     output reg          S_HWRITE,
     output reg  [2:0]   S_HSIZE,
+    output reg  [2:0]   S_HBURST,
     output reg  [1:0]   S_HTRANS,
     output reg  [31:0]  S_HWDATA,
     output reg  [3:0]   S_HPROT,
@@ -44,6 +47,7 @@ module ahb_lite_arbiter_8m1s (
     input  wire         S_HREADY,
     input  wire [31:0]  S_HRDATA,
     input  wire [1:0]   S_HRESP,
+    input  wire [1:0]   S_HRUSER,
 
     output wire         GRANT_VALID,
     output wire [2:0]   GRANT_SOURCE
@@ -59,6 +63,7 @@ module ahb_lite_arbiter_8m1s (
     reg [7:0] response_valid_r;
     reg [255:0] response_data_r;
     reg [15:0] response_status_r;
+    reg [15:0] response_user_r;
     integer offset;
 
     always @(*) begin
@@ -103,6 +108,7 @@ module ahb_lite_arbiter_8m1s (
             response_valid_r  <= 8'b0;
             response_data_r   <= 256'b0;
             response_status_r <= 16'b0;
+            response_user_r   <= 16'b0;
         end
         else begin
             response_valid_r <= 8'b0;
@@ -115,6 +121,7 @@ module ahb_lite_arbiter_8m1s (
             if (data_phase_active && S_HREADY) begin
                 response_data_r[data_phase_source*32 +: 32] <= S_HRDATA;
                 response_status_r[data_phase_source*2 +: 2] <= S_HRESP;
+                response_user_r[data_phase_source*2 +: 2] <= S_HRUSER;
                 response_valid_r[data_phase_source] <= 1'b1;
                 data_phase_active <= 1'b0;
             end
@@ -129,6 +136,7 @@ module ahb_lite_arbiter_8m1s (
         S_HADDR      = 32'd0;
         S_HWRITE     = 1'b0;
         S_HSIZE      = 3'b010;
+        S_HBURST     = 3'b000;
         S_HTRANS     = 2'b00;
         S_HWDATA     = 32'd0;
         S_HPROT      = 4'b0011;
@@ -137,11 +145,13 @@ module ahb_lite_arbiter_8m1s (
         M_HREADY     = response_valid_r;
         M_HRDATA     = response_data_r;
         M_HRESP      = response_status_r;
+        M_HRUSER     = response_user_r;
 
         if (grant_valid_r) begin
             S_HADDR      = M_HADDR[grant_source_r*32 +: 32];
             S_HWRITE     = M_HWRITE[grant_source_r];
             S_HSIZE      = M_HSIZE[grant_source_r*3 +: 3];
+            S_HBURST     = M_HBURST[grant_source_r*3 +: 3];
             S_HTRANS     = M_HTRANS[grant_source_r*2 +: 2];
             S_HWDATA     = M_HWDATA[grant_source_r*32 +: 32];
             S_HPROT      = M_HPROT[grant_source_r*4 +: 4];

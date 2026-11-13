@@ -11,9 +11,11 @@ module tb_ahb_arbiter;
     wire [7:0] master_hready;
     wire [255:0] master_hrdata;
     wire [15:0] master_hresp;
+    wire [15:0] master_hruser;
     reg slave_hready;
     reg [31:0] slave_hrdata;
     reg [1:0] slave_hresp;
+    reg [1:0] slave_hruser;
     integer errors;
     integer step;
     reg [2:0] expected_source;
@@ -27,10 +29,11 @@ module tb_ahb_arbiter;
         .M_HMASTLOCK(8'b0),
         .M_HGRANT(grants), .M_HREADY(master_hready),
         .M_HRDATA(master_hrdata), .M_HRESP(master_hresp),
+        .M_HRUSER(master_hruser),
         .S_HADDR(), .S_HWRITE(), .S_HSIZE(), .S_HTRANS(),
         .S_HWDATA(), .S_HPROT(), .S_HMASTLOCK(), .S_REQ_ACTIVE(),
         .S_HREADY(slave_hready), .S_HRDATA(slave_hrdata),
-        .S_HRESP(slave_hresp),
+        .S_HRESP(slave_hresp), .S_HRUSER(slave_hruser),
         .GRANT_VALID(grant_valid), .GRANT_SOURCE(grant_source)
     );
 
@@ -44,6 +47,7 @@ module tb_ahb_arbiter;
         slave_hready = 1'b1;
         slave_hrdata = 32'b0;
         slave_hresp = 2'b00;
+        slave_hruser = 2'b00;
         errors = 0;
         repeat (3) @(posedge clk);
         @(negedge clk);
@@ -93,12 +97,14 @@ module tb_ahb_arbiter;
 
         slave_hrdata = 32'hDEAD_BEEF;
         slave_hresp  = 2'b01;
+        slave_hruser = 2'b10;
         slave_hready = 1'b1;
         @(posedge clk); // capture slave response into master-3 buffer
         @(negedge clk);
         if (master_hready !== 8'b0000_1000 ||
             master_hrdata[3*32 +: 32] !== 32'hDEAD_BEEF ||
-            master_hresp[3*2 +: 2] !== 2'b01) begin
+            master_hresp[3*2 +: 2] !== 2'b01 ||
+            master_hruser[3*2 +: 2] !== 2'b10) begin
             $display("[FAIL] buffered response routed incorrectly: ready=%02x data=%08x resp=%02b",
                      master_hready, master_hrdata[3*32 +: 32],
                      master_hresp[3*2 +: 2]);

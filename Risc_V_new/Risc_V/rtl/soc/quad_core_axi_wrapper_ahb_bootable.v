@@ -86,6 +86,12 @@ module quad_core_axi_wrapper_ahb_bootable #(
     // ---------------- AXI4 master (combined read/write, to DRAM) ----------------
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI AWADDR" *)
     output wire [31:0] M_AXI_AWADDR,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI AWLEN" *)
+    output wire [7:0]  M_AXI_AWLEN,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI AWSIZE" *)
+    output wire [2:0]  M_AXI_AWSIZE,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI AWBURST" *)
+    output wire [1:0]  M_AXI_AWBURST,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI AWVALID" *)
     output wire        M_AXI_AWVALID,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI AWREADY" *)
@@ -96,6 +102,8 @@ module quad_core_axi_wrapper_ahb_bootable #(
     output wire [3:0]  M_AXI_WSTRB,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI WVALID" *)
     output wire        M_AXI_WVALID,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI WLAST" *)
+    output wire        M_AXI_WLAST,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI WREADY" *)
     input  wire        M_AXI_WREADY,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI BRESP" *)
@@ -106,6 +114,12 @@ module quad_core_axi_wrapper_ahb_bootable #(
     output wire        M_AXI_BREADY,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI ARADDR" *)
     output wire [31:0] M_AXI_ARADDR,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI ARLEN" *)
+    output wire [7:0]  M_AXI_ARLEN,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI ARSIZE" *)
+    output wire [2:0]  M_AXI_ARSIZE,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI ARBURST" *)
+    output wire [1:0]  M_AXI_ARBURST,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI ARVALID" *)
     output wire        M_AXI_ARVALID,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI ARREADY" *)
@@ -116,6 +130,8 @@ module quad_core_axi_wrapper_ahb_bootable #(
     input  wire [1:0]  M_AXI_RRESP,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI RVALID" *)
     input  wire        M_AXI_RVALID,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI RLAST" *)
+    input  wire        M_AXI_RLAST,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 M_AXI RREADY" *)
     output wire        M_AXI_RREADY
 );
@@ -156,11 +172,13 @@ module quad_core_axi_wrapper_ahb_bootable #(
         .Data_PageFault0(Data_PageFault0), .Data_PageFault1(Data_PageFault1),
         .Data_PageFault2(Data_PageFault2), .Data_PageFault3(Data_PageFault3),
 
-        .M_AXI_AWADDR(M_AXI_AWADDR), .M_AXI_AWVALID(M_AXI_AWVALID), .M_AXI_AWREADY(M_AXI_AWREADY),
-        .M_AXI_WDATA(M_AXI_WDATA), .M_AXI_WSTRB(M_AXI_WSTRB), .M_AXI_WVALID(M_AXI_WVALID), .M_AXI_WREADY(M_AXI_WREADY),
+        .M_AXI_AWADDR(M_AXI_AWADDR), .M_AXI_AWLEN(M_AXI_AWLEN), .M_AXI_AWSIZE(M_AXI_AWSIZE), .M_AXI_AWBURST(M_AXI_AWBURST),
+        .M_AXI_AWVALID(M_AXI_AWVALID), .M_AXI_AWREADY(M_AXI_AWREADY),
+        .M_AXI_WDATA(M_AXI_WDATA), .M_AXI_WSTRB(M_AXI_WSTRB), .M_AXI_WVALID(M_AXI_WVALID), .M_AXI_WLAST(M_AXI_WLAST), .M_AXI_WREADY(M_AXI_WREADY),
         .M_AXI_BRESP(M_AXI_BRESP), .M_AXI_BVALID(M_AXI_BVALID), .M_AXI_BREADY(M_AXI_BREADY),
-        .M_AXI_ARADDR(M_AXI_ARADDR), .M_AXI_ARVALID(M_AXI_ARVALID), .M_AXI_ARREADY(M_AXI_ARREADY),
-        .M_AXI_RDATA(M_AXI_RDATA), .M_AXI_RRESP(M_AXI_RRESP), .M_AXI_RVALID(M_AXI_RVALID), .M_AXI_RREADY(M_AXI_RREADY)
+        .M_AXI_ARADDR(M_AXI_ARADDR), .M_AXI_ARLEN(M_AXI_ARLEN), .M_AXI_ARSIZE(M_AXI_ARSIZE), .M_AXI_ARBURST(M_AXI_ARBURST),
+        .M_AXI_ARVALID(M_AXI_ARVALID), .M_AXI_ARREADY(M_AXI_ARREADY),
+        .M_AXI_RDATA(M_AXI_RDATA), .M_AXI_RRESP(M_AXI_RRESP), .M_AXI_RVALID(M_AXI_RVALID), .M_AXI_RLAST(M_AXI_RLAST), .M_AXI_RREADY(M_AXI_RREADY)
     );
 
 endmodule

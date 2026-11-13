@@ -27,11 +27,15 @@ set tests {
     {tb_cache_maintenance.v        tb_cache_maintenance        {CACHE_MAINTENANCE_TB: PASS}}
     {tb_cache_uncached.v           tb_cache_uncached           {CACHE_UNCACHED_TB: PASS}}
     {tb_coherence.v                tb_coherence                {MSI_COHERENCE_TB: PASS}}
+    {tb_coherence.v                tb_coherence_mesi_random    {MESI_COHERENCE_RANDOM_TB: PASS}}
     {tb_coherence_ahb.v            tb_coherence_ahb            {MSI_COHERENCE_AHB_TB: PASS}}
+    {tb_coherence_ahb.v            tb_coherence_ahb_mesi       {MESI_COHERENCE_AHB_TB: PASS}}
     {tb_coherence_error.v          tb_coherence_error          {COHERENCE_ERROR_TB: PASS}}
     {tb_coherence_watchdog.v       tb_coherence_watchdog       {CACHE_WATCHDOG_TB: PASS}}
     {tb_core_instruction_legality.v tb_core_instruction_legality {CORE_INSTRUCTION_LEGALITY_TB: PASS}}
     {tb_core_rv32ima_isa.v         tb_core_rv32ima_isa         {CORE_RV32IMA_ISA_TB: PASS}}
+    {tb_dcache_1000_cpu_requests.v tb_dcache_1000_cpu_requests {DCACHE_1000_CPU_REQUESTS_TB: PASS}}
+    {tb_reset_sync.v              tb_reset_sync              {RESET_SYNC_TB: PASS}}
     {tb_csr_access_fault.v         tb_csr_access_fault         {CSR_ACCESS_FAULT_TB: PASS}}
     {tb_csr_priv.v                 tb_csr_priv                 {CSR_PRIV_TB: PASS}}
     {tb_csr_trap.v                 tb_csr_trap                 {CSR_TRAP_TB: PASS}}

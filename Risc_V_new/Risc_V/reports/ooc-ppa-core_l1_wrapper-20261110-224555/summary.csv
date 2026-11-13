@@ -1,0 +1,2 @@
+top,part,flow,clock_port,target_period_ns,target_mhz,wns_ns,hold_slack_ns,estimated_fmax_mhz,lut,ff,ramb36,ramb18,bram_tiles,ramd64,mark_debug_nets,report_dir
+core_l1_wrapper,xcvu29p-fsga2577-2L-e,impl,clk,4.000,250.000,0.295,0.011,269.906,10618,6769,24,4,26,32,0,C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/ooc-ppa-core_l1_wrapper-20261110-224555

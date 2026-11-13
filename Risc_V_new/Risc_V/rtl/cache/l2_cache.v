@@ -231,20 +231,30 @@ module l2_cache #(
     assign lru_we    = init_active || (data_ram_we && active_cmd_w_valid);
     assign lru_wdata = init_active ? 2'b0 : (active_cmd_way + 2'b1);
 
+    // Do not clock every L2 BRAM on idle cycles.  Reads still enable all ways
+    // in parallel for one lookup/maintenance launch edge; writes enable only
+    // their selected way.  The existing valid pipeline holds the returned
+    // BRAM data until its later compare/select stage consumes it.
+    wire [3:0] meta_way_en = meta_way_we |
+                             {4{lookup_accept | maint_read}};
+    wire       lru_en = lru_we | lookup_accept;
+    wire [3:0] data_way_en = data_way_we |
+                             {4{lookup_accept | maint_read}};
+
     l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way0 (
-        .clk(clk), .we(meta_way_we[0]), .addr(meta_ram_set),
+        .clk(clk), .en(meta_way_en[0]), .we(meta_way_we[0]), .addr(meta_ram_set),
         .din(meta_wdata), .dout(meta_way0_q));
     l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way1 (
-        .clk(clk), .we(meta_way_we[1]), .addr(meta_ram_set),
+        .clk(clk), .en(meta_way_en[1]), .we(meta_way_we[1]), .addr(meta_ram_set),
         .din(meta_wdata), .dout(meta_way1_q));
     l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way2 (
-        .clk(clk), .we(meta_way_we[2]), .addr(meta_ram_set),
+        .clk(clk), .en(meta_way_en[2]), .we(meta_way_we[2]), .addr(meta_ram_set),
         .din(meta_wdata), .dout(meta_way2_q));
     l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(META_BITS)) u_meta_way3 (
-        .clk(clk), .we(meta_way_we[3]), .addr(meta_ram_set),
+        .clk(clk), .en(meta_way_en[3]), .we(meta_way_we[3]), .addr(meta_ram_set),
         .din(meta_wdata), .dout(meta_way3_q));
     l2_sync_block_ram #(.ADDR_WIDTH(INDEX_BITS), .WIDTH(2)) u_meta_lru (
-        .clk(clk), .we(lru_we), .addr(meta_ram_set),
+        .clk(clk), .en(lru_en), .we(lru_we), .addr(meta_ram_set),
         .din(lru_wdata), .dout(lru_q));
 
     wire                  meta_valid_way0   = meta_way0_q[0];
@@ -266,16 +276,16 @@ module l2_cache #(
     wire [1:0]            meta_lru          = lru_q;
 
     l2_way_data_ram #(.ADDR_WIDTH(INDEX_BITS)) u_data_way0 (
-        .clk(clk), .we(data_way_we[0]), .addr(data_ram_set),
+        .clk(clk), .en(data_way_en[0]), .we(data_way_we[0]), .addr(data_ram_set),
         .din(active_cmd_wdata), .dout(data_way0_q));
     l2_way_data_ram #(.ADDR_WIDTH(INDEX_BITS)) u_data_way1 (
-        .clk(clk), .we(data_way_we[1]), .addr(data_ram_set),
+        .clk(clk), .en(data_way_en[1]), .we(data_way_we[1]), .addr(data_ram_set),
         .din(active_cmd_wdata), .dout(data_way1_q));
     l2_way_data_ram #(.ADDR_WIDTH(INDEX_BITS)) u_data_way2 (
-        .clk(clk), .we(data_way_we[2]), .addr(data_ram_set),
+        .clk(clk), .en(data_way_en[2]), .we(data_way_we[2]), .addr(data_ram_set),
         .din(active_cmd_wdata), .dout(data_way2_q));
     l2_way_data_ram #(.ADDR_WIDTH(INDEX_BITS)) u_data_way3 (
-        .clk(clk), .we(data_way_we[3]), .addr(data_ram_set),
+        .clk(clk), .en(data_way_en[3]), .we(data_way_we[3]), .addr(data_ram_set),
         .din(active_cmd_wdata), .dout(data_way3_q));
 
     // Keep the post-BRAM mux/registers physically local to each 32-bit bank.
@@ -586,6 +596,7 @@ module l2_sync_block_ram #(
     parameter integer WIDTH = 21
 ) (
     input  wire                  clk,
+    input  wire                  en,
     input  wire                  we,
     input  wire [ADDR_WIDTH-1:0] addr,
     input  wire [WIDTH-1:0]      din,
@@ -615,7 +626,7 @@ module l2_sync_block_ram #(
         .WRITE_MODE_A       ("read_first"),
         .WRITE_PROTECT      (1)
     ) u_xpm (
-        .sleep(1'b0), .clka(clk), .rsta(1'b0), .ena(1'b1),
+        .sleep(1'b0), .clka(clk), .rsta(1'b0), .ena(en),
         .regcea(1'b1), .wea(we), .addra(addr), .dina(din),
         .injectsbiterra(1'b0), .injectdbiterra(1'b0),
         .douta(dout), .sbiterra(), .dbiterra()
@@ -626,9 +637,10 @@ module l2_sync_block_ram #(
 
     assign dout = dout_r;
     always @(posedge clk) begin
-        if (we)
+        if (en && we)
             mem[addr] <= din;
-        dout_r <= mem[addr];
+        if (en)
+            dout_r <= mem[addr];
     end
 `endif
 endmodule
@@ -640,6 +652,7 @@ module l2_way_data_ram #(
     parameter integer ADDR_WIDTH = 12
 ) (
     input  wire                  clk,
+    input  wire                  en,
     input  wire                  we,
     input  wire [ADDR_WIDTH-1:0] addr,
     input  wire [255:0]          din,
@@ -653,6 +666,7 @@ module l2_way_data_ram #(
                 .WIDTH     (32)
             ) u_word_ram (
                 .clk (clk),
+                .en  (en),
                 .we  (we),
                 .addr(addr),
                 .din (din[word_bank*32 +: 32]),

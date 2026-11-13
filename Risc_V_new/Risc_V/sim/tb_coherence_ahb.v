@@ -45,7 +45,9 @@
 // direct, effectively-1-cycle-per-word custom protocol. The cycle
 // budget below is sized generously for this.
 // ============================================================
-module tb_coherence_ahb;
+module tb_coherence_ahb #(
+    parameter MESI_ENABLE = 0
+);
 
     localparam CLK_PERIOD = 10;
     localparam LINE_ADDR  = 32'h0000_1000;
@@ -114,15 +116,17 @@ module tb_coherence_ahb;
     wire [31:0] hrdata [0:3];
     wire        hready [0:3];
     wire [1:0]  hresp  [0:3];
+    wire [1:0]  hruser [0:3];
     wire        hmastlock [0:3];
     wire [2:0]  hsize [0:3];
+    wire [2:0]  hburst [0:3];
     wire [3:0]  hprot [0:3];
     wire        req_active [0:3];
 
     genvar gi;
     generate
         for (gi = 0; gi < 4; gi = gi + 1) begin : DCACHES
-            l1_dcache u_dc (
+            l1_dcache #(.MESI_ENABLE(MESI_ENABLE)) u_dc (
                 .clk(clk), .rst(rst), .flush(1'b0),
                 .flush_busy(), .flush_done(),
                 .cpu_addr(c_addr[gi]), .cpu_wdata(c_wdata[gi]),
@@ -143,15 +147,15 @@ module tb_coherence_ahb;
                 .bus_req_addr(bus_req_addr[gi]), .bus_req_line(bus_req_line[gi]),
                 .bus_resp_valid(bus_resp_valid[gi]), .bus_resp_error(bus_resp_error[gi]), .bus_resp_line(bus_resp_line[gi]), .bus_resp_state(bus_resp_state[gi]),
                 .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HSIZE(hsize[gi]), .HTRANS(htrans[gi]),
-                .HWDATA(hwdata[gi]), .HBURST(), .HPROT(hprot[gi]), .HMASTLOCK(hmastlock[gi]),
-                .HRDATA(hrdata[gi]), .HREADY(hready[gi]), .HRESP(hresp[gi]),
+                .HWDATA(hwdata[gi]), .HBURST(hburst[gi]), .HPROT(hprot[gi]), .HMASTLOCK(hmastlock[gi]),
+                .HRDATA(hrdata[gi]), .HREADY(hready[gi]), .HRESP(hresp[gi]), .HRUSER(hruser[gi]),
                 .REQ_ACTIVE(req_active[gi])
             );
 
             ahb_lite_l1_slave_adapter u_ahb_s (
                 .HCLK(clk), .HRESETn(HRESETn),
-                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]), .HSIZE(hsize[gi]), .HPROT(hprot[gi]), .REQ_ACTIVE(req_active[gi]),
-                .HREADYOUT(hready[gi]), .HRDATA(hrdata[gi]), .HRESP(hresp[gi]),
+                .HADDR(haddr[gi]), .HWRITE(hwrite[gi]), .HTRANS(htrans[gi]), .HWDATA(hwdata[gi]), .HMASTLOCK(hmastlock[gi]), .HSIZE(hsize[gi]), .HBURST(hburst[gi]), .HPROT(hprot[gi]), .REQ_ACTIVE(req_active[gi]),
+                .HREADYOUT(hready[gi]), .HRDATA(hrdata[gi]), .HRESP(hresp[gi]), .HRUSER(hruser[gi]),
                 .dreq_valid(dreq_valid[gi]), .dreq_type(dreq_type[gi]),
                 .dreq_addr(dreq_addr[gi]), .dreq_line(dreq_line[gi]),
                 .dresp_valid(dresp_valid[gi]), .dresp_error(dresp_error[gi]), .dresp_line(dresp_line[gi]), .dresp_state(dresp_state[gi])
@@ -192,7 +196,7 @@ module tb_coherence_ahb;
     // instantiation); only what feeds its dreq_*/dresp_* ports changed
     // (now the AHB-Lite slave adapters above, not l1_dcache directly).
     // ------------------------------------------------------
-    coherence_manager u_cm (
+    coherence_manager #(.MESI_ENABLE(MESI_ENABLE)) u_cm (
         .clk(clk), .rst(rst),
 
         .c0_dreq_valid(dreq_valid[0]), .c0_dreq_type(dreq_type[0]), .c0_dreq_addr(dreq_addr[0]), .c0_dreq_line(dreq_line[0]),
@@ -245,6 +249,14 @@ module tb_coherence_ahb;
     integer backend_wb_total;
     integer core0_wait_cycles;
     integer e_grant_count;
+    integer ahb_incr8_count;
+    integer ahb_seq_count;
+    integer ahb_burst_errors;
+    integer ahb_nonseq_this_cycle;
+    integer ahb_seq_this_cycle;
+    integer ahb_error_this_cycle;
+    reg [31:0] ahb_last_addr [0:3];
+    reg        ahb_burst_active [0:3];
     integer mon_i;
     always @(posedge clk) begin
         if (rst) begin
@@ -255,8 +267,18 @@ module tb_coherence_ahb;
             backend_wb_total <= 0;
             core0_wait_cycles <= 0;
             e_grant_count <= 0;
+            ahb_incr8_count <= 0;
+            ahb_seq_count <= 0;
+            ahb_burst_errors <= 0;
+            for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1) begin
+                ahb_last_addr[mon_i] <= 32'b0;
+                ahb_burst_active[mon_i] <= 1'b0;
+            end
         end
         else begin
+            ahb_nonseq_this_cycle = 0;
+            ahb_seq_this_cycle = 0;
+            ahb_error_this_cycle = 0;
             if (monitor_core0_bus && bus_req_valid[0]) core0_bus_events <= core0_bus_events + 1;
             if (monitor_core0_bus && hmastlock[0]) core0_lock_cycles <= core0_lock_cycles + 1;
             if (monitor_core0_bus && dreq_valid[0] && dreq_type[0] == 2'b01)
@@ -271,6 +293,37 @@ module tb_coherence_ahb;
             for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1)
                 if (dresp_valid[mon_i] && dresp_state[mon_i] == 2'b10)
                     e_grant_count <= e_grant_count + 1;
+
+            // Cached line traffic must be one fixed INCR8 burst.  This master
+            // intentionally inserts BUSY cycles between address beats, but it
+            // must never terminate/restart the burst with eight NONSEQ beats.
+            for (mon_i = 0; mon_i < 4; mon_i = mon_i + 1) begin
+                if (htrans[mon_i] == 2'b10) begin
+                    ahb_nonseq_this_cycle = ahb_nonseq_this_cycle + 1;
+                    ahb_last_addr[mon_i] <= haddr[mon_i];
+                    ahb_burst_active[mon_i] <= 1'b1;
+                    if ((hburst[mon_i] != 3'b101) ||
+                        (haddr[mon_i][4:0] != 5'b0))
+                        ahb_error_this_cycle = ahb_error_this_cycle + 1;
+                end
+                else if (htrans[mon_i] == 2'b11) begin
+                    ahb_seq_this_cycle = ahb_seq_this_cycle + 1;
+                    if (!ahb_burst_active[mon_i] ||
+                        (hburst[mon_i] != 3'b101) ||
+                        (haddr[mon_i] != (ahb_last_addr[mon_i] + 32'd4)))
+                        ahb_error_this_cycle = ahb_error_this_cycle + 1;
+                    ahb_last_addr[mon_i] <= haddr[mon_i];
+                    if (haddr[mon_i][4:2] == 3'd7)
+                        ahb_burst_active[mon_i] <= 1'b0;
+                end
+                else if ((htrans[mon_i] == 2'b01) && req_active[mon_i] &&
+                         (hburst[mon_i] != 3'b101)) begin
+                    ahb_error_this_cycle = ahb_error_this_cycle + 1;
+                end
+            end
+            ahb_incr8_count <= ahb_incr8_count + ahb_nonseq_this_cycle;
+            ahb_seq_count <= ahb_seq_count + ahb_seq_this_cycle;
+            ahb_burst_errors <= ahb_burst_errors + ahb_error_this_cycle;
         end
     end
 
@@ -355,11 +408,15 @@ module tb_coherence_ahb;
         repeat (2) @(posedge clk);
 
         $display("---------------------------------------------");
-        $display("MSI/AHB A: cold read returns S through the bridge");
+        $display("MSI/MESI AHB A: cold read returns the granted state through HRUSER");
         do_read(0, LINE_ADDR, rd);
         check_eq32("A: core0 initial read", rd, 32'h0000_0000);
+        if (MESI_ENABLE)
+            check_true("A: sole cold reader received Exclusive", e_grant_count > 0);
+        else
+            check_true("A: MSI cold reader did not receive Exclusive", e_grant_count == 0);
 
-        $display("MSI/AHB B: S->M must cross AHB as locked RFO");
+        $display("MSI/MESI AHB B: compare S->M RFO against silent E->M");
         monitor_core0_bus = 1'b1;
         core0_bus_events  = 0;
         core0_lock_cycles = 0;
@@ -368,10 +425,17 @@ module tb_coherence_ahb;
         snap_backend_rfo = core0_backend_rfo_total;
         do_write(0, LINE_ADDR, 32'hAAAA_0001);
         monitor_core0_bus = 1'b0;
-        check_true("B: upgrade generated cache-side traffic", core0_bus_events > 0);
-        check_true("B: RFO encoded with HMASTLOCK", core0_lock_cycles > 0);
-        check_true("B: slave reconstructed backend RFO", core0_backend_rfo_total > snap_backend_rfo);
-        check_true("B: HREADY inserted back-pressure", core0_wait_cycles > 0);
+        if (MESI_ENABLE) begin
+            check_true("B: E->M generated no cache-side transaction", core0_bus_events == 0);
+            check_true("B: E->M generated no HMASTLOCK", core0_lock_cycles == 0);
+            check_true("B: E->M generated no backend RFO", core0_backend_rfo_total == snap_backend_rfo);
+        end
+        else begin
+            check_true("B: S->M generated cache-side traffic", core0_bus_events > 0);
+            check_true("B: RFO encoded with HMASTLOCK", core0_lock_cycles > 0);
+            check_true("B: slave reconstructed backend RFO", core0_backend_rfo_total > snap_backend_rfo);
+            check_true("B: HREADY inserted back-pressure", core0_wait_cycles > 0);
+        end
 
         $display("MSI/AHB C: another reader snoops M and gets latest data");
         do_read(1, LINE_ADDR, rd);
@@ -403,13 +467,23 @@ module tb_coherence_ahb;
         check_eq32("G: first concurrent read completes", rd0_concurrent, 32'h0000_0000);
         check_eq32("G: second held concurrent read is not lost", rd3_concurrent, 32'h0000_0000);
 
-        check_true("MSI/AHB never granted Exclusive", e_grant_count == 0);
+        if (MESI_ENABLE)
+            check_true("MESI/AHB granted at least one Exclusive line", e_grant_count > 0);
+        else
+            check_true("MSI/AHB never granted Exclusive", e_grant_count == 0);
+        check_true("AHB cached traffic used INCR8", ahb_incr8_count > 0);
+        check_true("AHB INCR8 used seven SEQ beats after every NONSEQ",
+                   ahb_seq_count == (ahb_incr8_count * 7));
+        check_true("AHB INCR8 address/control sequence stayed legal",
+                   ahb_burst_errors == 0);
         $display("---------------------------------------------");
         if (errors == 0) begin
-            $display("MSI_COHERENCE_AHB_TB: PASS");
+            if (MESI_ENABLE) $display("MESI_COHERENCE_AHB_TB: PASS");
+            else             $display("MSI_COHERENCE_AHB_TB: PASS");
         end
         else begin
-            $display("MSI_COHERENCE_AHB_TB: FAIL (%0d check(s) failed)", errors);
+            if (MESI_ENABLE) $display("MESI_COHERENCE_AHB_TB: FAIL (%0d check(s) failed)", errors);
+            else             $display("MSI_COHERENCE_AHB_TB: FAIL (%0d check(s) failed)", errors);
         end
         $display("---------------------------------------------");
         $finish;
@@ -420,8 +494,15 @@ module tb_coherence_ahb;
     // instead of tb_coherence.v's direct ~1-cycle-per-word protocol.
     initial begin
         #(CLK_PERIOD * 40000);
-        $display("MSI_COHERENCE_AHB_TB: FAIL (global timeout -- dump AHB/coherence waves)");
+        if (MESI_ENABLE)
+            $display("MESI_COHERENCE_AHB_TB: FAIL (global timeout -- dump AHB/coherence waves)");
+        else
+            $display("MSI_COHERENCE_AHB_TB: FAIL (global timeout -- dump AHB/coherence waves)");
         $finish;
     end
 
+endmodule
+
+module tb_coherence_ahb_mesi;
+    tb_coherence_ahb #(.MESI_ENABLE(1)) u_mesi();
 endmodule
