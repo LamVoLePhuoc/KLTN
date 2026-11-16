@@ -17,7 +17,11 @@ Compiling module xil_defaultlib.cache_tdp_data_ram(WIDTH=20,ADDR...
 Compiling module xil_defaultlib.l1_dcache_default
 Compiling module xil_defaultlib.ahb_lite_l1_adapter
 Compiling module xil_defaultlib.ahb_lite_l1_slave_adapter
-Compiling module xil_defaultlib.l2_way_data_ram
+Compiling module xil_defaultlib.l2_sync_block_ram
+Compiling module xil_defaultlib.l2_sync_block_ram(WIDTH=2)
+Compiling module xil_defaultlib.l2_sync_block_ram(WIDTH=32)
+Compiling module xil_defaultlib.l2_way_data_ram_default
+Compiling module xil_defaultlib.l2_line_slice_pipe
 Compiling module xil_defaultlib.l2_cache_default
 Compiling module xil_defaultlib.cache_controller_mmu(EXTERNAL_L2...
 Compiling module xil_defaultlib.coherence_manager

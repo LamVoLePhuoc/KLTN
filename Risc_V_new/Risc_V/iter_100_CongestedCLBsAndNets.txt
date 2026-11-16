@@ -1,6 +1,13 @@
 List of CLB Tiles
-CLEM_X34Y303
-CLEL_R_X34Y303
+CLEM_X49Y563
+CLEL_R_X49Y563
+CLEM_X49Y660
+CLEL_R_X49Y660
+CLEM_X39Y568
+CLEM_X18Y607
+CLEL_R_X18Y607
 
 List of Congested Nets
+soc/core3/physical_core/core/id_ex/ALU_In_A[15]
+soc/core3/physical_core/core/id_ex/Imm_Ext_E_reg[31]_1[15]
 

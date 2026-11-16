@@ -1,0 +1,1 @@
+create_clock -name soc_clk -period 4.000 [get_ports ACLK]

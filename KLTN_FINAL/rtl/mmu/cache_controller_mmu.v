@@ -1,0 +1,1303 @@
+`timescale 1ns / 1ps
+
+// ============================================================
+// cache_controller_mmu
+//
+// Protocol engine used by the shared cache controller.  It contains the
+// atomic MSI/MESI transaction FSM and the external-memory line-transfer engine.
+// IMPORTANT ARBITRATION OWNERSHIP:
+//   * The active AHB hierarchy sets EXTERNAL_REQUEST_ARBITER=1.  In that
+//     configuration this module DOES NOT decide which L1 may issue.  The
+//     standalone ahb_lite_arbiter_8m1s owns request selection/grant and
+//     supplies one selected request plus its 3-bit source ID here.
+//   * The small 8-source round-robin picker retained below is a legacy
+//     compatibility path only for direct-wire tops/tests that instantiate
+//     this module with EXTERNAL_REQUEST_ARBITER=0.
+//
+// EXTERNAL_L2=0 preserves the original, self-contained integration
+// used by legacy unit tests.  EXTERNAL_L2=1 exports the command/status
+// interface of l2_cache so the active quad-core hierarchy can place
+// the controller and L2 as peer blocks.  That peer topology matches
+// the project adviser terminology: the shared "MMU" is a cache/memory
+// controller. The old per-core Sv32 sources are retained only in the
+// optional legacy manifest and are absent from the active hierarchy.
+//
+// In the active thesis scope this is the only block called "MMU".
+// The name means Cache/Memory Management Unit, not a virtual-memory
+// translation unit.  Cores and caches use one direct 32-bit physical
+// address space; no TLB or page-table walker is instantiated.
+//
+// The active implementation therefore has separate physical blocks:
+// eight L1 AHB master adapters -> ahb_lite_arbiter_8m1s -> one AHB slave
+// adapter -> this MSI/cache transaction engine.  HADDR/HREADY/HRESP and
+// grant ownership live outside this module in that configuration.
+//
+// ATOMICITY (the central design choice, made for correctness over
+// throughput): only one requester's transaction is in flight system-
+// wide at any time. The arbiter does not accept a new request until
+// the previous one has been fully resolved -- data fetched/evicted,
+// every necessary snoop sent and acknowledged, L2 and the requester
+// both updated. This serializes ALL cache-miss/coherence traffic
+// across all 4 cores, which is slow, but it structurally rules out
+// the concurrent-transaction races (two transactions individually
+// correct but racing on the same line) that are the usual source of
+// real coherence bugs -- and this design was written and reasoned
+// through without access to a simulator (see repo README), so
+// trading throughput for something provable by hand was the
+// deliberate choice. Pipelining this is a well-defined, bounded
+// future improvement, not a redesign.
+//
+// DIRECTORY INVARIANT: the directory stores a sharer bitmap but no
+// separate dirty-owner ID. Under MSI every transition S->M is an RFO
+// observed here. Under MESI, E->M is silent but the E grant is made only
+// when exactly one directory bit is set, so an M line still has exactly
+// one directory bit set. A
+// BusRd/BusRdX snoops every other listed holder; an M holder returns
+// the authoritative line and then moves to S/I. This keeps L2 data
+// coherent without relying on MESI's silent E->M transition.
+//
+// Local-hit races: see l1_dcache.v's header for why a core's own
+// local cache hit and an incoming snoop for the exact same line can
+// still race even under this module's atomicity (a local hit never
+// touches the arbiter) -- resolved there, not here.
+//
+// In legacy EXTERNAL_REQUEST_ARBITER=0 mode only, the compatibility picker
+// is starvation-free round-robin over all eight D$/I$ sources.  In active
+// AHB mode, fairness and grant lifetime belong solely to the external
+// ahb_lite_arbiter_8m1s.
+//
+// Encodings (shared with l1_dcache.v -- keep in sync if either
+// changes):
+//   dreq_type:  2'b00=READ, 2'b01=RFO, 2'b10=WRITEBACK,
+//               2'b11=UNCACHED single-word bypass
+//   dresp_state: 2'b01=S, 2'b10=E (MESI only), 2'b11=M
+//   snoop_type: 1'b0=INVALIDATE, 1'b1=DOWNGRADE
+//
+// EXTERNAL MEMORY ERRORS: mem_error is sampled only with mem_valid and
+// returned to the serialized transaction's original I$/D$ requester.
+// Failed fills never enter L2. If a dirty victim writeback fails after
+// snoops have removed other copies, the authoritative line is restored
+// into its original L2 way/tag as dirty before the error response fires.
+// UNCACHED requests bypass L2/directory/snoops and carry one write-enable,
+// four byte strobes and shifted write data in dreq_line[36:0].
+// ============================================================
+module cache_controller_mmu #(
+    parameter LINE_WORDS = 8,
+    parameter PERF_COUNTER_ENABLE = 1,
+    parameter DEBUG_TRACE_ENABLE = 0,
+    // L2 invalidates one set per cycle after reset so its metadata can be
+    // inferred as RAM instead of tens of thousands of flip-flops.  Allow
+    // the first blocked lookup to wait through all 4096 default L2 sets.
+    parameter integer WATCHDOG_LIMIT = 8192,
+    parameter EXTERNAL_L2 = 1,
+    parameter REQUEST_QUEUE_ENABLE = 0,
+    parameter EXTERNAL_REQUEST_ARBITER = 0,
+    parameter MESI_ENABLE = 0,
+    // When enabled, cached 32-byte fills/writebacks cross the external
+    // memory boundary as one line transaction.  Uncached/MMIO requests
+    // remain single-word operations.  The default preserves legacy test
+    // harnesses; the board-facing AXI wrapper enables this mode.
+    parameter MEM_BURST_ENABLE = 0
+)(
+    input  wire clk,
+    input  wire rst,
+
+    // ================= Core 0 =================
+    input  wire         c0_dreq_valid, output wire c0_dreq_ready, input wire [1:0] c0_dreq_type, input wire [31:0] c0_dreq_addr, input wire [255:0] c0_dreq_line,
+    output wire         c0_dresp_valid, output wire c0_dresp_error, output wire [255:0] c0_dresp_line, output wire [1:0] c0_dresp_state,
+    output wire         c0_dsnoop_valid, output wire c0_dsnoop_type, output wire [31:0] c0_dsnoop_addr,
+    input  wire         c0_dsnoop_ack_valid, input wire c0_dsnoop_ack_hit, input wire c0_dsnoop_ack_dirty, input wire [255:0] c0_dsnoop_ack_line,
+    input  wire         c0_ireq_valid, output wire c0_ireq_ready, input wire [31:0] c0_ireq_addr,
+    output wire         c0_iresp_valid, output wire c0_iresp_error, output wire [255:0] c0_iresp_line,
+
+    // ================= Core 1 =================
+    input  wire         c1_dreq_valid, output wire c1_dreq_ready, input wire [1:0] c1_dreq_type, input wire [31:0] c1_dreq_addr, input wire [255:0] c1_dreq_line,
+    output wire         c1_dresp_valid, output wire c1_dresp_error, output wire [255:0] c1_dresp_line, output wire [1:0] c1_dresp_state,
+    output wire         c1_dsnoop_valid, output wire c1_dsnoop_type, output wire [31:0] c1_dsnoop_addr,
+    input  wire         c1_dsnoop_ack_valid, input wire c1_dsnoop_ack_hit, input wire c1_dsnoop_ack_dirty, input wire [255:0] c1_dsnoop_ack_line,
+    input  wire         c1_ireq_valid, output wire c1_ireq_ready, input wire [31:0] c1_ireq_addr,
+    output wire         c1_iresp_valid, output wire c1_iresp_error, output wire [255:0] c1_iresp_line,
+
+    // ================= Core 2 =================
+    input  wire         c2_dreq_valid, output wire c2_dreq_ready, input wire [1:0] c2_dreq_type, input wire [31:0] c2_dreq_addr, input wire [255:0] c2_dreq_line,
+    output wire         c2_dresp_valid, output wire c2_dresp_error, output wire [255:0] c2_dresp_line, output wire [1:0] c2_dresp_state,
+    output wire         c2_dsnoop_valid, output wire c2_dsnoop_type, output wire [31:0] c2_dsnoop_addr,
+    input  wire         c2_dsnoop_ack_valid, input wire c2_dsnoop_ack_hit, input wire c2_dsnoop_ack_dirty, input wire [255:0] c2_dsnoop_ack_line,
+    input  wire         c2_ireq_valid, output wire c2_ireq_ready, input wire [31:0] c2_ireq_addr,
+    output wire         c2_iresp_valid, output wire c2_iresp_error, output wire [255:0] c2_iresp_line,
+
+    // ================= Core 3 =================
+    input  wire         c3_dreq_valid, output wire c3_dreq_ready, input wire [1:0] c3_dreq_type, input wire [31:0] c3_dreq_addr, input wire [255:0] c3_dreq_line,
+    output wire         c3_dresp_valid, output wire c3_dresp_error, output wire [255:0] c3_dresp_line, output wire [1:0] c3_dresp_state,
+    output wire         c3_dsnoop_valid, output wire c3_dsnoop_type, output wire [31:0] c3_dsnoop_addr,
+    input  wire         c3_dsnoop_ack_valid, input wire c3_dsnoop_ack_hit, input wire c3_dsnoop_ack_dirty, input wire [255:0] c3_dsnoop_ack_line,
+    input  wire         c3_ireq_valid, output wire c3_ireq_ready, input wire [31:0] c3_ireq_addr,
+    output wire         c3_iresp_valid, output wire c3_iresp_error, output wire [255:0] c3_iresp_line,
+
+    // Optional request stream selected by an external AHB arbiter.  Source
+    // encoding matches the legacy internal arbiter: 0..3 D$, 4..7 I$.
+    input  wire         ext_req_valid,
+    output wire         ext_req_ready,
+    input  wire [2:0]   ext_req_source,
+    input  wire [1:0]   ext_req_type,
+    input  wire [31:0]  ext_req_addr,
+    input  wire [255:0] ext_req_line,
+
+    // ---- External memory ("CPU MEMORY PORT"), single word, real handshake ----
+    output reg          mem_req_valid,
+    output reg          mem_we,
+    output reg  [31:0]  mem_addr,
+    output reg  [31:0]  mem_wdata,
+    output reg  [3:0]   mem_wstrb,
+    output reg          mem_req_burst,
+    output reg  [LINE_WORDS*32-1:0] mem_wline,
+    input  wire [31:0]  mem_rdata,
+    input  wire [LINE_WORDS*32-1:0] mem_rline,
+    input  wire         mem_valid,
+    input  wire         mem_error,
+
+    // ---- Bring-up observability (free-running, saturating only by 32-bit wrap) ----
+    output reg [31:0] perf_total_requests,
+    output reg [31:0] perf_d_bus_reads,
+    output reg [31:0] perf_d_rfos,
+    output reg [31:0] perf_d_writebacks,
+    output reg [31:0] perf_i_reads,
+    output reg [31:0] perf_l2_hits,
+    output reg [31:0] perf_l2_misses,
+    output reg [31:0] perf_snoop_requests,
+    output reg [31:0] perf_mem_read_words,
+    output reg [31:0] perf_mem_write_words,
+    output reg [31:0] perf_busy_cycles,
+    output reg        protocol_error,
+    output reg        timeout_error,
+    output reg        memory_error,
+
+    // Optional 16-entry circular transaction trace. Record format:
+    // {cycle[31:0], event[3:0], core[2:0], is_d, type[1:0],
+    //  state[3:0], l2_hit, dirty, sharers[3:0], reserved[11:0], addr[31:0]}.
+    input  wire [3:0]  debug_trace_rd_index,
+    output wire [95:0] debug_trace_rd_data,
+    output wire [4:0]  debug_trace_count,
+    output wire [3:0]  debug_trace_write_index,
+    output wire [3:0]  debug_controller_state,
+
+    // Full shared-L2 clean/invalidate request.  The SoC-level maintenance
+    // sequencer asserts this only after every private L1 has drained.
+    input  wire         cache_flush_req,
+    output wire         cache_flush_busy,
+    output reg          cache_flush_done,
+    output reg          cache_flush_error,
+
+    // ---- L2 command/status interface ----
+    // Used when EXTERNAL_L2=1.  Command is controller -> L2; response
+    // is L2 -> controller.  Keeping data and policy on opposite sides
+    // of this boundary makes the adviser's "MMU beside L2" structure
+    // explicit without duplicating cache arrays in the controller.
+    output wire         l2_cmd_valid_o,
+    output wire         l2_cmd_we_o,
+    output wire [31:0]  l2_cmd_addr_o,
+    output wire [1:0]   l2_cmd_way_o,
+    output wire [255:0] l2_cmd_wdata_o,
+    output wire         l2_cmd_w_valid_o,
+    output wire         l2_cmd_w_dirty_o,
+    output wire [3:0]   l2_cmd_w_sharers_o,
+    input  wire         l2_resp_valid_i,
+    input  wire         l2_resp_hit_i,
+    input  wire [1:0]   l2_resp_way_i,
+    input  wire [14:0]  l2_resp_victim_tag_i,
+    input  wire         l2_resp_victim_valid_i,
+    input  wire         l2_resp_victim_dirty_i,
+    input  wire [3:0]   l2_resp_victim_sharers_i,
+    input  wire [255:0] l2_resp_line_i,
+    input  wire [3:0]   l2_resp_sharers_i,
+
+    // Explicit L2 entry scan interface used only during full maintenance.
+    output wire         l2_maint_valid_o,
+    output wire [11:0]  l2_maint_set_o,
+    output wire [1:0]   l2_maint_way_o,
+    output wire         l2_maint_invalidate_o,
+    input  wire         l2_maint_ready_i,
+    input  wire         l2_maint_resp_valid_i,
+    input  wire         l2_maint_line_valid_i,
+    input  wire         l2_maint_line_dirty_i,
+    input  wire [14:0]  l2_maint_line_tag_i,
+    input  wire [255:0] l2_maint_line_data_i
+);
+
+    localparam LINE_BITS = LINE_WORDS * 32;
+
+    // ------------------------------------------------------
+    // Flatten the 8 per-core request sources into indexable arrays
+    // ------------------------------------------------------
+    wire        dreq_valid [0:3];
+    wire [1:0]  dreq_type  [0:3];
+    wire [31:0] dreq_addr  [0:3];
+    wire [255:0] dreq_line [0:3];
+    wire        ireq_valid [0:3];
+    wire [31:0] ireq_addr  [0:3];
+
+    assign dreq_valid[0]=c0_dreq_valid; assign dreq_type[0]=c0_dreq_type; assign dreq_addr[0]=c0_dreq_addr; assign dreq_line[0]=c0_dreq_line;
+    assign dreq_valid[1]=c1_dreq_valid; assign dreq_type[1]=c1_dreq_type; assign dreq_addr[1]=c1_dreq_addr; assign dreq_line[1]=c1_dreq_line;
+    assign dreq_valid[2]=c2_dreq_valid; assign dreq_type[2]=c2_dreq_type; assign dreq_addr[2]=c2_dreq_addr; assign dreq_line[2]=c2_dreq_line;
+    assign dreq_valid[3]=c3_dreq_valid; assign dreq_type[3]=c3_dreq_type; assign dreq_addr[3]=c3_dreq_addr; assign dreq_line[3]=c3_dreq_line;
+
+    assign ireq_valid[0]=c0_ireq_valid; assign ireq_addr[0]=c0_ireq_addr;
+    assign ireq_valid[1]=c1_ireq_valid; assign ireq_addr[1]=c1_ireq_addr;
+    assign ireq_valid[2]=c2_ireq_valid; assign ireq_addr[2]=c2_ireq_addr;
+    assign ireq_valid[3]=c3_ireq_valid; assign ireq_addr[3]=c3_ireq_addr;
+
+    // Per-core response/snoop pulses, driven from one shared reg set
+    // below and demuxed onto the right core's output ports.
+    reg         dresp_valid_r [0:3];
+    reg         dresp_error_r [0:3];
+    reg [255:0] dresp_line_r  [0:3];
+    reg [1:0]   dresp_state_r [0:3];
+    reg         iresp_valid_r [0:3];
+    reg         iresp_error_r [0:3];
+    reg [255:0] iresp_line_r  [0:3];
+    reg         dsnoop_valid_r [0:3];
+    reg         dsnoop_type_r  [0:3];
+    reg [31:0]  dsnoop_addr_r  [0:3];
+
+    wire        dsnoop_ack_valid [0:3];
+    wire        dsnoop_ack_hit   [0:3];
+    wire        dsnoop_ack_dirty [0:3];
+    wire [255:0] dsnoop_ack_line [0:3];
+    assign dsnoop_ack_valid[0]=c0_dsnoop_ack_valid; assign dsnoop_ack_hit[0]=c0_dsnoop_ack_hit; assign dsnoop_ack_dirty[0]=c0_dsnoop_ack_dirty; assign dsnoop_ack_line[0]=c0_dsnoop_ack_line;
+    assign dsnoop_ack_valid[1]=c1_dsnoop_ack_valid; assign dsnoop_ack_hit[1]=c1_dsnoop_ack_hit; assign dsnoop_ack_dirty[1]=c1_dsnoop_ack_dirty; assign dsnoop_ack_line[1]=c1_dsnoop_ack_line;
+    assign dsnoop_ack_valid[2]=c2_dsnoop_ack_valid; assign dsnoop_ack_hit[2]=c2_dsnoop_ack_hit; assign dsnoop_ack_dirty[2]=c2_dsnoop_ack_dirty; assign dsnoop_ack_line[2]=c2_dsnoop_ack_line;
+    assign dsnoop_ack_valid[3]=c3_dsnoop_ack_valid; assign dsnoop_ack_hit[3]=c3_dsnoop_ack_hit; assign dsnoop_ack_dirty[3]=c3_dsnoop_ack_dirty; assign dsnoop_ack_line[3]=c3_dsnoop_ack_line;
+    wire [3:0] dsnoop_ack_valid_vec = {dsnoop_ack_valid[3], dsnoop_ack_valid[2],
+                                       dsnoop_ack_valid[1], dsnoop_ack_valid[0]};
+
+    assign c0_dresp_valid=dresp_valid_r[0]; assign c0_dresp_error=dresp_error_r[0]; assign c0_dresp_line=dresp_line_r[0]; assign c0_dresp_state=dresp_state_r[0];
+    assign c1_dresp_valid=dresp_valid_r[1]; assign c1_dresp_error=dresp_error_r[1]; assign c1_dresp_line=dresp_line_r[1]; assign c1_dresp_state=dresp_state_r[1];
+    assign c2_dresp_valid=dresp_valid_r[2]; assign c2_dresp_error=dresp_error_r[2]; assign c2_dresp_line=dresp_line_r[2]; assign c2_dresp_state=dresp_state_r[2];
+    assign c3_dresp_valid=dresp_valid_r[3]; assign c3_dresp_error=dresp_error_r[3]; assign c3_dresp_line=dresp_line_r[3]; assign c3_dresp_state=dresp_state_r[3];
+
+    assign c0_iresp_valid=iresp_valid_r[0]; assign c0_iresp_error=iresp_error_r[0]; assign c0_iresp_line=iresp_line_r[0];
+    assign c1_iresp_valid=iresp_valid_r[1]; assign c1_iresp_error=iresp_error_r[1]; assign c1_iresp_line=iresp_line_r[1];
+    assign c2_iresp_valid=iresp_valid_r[2]; assign c2_iresp_error=iresp_error_r[2]; assign c2_iresp_line=iresp_line_r[2];
+    assign c3_iresp_valid=iresp_valid_r[3]; assign c3_iresp_error=iresp_error_r[3]; assign c3_iresp_line=iresp_line_r[3];
+
+    assign c0_dsnoop_valid=dsnoop_valid_r[0]; assign c0_dsnoop_type=dsnoop_type_r[0]; assign c0_dsnoop_addr=dsnoop_addr_r[0];
+    assign c1_dsnoop_valid=dsnoop_valid_r[1]; assign c1_dsnoop_type=dsnoop_type_r[1]; assign c1_dsnoop_addr=dsnoop_addr_r[1];
+    assign c2_dsnoop_valid=dsnoop_valid_r[2]; assign c2_dsnoop_type=dsnoop_type_r[2]; assign c2_dsnoop_addr=dsnoop_addr_r[2];
+    assign c3_dsnoop_valid=dsnoop_valid_r[3]; assign c3_dsnoop_type=dsnoop_type_r[3]; assign c3_dsnoop_addr=dsnoop_addr_r[3];
+
+    // ------------------------------------------------------
+    // L2 storage
+    // ------------------------------------------------------
+    wire         l2_cmd_valid;
+    wire         l2_cmd_we;
+    wire [31:0]  l2_cmd_addr;
+    wire [1:0]   l2_cmd_way;
+    wire [255:0] l2_cmd_wdata;
+    wire         l2_cmd_w_valid;
+    wire         l2_cmd_w_dirty;
+    wire [3:0]   l2_cmd_w_sharers;
+    wire         l2_resp_valid;
+    wire         l2_resp_hit;
+    wire [1:0]   l2_resp_way;
+    wire [14:0]  l2_resp_victim_tag;
+    wire         l2_resp_victim_valid;
+    wire         l2_resp_victim_dirty;
+    wire [3:0]   l2_resp_victim_sharers;
+    wire [255:0] l2_resp_line;
+    wire [3:0]   l2_resp_sharers;
+
+    wire         int_l2_resp_valid;
+    wire         int_l2_resp_hit;
+    wire [1:0]   int_l2_resp_way;
+    wire [14:0]  int_l2_resp_victim_tag;
+    wire         int_l2_resp_victim_valid;
+    wire         int_l2_resp_victim_dirty;
+    wire [3:0]   int_l2_resp_victim_sharers;
+    wire [255:0] int_l2_resp_line;
+    wire [3:0]   int_l2_resp_sharers;
+    wire         int_l2_maint_ready;
+    wire         int_l2_maint_resp_valid;
+    wire         int_l2_maint_line_valid;
+    wire         int_l2_maint_line_dirty;
+    wire [14:0]  int_l2_maint_line_tag;
+    wire [255:0] int_l2_maint_line_data;
+
+    generate
+        if (!EXTERNAL_L2) begin : g_internal_l2
+            l2_cache u_l2 (
+                .clk(clk), .rst(rst),
+                .cmd_valid(l2_cmd_valid), .cmd_we(l2_cmd_we), .cmd_addr(l2_cmd_addr), .cmd_way(l2_cmd_way),
+                .cmd_wdata(l2_cmd_wdata), .cmd_w_valid(l2_cmd_w_valid), .cmd_w_dirty(l2_cmd_w_dirty), .cmd_w_sharers(l2_cmd_w_sharers),
+                .maint_valid(l2_maint_valid_o), .maint_set(l2_maint_set_o),
+                .maint_way(l2_maint_way_o), .maint_invalidate(l2_maint_invalidate_o),
+                .maint_ready(int_l2_maint_ready), .maint_resp_valid(int_l2_maint_resp_valid),
+                .maint_line_valid(int_l2_maint_line_valid),
+                .maint_line_dirty(int_l2_maint_line_dirty), .maint_line_tag(int_l2_maint_line_tag),
+                .maint_line_data(int_l2_maint_line_data),
+                .resp_valid(int_l2_resp_valid), .resp_hit(int_l2_resp_hit), .resp_way(int_l2_resp_way),
+                .resp_victim_tag(int_l2_resp_victim_tag), .resp_victim_valid(int_l2_resp_victim_valid),
+                .resp_victim_dirty(int_l2_resp_victim_dirty), .resp_victim_sharers(int_l2_resp_victim_sharers),
+                .resp_line(int_l2_resp_line), .resp_sharers(int_l2_resp_sharers)
+            );
+        end
+    endgenerate
+
+    assign l2_resp_valid           = EXTERNAL_L2 ? l2_resp_valid_i           : int_l2_resp_valid;
+    assign l2_resp_hit             = EXTERNAL_L2 ? l2_resp_hit_i             : int_l2_resp_hit;
+    assign l2_resp_way             = EXTERNAL_L2 ? l2_resp_way_i             : int_l2_resp_way;
+    assign l2_resp_victim_tag      = EXTERNAL_L2 ? l2_resp_victim_tag_i      : int_l2_resp_victim_tag;
+    assign l2_resp_victim_valid    = EXTERNAL_L2 ? l2_resp_victim_valid_i    : int_l2_resp_victim_valid;
+    assign l2_resp_victim_dirty    = EXTERNAL_L2 ? l2_resp_victim_dirty_i    : int_l2_resp_victim_dirty;
+    assign l2_resp_victim_sharers  = EXTERNAL_L2 ? l2_resp_victim_sharers_i  : int_l2_resp_victim_sharers;
+    assign l2_resp_line            = EXTERNAL_L2 ? l2_resp_line_i            : int_l2_resp_line;
+    assign l2_resp_sharers         = EXTERNAL_L2 ? l2_resp_sharers_i         : int_l2_resp_sharers;
+
+    wire         l2_maint_ready      = EXTERNAL_L2 ? l2_maint_ready_i      : int_l2_maint_ready;
+    wire         l2_maint_resp_valid = EXTERNAL_L2 ? l2_maint_resp_valid_i : int_l2_maint_resp_valid;
+    wire         l2_maint_line_valid = EXTERNAL_L2 ? l2_maint_line_valid_i : int_l2_maint_line_valid;
+    wire         l2_maint_line_dirty = EXTERNAL_L2 ? l2_maint_line_dirty_i : int_l2_maint_line_dirty;
+    wire [14:0]  l2_maint_line_tag   = EXTERNAL_L2 ? l2_maint_line_tag_i   : int_l2_maint_line_tag;
+    wire [255:0] l2_maint_line_data  = EXTERNAL_L2 ? l2_maint_line_data_i  : int_l2_maint_line_data;
+
+    assign l2_cmd_valid_o      = l2_cmd_valid;
+    assign l2_cmd_we_o         = l2_cmd_we;
+    assign l2_cmd_addr_o       = l2_cmd_addr;
+    assign l2_cmd_way_o        = l2_cmd_way;
+    assign l2_cmd_wdata_o      = l2_cmd_wdata;
+    assign l2_cmd_w_valid_o    = l2_cmd_w_valid;
+    assign l2_cmd_w_dirty_o    = l2_cmd_w_dirty;
+    assign l2_cmd_w_sharers_o  = l2_cmd_w_sharers;
+
+    // ------------------------------------------------------
+    // Main FSM
+    // ------------------------------------------------------
+    localparam [3:0]
+        S_IDLE              = 4'd0,
+        S_L2_LOOKUP         = 4'd1,
+        S_L2_LOOKUP_WAIT    = 4'd2,
+        S_EVICT_SNOOP_ISSUE = 4'd3,
+        S_EVICT_SNOOP_WAIT  = 4'd4,
+        S_EVICT_WB_MEM      = 4'd5,
+        S_FETCH_MEM         = 4'd6,
+        S_L2_FILL           = 4'd7,
+        S_SHARER_SNOOP_ISSUE= 4'd8,
+        S_SHARER_SNOOP_WAIT = 4'd9,
+        S_GRANT_WRITE_L2    = 4'd10,
+        S_RESPOND           = 4'd11,
+        S_WB_UPDATE_L2      = 4'd12,
+        S_WAIT_REQ_DROP     = 4'd13,
+        S_ERROR_RESTORE_L2  = 4'd14,
+        S_UNCACHED_MEM      = 4'd15;
+
+    reg [3:0] state;
+    reg [3:0] watchdog_state;
+    reg [31:0] watchdog_cycles;
+
+    // Shared-L2 maintenance is a separate micro-FSM so the established
+    // coherence-state encoding remains stable for debug/ILA users.
+    localparam [2:0]
+        F_IDLE      = 3'd0,
+        F_SCAN_REQ  = 3'd1,
+        F_SCAN_WAIT = 3'd2,
+        F_WB        = 3'd3,
+        F_CLEAR     = 3'd4;
+    reg [2:0]  flush_state;
+    reg        flush_pending;
+    reg        flush_active;
+    reg [11:0] flush_set;
+    reg [1:0]  flush_way;
+    reg [255:0] flush_line;
+
+    assign cache_flush_busy = flush_pending | flush_active | cache_flush_req;
+    assign l2_maint_valid_o = flush_active &&
+        ((flush_state == F_SCAN_REQ) || (flush_state == F_CLEAR) ||
+         ((flush_state == F_SCAN_WAIT) && l2_maint_resp_valid &&
+          !(l2_maint_line_valid && l2_maint_line_dirty)));
+    assign l2_maint_set_o = flush_set;
+    assign l2_maint_way_o = flush_way;
+    // Clean/invalid entries can be invalidated on the scan edge itself.  A
+    // dirty entry uses F_CLEAR only after all eight memory writes succeed.
+    assign l2_maint_invalidate_o = flush_active &&
+        ((flush_state == F_CLEAR) ||
+         ((flush_state == F_SCAN_WAIT) && l2_maint_resp_valid &&
+          !(l2_maint_line_valid && l2_maint_line_dirty)));
+
+    // ---- Latched transaction context ----
+    reg [2:0]   req_core;      // 0-3 = D$ of that core, 4-7 = I$ of core (req_core-4)
+    reg         req_is_d;
+    reg [1:0]   req_type;      // dreq_type, valid only when req_is_d
+    reg [31:0]  req_addr;      // line-aligned except exact byte address for UNCACHED
+    reg [255:0] req_wr_line;   // WRITEBACK line or UNCACHED metadata/payload
+
+    // Optional one-entry skid queue. It improves the direct L1 path by
+    // accepting the next miss while the current coherence transaction is
+    // finishing, but never executes two MSI transactions concurrently.
+    reg         pending_valid;
+    reg [2:0]   pending_core;
+    reg [1:0]   pending_type;
+    reg [31:0]  pending_addr;
+    reg [255:0] pending_line;
+
+    reg [1:0]   line_way;
+    reg [255:0] line_data;
+    reg [3:0]   line_sharers;
+    reg         line_dirty;
+
+    reg [3:0]   snoop_todo;
+    reg         snoop_type_send;
+    reg [31:0]  snoop_addr_send;
+    reg [3:0]   snoop_after; // which state (one-hot-ish encode via case) to resume in
+    reg         any_snoop_dirty;
+    reg [255:0] snoop_dirty_data;
+    wire [3:0] dsnoop_ack_active_vec = dsnoop_ack_valid_vec & snoop_todo;
+    wire [3:0] dsnoop_ack_dirty_vec = {
+        dsnoop_ack_active_vec[3] & dsnoop_ack_dirty[3],
+        dsnoop_ack_active_vec[2] & dsnoop_ack_dirty[2],
+        dsnoop_ack_active_vec[1] & dsnoop_ack_dirty[1],
+        dsnoop_ack_active_vec[0] & dsnoop_ack_dirty[0]
+    };
+    wire [3:0] snoop_remove_mask = {
+        dsnoop_ack_active_vec[3] & (!snoop_type_send | !dsnoop_ack_hit[3]),
+        dsnoop_ack_active_vec[2] & (!snoop_type_send | !dsnoop_ack_hit[2]),
+        dsnoop_ack_active_vec[1] & (!snoop_type_send | !dsnoop_ack_hit[1]),
+        dsnoop_ack_active_vec[0] & (!snoop_type_send | !dsnoop_ack_hit[0])
+    };
+    wire [255:0] snoop_ack_dirty_line = dsnoop_ack_dirty_vec[0] ? dsnoop_ack_line[0] :
+                                         dsnoop_ack_dirty_vec[1] ? dsnoop_ack_line[1] :
+                                         dsnoop_ack_dirty_vec[2] ? dsnoop_ack_line[2] :
+                                                                  dsnoop_ack_line[3];
+
+    reg [2:0]   mem_word_idx;
+    reg [31:0]  mem_line_addr;
+    reg [255:0] mem_line_buf;
+    // One request pulse is emitted per external-memory word, then the
+    // FSM waits for mem_valid before advancing to the next word.
+    reg         mem_waiting;
+    reg         victim_valid;
+    reg         transaction_error;
+    reg         recovery_dirty;
+
+    integer i;
+
+    // ---- Request-source selector ---------------------------------
+    // Active AHB mode (EXTERNAL_REQUEST_ARBITER=1): this is only a mux
+    // from the already-arbitrated ext_req_* stream; no grant decision is
+    // made here.  Legacy direct-wire mode (=0): the fallback round-robin
+    // picker below selects one of the eight native request ports.
+    // Source encoding is 0..3=D$0..D$3, 4..7=I$0..I$3.
+    reg        arb_valid;
+    reg [2:0]  arb_core;
+    reg [2:0]  rr_next;
+    reg [2:0]  arb_candidate;
+    reg [7:0]  arb_requests;
+    integer    arb_offset;
+    always @(*) begin
+        arb_requests = {ireq_valid[3], ireq_valid[2], ireq_valid[1], ireq_valid[0],
+                        dreq_valid[3], dreq_valid[2], dreq_valid[1], dreq_valid[0]};
+        arb_valid     = 1'b0;
+        arb_core      = rr_next;
+        arb_candidate = rr_next;
+        if (EXTERNAL_REQUEST_ARBITER) begin
+            arb_valid = ext_req_valid;
+            arb_core  = ext_req_source;
+        end
+        else begin
+            for (arb_offset = 0; arb_offset < 8; arb_offset = arb_offset + 1) begin
+                arb_candidate = rr_next + arb_offset[2:0];
+                if (!arb_valid && arb_requests[arb_candidate]) begin
+                    arb_valid = 1'b1;
+                    arb_core  = arb_candidate;
+                end
+            end
+        end
+    end
+
+    wire [1:0] arb_selected_type = EXTERNAL_REQUEST_ARBITER ? ext_req_type :
+                                   (arb_core[2] ? 2'b00 : dreq_type[arb_core[1:0]]);
+    wire [31:0] arb_selected_addr = EXTERNAL_REQUEST_ARBITER ? ext_req_addr :
+                                    (arb_core[2] ? ireq_addr[arb_core[1:0]] :
+                                                   dreq_addr[arb_core[1:0]]);
+    wire [255:0] arb_selected_line = EXTERNAL_REQUEST_ARBITER ? ext_req_line :
+                                     (arb_core[2] ? {LINE_BITS{1'b0}} :
+                                                    dreq_line[arb_core[1:0]]);
+    wire active_source_valid = EXTERNAL_REQUEST_ARBITER ? ext_req_valid :
+                               (req_is_d ? dreq_valid[req_core[1:0]] :
+                                           ireq_valid[req_core[1:0]]);
+
+    // A request is accepted only when valid and ready are high on the
+    // same edge.  The selected source may drop valid immediately after
+    // that edge; all transaction context is already latched below.
+    // Non-selected requesters keep valid asserted and are reconsidered
+    // by the starvation-free round-robin arbiter after this transaction.
+    wire accept_direct = (state == S_IDLE) && !pending_valid && arb_valid &&
+                         !flush_pending && !flush_active && !cache_flush_req;
+    wire accept_queued = REQUEST_QUEUE_ENABLE && (state != S_IDLE) &&
+                         !pending_valid && arb_valid &&
+                         (arb_core != req_core) &&
+                         !flush_pending && !flush_active && !cache_flush_req;
+    wire request_accept = accept_direct || accept_queued;
+    assign c0_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd0);
+    assign c1_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd1);
+    assign c2_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd2);
+    assign c3_dreq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd3);
+    assign c0_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd4);
+    assign c1_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd5);
+    assign c2_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd6);
+    assign c3_ireq_ready = !EXTERNAL_REQUEST_ARBITER && request_accept && (arb_core == 3'd7);
+    assign ext_req_ready = EXTERNAL_REQUEST_ARBITER && request_accept;
+
+    // Event codes: 0=request accepted, 1=L2 hit, 2=L2 miss,
+    // 3=snoop issued, 4=response returned, 5=external-memory error.
+    reg [31:0] trace_cycle;
+    reg        trace_event_valid;
+    reg [95:0] trace_event_data;
+    reg [31:0] trace_event_addr;
+    reg [1:0]  trace_event_type;
+    always @(*) begin
+        trace_event_valid = 1'b0;
+        trace_event_addr  = req_addr;
+        trace_event_type  = req_type;
+        trace_event_data  = 96'b0;
+
+        if (request_accept) begin
+            trace_event_valid = 1'b1;
+            trace_event_addr  = arb_selected_addr;
+            trace_event_type  = arb_selected_type;
+            trace_event_data  = {trace_cycle, 4'd0, arb_core, ~arb_core[2],
+                                 trace_event_type, state, 1'b0, 1'b0, 4'b0,
+                                 12'b0, trace_event_addr};
+        end
+        else if ((state == S_L2_LOOKUP_WAIT) && l2_resp_valid) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, l2_resp_hit ? 4'd1 : 4'd2,
+                                 req_core, req_is_d, req_type, state,
+                                 l2_resp_hit, l2_resp_victim_dirty,
+                                 l2_resp_sharers, 12'b0, req_addr};
+        end
+        else if (((state == S_EVICT_SNOOP_ISSUE) ||
+                  (state == S_SHARER_SNOOP_ISSUE)) && (snoop_todo != 4'b0)) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, 4'd3, req_core, req_is_d,
+                                 req_type, state, 1'b0, line_dirty,
+                                 line_sharers, 12'b0, snoop_addr_send};
+        end
+        else if (((state == S_EVICT_WB_MEM) || (state == S_FETCH_MEM) ||
+                  (state == S_UNCACHED_MEM)) &&
+                 mem_valid && mem_error) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, 4'd5, req_core, req_is_d,
+                                 req_type, state, 1'b0, line_dirty,
+                                 line_sharers, 12'b0, mem_addr};
+        end
+        else if (state == S_RESPOND) begin
+            trace_event_valid = 1'b1;
+            trace_event_data  = {trace_cycle, 4'd4, req_core, req_is_d,
+                                 req_type, state, 1'b0, line_dirty,
+                                 line_sharers, 12'b0, req_addr};
+        end
+    end
+
+    assign debug_controller_state = state;
+
+    generate
+        if (DEBUG_TRACE_ENABLE) begin : GEN_CACHE_TRACE
+            cache_debug_buffer #(
+                .DEPTH(16), .ADDR_WIDTH(4), .DATA_WIDTH(96)
+            ) u_cache_debug_buffer (
+                .clk(clk), .rst(rst),
+                .event_valid(trace_event_valid), .event_data(trace_event_data),
+                .read_index(debug_trace_rd_index), .read_data(debug_trace_rd_data),
+                .record_count(debug_trace_count), .write_index(debug_trace_write_index)
+            );
+        end
+        else begin : GEN_NO_CACHE_TRACE
+            assign debug_trace_rd_data     = 96'b0;
+            assign debug_trace_count       = 5'b0;
+            assign debug_trace_write_index = 4'b0;
+        end
+    endgenerate
+
+    assign l2_cmd_valid = (state == S_L2_LOOKUP) || (state == S_L2_FILL) ||
+                           (state == S_GRANT_WRITE_L2) || (state == S_WB_UPDATE_L2) ||
+                           (state == S_ERROR_RESTORE_L2);
+    assign l2_cmd_we    = (state != S_L2_LOOKUP);
+    assign l2_cmd_addr  = (state == S_ERROR_RESTORE_L2) ? mem_line_addr : req_addr;
+    assign l2_cmd_way   = line_way;
+    assign l2_cmd_wdata = line_data;
+    assign l2_cmd_w_valid  = (state == S_L2_FILL) || (state == S_GRANT_WRITE_L2) ||
+                             (state == S_WB_UPDATE_L2) || (state == S_ERROR_RESTORE_L2);
+    assign l2_cmd_w_dirty  = (state == S_ERROR_RESTORE_L2) ? recovery_dirty :
+                              (state == S_WB_UPDATE_L2) ? 1'b1 :
+                               (state == S_GRANT_WRITE_L2) ? (line_dirty | any_snoop_dirty) : 1'b0;
+
+    // NOTE (bug fixed on review): this cannot just read the
+    // `line_sharers` register -- S_L2_FILL and S_GRANT_WRITE_L2 both
+    // *also* write a new value into `line_sharers` on this same
+    // cycle (non-blocking, so the register doesn't actually update
+    // until the next edge), so an L2 write issued in either of those
+    // states must compute the value it wants combinationally right
+    // here, not through the register round-trip -- otherwise the
+    // write that fires this cycle silently uses last cycle's stale
+    // value instead of the one just decided.
+    wire [3:0] req_bit       = (4'b0001 << req_core[1:0]);
+    wire [3:0] grant_sharers = (req_type == 2'b01) ? req_bit : (line_sharers | req_bit);
+    assign l2_cmd_w_sharers = (state == S_ERROR_RESTORE_L2) ? 4'b0 :
+                               (state == S_L2_FILL)        ? 4'b0 :
+                               (state == S_GRANT_WRITE_L2) ? grant_sharers :
+                                                               line_sharers; // S_WB_UPDATE_L2: already resolved 1 full cycle earlier, safe to read directly
+
+    always @(posedge clk) begin
+        if (rst) begin
+            state <= S_IDLE;
+            for (i = 0; i < 4; i = i + 1) begin
+                dresp_valid_r[i]  <= 1'b0;
+                dresp_error_r[i]  <= 1'b0;
+                iresp_valid_r[i]  <= 1'b0;
+                iresp_error_r[i]  <= 1'b0;
+                dsnoop_valid_r[i] <= 1'b0;
+            end
+            mem_req_valid <= 1'b0;
+            mem_we        <= 1'b0;
+            mem_addr      <= 32'b0;
+            mem_wdata     <= 32'b0;
+            mem_wstrb     <= 4'b0;
+            mem_req_burst <= 1'b0;
+            mem_wline     <= {LINE_BITS{1'b0}};
+            mem_word_idx  <= 3'd0;
+            mem_line_addr <= 32'b0;
+            mem_line_buf  <= {LINE_BITS{1'b0}};
+            mem_waiting   <= 1'b0;
+            victim_valid  <= 1'b0;
+            transaction_error <= 1'b0;
+            recovery_dirty <= 1'b0;
+            req_core      <= 3'd0;
+            req_is_d      <= 1'b0;
+            req_type      <= 2'b00;
+            req_addr      <= 32'b0;
+            req_wr_line   <= {LINE_BITS{1'b0}};
+            pending_valid <= 1'b0;
+            pending_core  <= 3'b0;
+            pending_type  <= 2'b0;
+            pending_addr  <= 32'b0;
+            pending_line  <= {LINE_BITS{1'b0}};
+            line_way      <= 2'b0;
+            line_data     <= {LINE_BITS{1'b0}};
+            line_sharers  <= 4'b0;
+            line_dirty    <= 1'b0;
+            snoop_todo    <= 4'b0;
+            snoop_type_send <= 1'b0;
+            snoop_addr_send <= 32'b0;
+            snoop_after   <= S_IDLE;
+            any_snoop_dirty <= 1'b0;
+            snoop_dirty_data <= {LINE_BITS{1'b0}};
+            rr_next          <= 3'd0;
+            perf_total_requests <= 32'b0;
+            perf_d_bus_reads    <= 32'b0;
+            perf_d_rfos         <= 32'b0;
+            perf_d_writebacks   <= 32'b0;
+            perf_i_reads        <= 32'b0;
+            perf_l2_hits        <= 32'b0;
+            perf_l2_misses      <= 32'b0;
+            perf_snoop_requests <= 32'b0;
+            perf_mem_read_words <= 32'b0;
+            perf_mem_write_words<= 32'b0;
+            perf_busy_cycles    <= 32'b0;
+            protocol_error      <= 1'b0;
+            timeout_error       <= 1'b0;
+            memory_error        <= 1'b0;
+            watchdog_state      <= S_IDLE;
+            watchdog_cycles     <= 32'b0;
+            trace_cycle         <= 32'b0;
+            flush_state         <= F_IDLE;
+            flush_pending       <= 1'b0;
+            flush_active        <= 1'b0;
+            flush_set           <= 12'b0;
+            flush_way           <= 2'b0;
+            flush_line          <= {LINE_BITS{1'b0}};
+            cache_flush_done    <= 1'b0;
+            cache_flush_error   <= 1'b0;
+        end
+        else begin
+            // Default: all pulses low unless explicitly set below.
+            for (i = 0; i < 4; i = i + 1) begin
+                dresp_valid_r[i]  <= 1'b0;
+                dresp_error_r[i]  <= 1'b0;
+                iresp_valid_r[i]  <= 1'b0;
+                iresp_error_r[i]  <= 1'b0;
+                dsnoop_valid_r[i] <= 1'b0;
+            end
+            mem_req_valid <= 1'b0;
+            mem_wstrb     <= 4'b0;
+            mem_req_burst <= 1'b0;
+            trace_cycle <= trace_cycle + 32'd1;
+            cache_flush_done <= 1'b0;
+
+            // Latch a maintenance pulse even if the final L1 writeback is
+            // still leaving the normal transaction FSM.  Arbitration is
+            // blocked immediately and the scan starts once S_IDLE is safe.
+            if (cache_flush_req && !flush_pending && !flush_active) begin
+                flush_pending     <= 1'b1;
+                cache_flush_error <= 1'b0;
+            end
+
+            if (accept_queued) begin
+                pending_valid <= 1'b1;
+                pending_core  <= arb_core;
+                pending_type  <= arb_selected_type;
+                pending_addr  <= arb_selected_addr;
+                pending_line  <= arb_selected_line;
+                rr_next       <= arb_core + 3'd1;
+            end
+
+            if (PERF_COUNTER_ENABLE && ((state != S_IDLE) || flush_active))
+                perf_busy_cycles <= perf_busy_cycles + 32'd1;
+
+            // Detect a bus/snoop/requester handshake that leaves one
+            // FSM state without progress for too long.  The flag is
+            // sticky for ILA/software diagnosis; the transaction is
+            // deliberately not abandoned because doing so could break
+            // MSI atomicity or discard dirty data.
+            if (state != watchdog_state) begin
+                watchdog_state  <= state;
+                watchdog_cycles <= 32'b0;
+            end
+            else if (state == S_IDLE) begin
+                watchdog_cycles <= 32'b0;
+            end
+            else if (!timeout_error) begin
+                if (watchdog_cycles >= (WATCHDOG_LIMIT - 1)) begin
+                    timeout_error  <= 1'b1;
+                    protocol_error <= 1'b1;
+                end
+                else begin
+                    watchdog_cycles <= watchdog_cycles + 32'd1;
+                end
+            end
+
+            if (flush_active) begin
+                case (flush_state)
+                    F_SCAN_REQ: begin
+                        if (l2_maint_ready)
+                            flush_state <= F_SCAN_WAIT;
+                    end
+
+                    F_SCAN_WAIT: begin
+                        if (l2_maint_resp_valid) begin
+                            if (l2_maint_line_valid && l2_maint_line_dirty) begin
+                                flush_line    <= l2_maint_line_data;
+                                mem_line_addr <= {l2_maint_line_tag, flush_set, 5'b0};
+                                mem_word_idx  <= 3'd0;
+                                mem_waiting   <= 1'b0;
+                                flush_state   <= F_WB;
+                            end
+                            else begin
+                                // Clean and invalid entries need no memory
+                                // access but are still invalidated so a DMA
+                                // update cannot be hidden by a stale L2 hit.
+                                if ((flush_set == 12'hfff) && (flush_way == 2'd3)) begin
+                                    flush_active     <= 1'b0;
+                                    flush_pending    <= 1'b0;
+                                    flush_state      <= F_IDLE;
+                                    cache_flush_done <= 1'b1;
+                                end
+                                else begin
+                                    if (flush_way == 2'd3) begin
+                                        flush_way <= 2'd0;
+                                        flush_set <= flush_set + 12'd1;
+                                    end
+                                    else begin
+                                        flush_way <= flush_way + 2'd1;
+                                    end
+                                    flush_state <= F_SCAN_REQ;
+                                end
+                            end
+                        end
+                    end
+
+                    F_WB: begin
+                        if (!mem_waiting) begin
+                            mem_req_valid <= 1'b1;
+                            mem_we        <= 1'b1;
+                            mem_req_burst <= MEM_BURST_ENABLE;
+                            mem_addr      <= MEM_BURST_ENABLE ? mem_line_addr :
+                                             mem_line_addr + (mem_word_idx << 2);
+                            mem_wdata     <= flush_line[mem_word_idx*32 +: 32];
+                            mem_wstrb     <= 4'b1111;
+                            mem_wline     <= flush_line;
+                            mem_waiting   <= 1'b1;
+                            if (PERF_COUNTER_ENABLE)
+                                perf_mem_write_words <= perf_mem_write_words +
+                                                        (MEM_BURST_ENABLE ? 32'd8 : 32'd1);
+                        end
+                        else if (mem_valid) begin
+                            mem_waiting <= 1'b0;
+                            if (mem_error) begin
+                                // Do not invalidate the line whose writeback
+                                // failed: it remains the authoritative copy.
+                                memory_error      <= 1'b1;
+                                cache_flush_error <= 1'b1;
+                                cache_flush_done  <= 1'b1;
+                                flush_active      <= 1'b0;
+                                flush_pending     <= 1'b0;
+                                flush_state       <= F_IDLE;
+                            end
+                            else if (MEM_BURST_ENABLE || (mem_word_idx == 3'd7)) begin
+                                mem_word_idx <= 3'd0;
+                                flush_state  <= F_CLEAR;
+                            end
+                            else begin
+                                mem_word_idx <= mem_word_idx + 3'd1;
+                            end
+                        end
+                    end
+
+                    F_CLEAR: begin
+                        // l2_maint_invalidate_o is high for this complete
+                        // cycle; the L2 clears the selected entry on this edge.
+                        if ((flush_set == 12'hfff) && (flush_way == 2'd3)) begin
+                            flush_active    <= 1'b0;
+                            flush_pending   <= 1'b0;
+                            flush_state     <= F_IDLE;
+                            cache_flush_done <= 1'b1;
+                        end
+                        else begin
+                            if (flush_way == 2'd3) begin
+                                flush_way <= 2'd0;
+                                flush_set <= flush_set + 12'd1;
+                            end
+                            else begin
+                                flush_way <= flush_way + 2'd1;
+                            end
+                            flush_state <= F_SCAN_REQ;
+                        end
+                    end
+
+                    default: flush_state <= F_SCAN_REQ;
+                endcase
+            end
+            else if (flush_pending && (state == S_IDLE) && !pending_valid) begin
+                flush_active  <= 1'b1;
+                flush_pending <= 1'b0;
+                flush_state   <= F_SCAN_REQ;
+                flush_set     <= 12'b0;
+                flush_way     <= 2'b0;
+                mem_word_idx  <= 3'd0;
+                mem_waiting   <= 1'b0;
+            end
+            else begin
+            case (state)
+                // ==================================================
+                S_IDLE: begin
+                    if (pending_valid) begin
+                        req_core         <= pending_core;
+                        req_is_d         <= ~pending_core[2];
+                        req_type         <= pending_type;
+                        req_addr         <= (!pending_core[2] && (pending_type == 2'b11)) ?
+                                            {pending_addr[31:2], 2'b00} :
+                                            {pending_addr[31:5], 5'b0};
+                        req_wr_line      <= pending_line;
+                        pending_valid    <= 1'b0;
+                        transaction_error <= 1'b0;
+                        victim_valid     <= 1'b0;
+                        recovery_dirty   <= 1'b0;
+                        mem_waiting      <= 1'b0;
+                        if (PERF_COUNTER_ENABLE) begin
+                            perf_total_requests <= perf_total_requests + 32'd1;
+                            if (pending_core[2])
+                                perf_i_reads <= perf_i_reads + 32'd1;
+                            else begin
+                                case (pending_type)
+                                    2'b00: perf_d_bus_reads  <= perf_d_bus_reads + 32'd1;
+                                    2'b01: perf_d_rfos       <= perf_d_rfos + 32'd1;
+                                    2'b10: perf_d_writebacks <= perf_d_writebacks + 32'd1;
+                                    default: ;
+                                endcase
+                            end
+                        end
+                        if ((pending_core[2] && (pending_addr[4:0] != 5'b0)) ||
+                            (!pending_core[2] && (pending_type != 2'b11) &&
+                             (pending_addr[4:0] != 5'b0)))
+                            protocol_error <= 1'b1;
+                        state <= (!pending_core[2] && (pending_type == 2'b11)) ?
+                                 S_UNCACHED_MEM : S_L2_LOOKUP;
+                    end
+                    else if (arb_valid) begin
+                        req_core <= arb_core;
+                        transaction_error <= 1'b0;
+                        victim_valid      <= 1'b0;
+                        recovery_dirty    <= 1'b0;
+                        rr_next  <= arb_core + 3'd1;
+                        if (PERF_COUNTER_ENABLE) begin
+                            perf_total_requests <= perf_total_requests + 32'd1;
+                            if (arb_core[2])
+                                perf_i_reads <= perf_i_reads + 32'd1;
+                            else begin
+                                case (arb_selected_type)
+                                    2'b00: perf_d_bus_reads  <= perf_d_bus_reads + 32'd1;
+                                    2'b01: perf_d_rfos       <= perf_d_rfos + 32'd1;
+                                    2'b10: perf_d_writebacks <= perf_d_writebacks + 32'd1;
+                                    default: ;
+                                endcase
+                            end
+                        end
+                        if ((arb_core[2] && (arb_selected_addr[4:0] != 5'b0)) ||
+                            (!arb_core[2] &&
+                             (arb_selected_type != 2'b11) &&
+                             (arb_selected_addr[4:0] != 5'b0)))
+                            protocol_error <= 1'b1;
+                        req_is_d <= ~arb_core[2];
+                        if (~arb_core[2]) begin
+                            req_type    <= arb_selected_type;
+                            req_addr    <= (arb_selected_type == 2'b11) ?
+                                           {arb_selected_addr[31:2], 2'b00} :
+                                           {arb_selected_addr[31:5], 5'b0};
+                            req_wr_line <= arb_selected_line;
+                        end
+                        else begin
+                            req_type    <= 2'b00; // READ semantics for I$
+                            req_addr    <= {arb_selected_addr[31:5], 5'b0};
+                        end
+                        mem_waiting <= 1'b0;
+                        state <= (!arb_core[2] &&
+                                  (arb_selected_type == 2'b11)) ?
+                                 S_UNCACHED_MEM : S_L2_LOOKUP;
+                    end
+                end
+
+                // ==================================================
+                // l2_cache may pipeline its directory/tag lookup.  This FSM
+                // deliberately uses resp_valid rather than a fixed latency.
+                S_L2_LOOKUP: state <= S_L2_LOOKUP_WAIT;
+
+                S_L2_LOOKUP_WAIT: begin
+                    if (l2_resp_valid) begin
+                        if (PERF_COUNTER_ENABLE) begin
+                            if (l2_resp_hit)
+                                perf_l2_hits <= perf_l2_hits + 32'd1;
+                            else
+                                perf_l2_misses <= perf_l2_misses + 32'd1;
+                        end
+                        line_way <= l2_resp_way;
+
+                        if (req_is_d && (req_type == 2'b10)) begin
+                            // WRITEBACK: by the inclusion property this
+                            // always hits (see header). Just update L2.
+                            line_data    <= req_wr_line;
+                            line_sharers <= l2_resp_sharers & ~(4'b0001 << req_core[1:0]);
+                            if (!l2_resp_hit)
+                                protocol_error <= 1'b1;
+                            state        <= S_WB_UPDATE_L2;
+                        end
+                        else if (l2_resp_hit) begin
+                            line_data    <= l2_resp_line;
+                            line_sharers <= l2_resp_sharers;
+                            // resp_victim_dirty describes the selected
+                            // way on both hit and miss. Preserve it: L2
+                            // may already be newer than DRAM after an
+                            // earlier M->S downgrade/writeback.
+                            line_dirty   <= l2_resp_victim_dirty;
+                            victim_valid <= l2_resp_victim_valid;
+                            any_snoop_dirty  <= 1'b0;
+                            snoop_dirty_data <= {LINE_BITS{1'b0}};
+
+                            if (!req_is_d) begin
+                                // I$: no coherence involvement at all.
+                                state <= S_RESPOND;
+                            end
+                            else begin
+                                snoop_todo <= (l2_resp_sharers & ~(4'b0001 << req_core[1:0]));
+                                snoop_type_send <= (req_type == 2'b00) ? 1'b1 : 1'b0; // READ->DOWNGRADE, RFO->INVALIDATE
+                                snoop_addr_send <= req_addr;
+                                snoop_after <= S_GRANT_WRITE_L2;
+                                state <= S_SHARER_SNOOP_ISSUE;
+                            end
+                        end
+                        else begin
+                            // Miss in L2: may need to evict the victim way first.
+                            line_data    <= l2_resp_line;      // victim's current data (for its own writeback, if needed)
+                            line_sharers <= l2_resp_victim_sharers;
+                            line_dirty   <= l2_resp_victim_dirty;
+                            victim_valid <= l2_resp_victim_valid;
+                            any_snoop_dirty  <= 1'b0;
+                            snoop_dirty_data <= {LINE_BITS{1'b0}};
+                            // L2 is inclusive: evicting a directory
+                            // entry must snoop the VICTIM address, not
+                            // the newly requested address.
+                            snoop_addr_send <= {l2_resp_victim_tag, req_addr[16:5], 5'b0};
+                            mem_line_addr   <= {l2_resp_victim_tag, req_addr[16:5], 5'b0};
+                            mem_word_idx    <= 3'd0;
+                            mem_waiting     <= 1'b0;
+
+                            if (l2_resp_victim_valid && (l2_resp_victim_sharers != 4'b0)) begin
+                                snoop_todo      <= l2_resp_victim_sharers;
+                                snoop_type_send <= 1'b0; // INVALIDATE -- evicting outright
+                                snoop_after     <= S_EVICT_WB_MEM;
+                                state           <= S_EVICT_SNOOP_ISSUE;
+                            end
+                            else if (l2_resp_victim_valid && l2_resp_victim_dirty) begin
+                                state <= S_EVICT_WB_MEM;
+                            end
+                            else begin
+                                mem_word_idx <= 3'd0;
+                                mem_waiting  <= 1'b0;
+                                state <= S_FETCH_MEM;
+                            end
+                        end
+                    end
+                end
+
+                // ==================================================
+                // Generic snoop-one-or-more sub-sequence. All current
+                // sharers are probed in parallel. Responses may return
+                // on different cycles; snoop_todo remains the scoreboard
+                // until every targeted core has acknowledged.
+                // ==================================================
+                S_EVICT_SNOOP_ISSUE, S_SHARER_SNOOP_ISSUE: begin
+                    if (snoop_todo == 4'b0) begin
+                        state <= snoop_after;
+                    end
+                    else begin
+                        if (PERF_COUNTER_ENABLE)
+                            perf_snoop_requests <= perf_snoop_requests + 32'd0 +
+                                snoop_todo[0] + snoop_todo[1] +
+                                snoop_todo[2] + snoop_todo[3];
+                        for (i = 0; i < 4; i = i + 1) begin
+                            if (snoop_todo[i]) begin
+                                dsnoop_valid_r[i] <= 1'b1;
+                                dsnoop_type_r[i]  <= snoop_type_send;
+                                dsnoop_addr_r[i]  <= snoop_addr_send;
+                            end
+                        end
+                        state <= (state == S_EVICT_SNOOP_ISSUE) ? S_EVICT_SNOOP_WAIT : S_SHARER_SNOOP_WAIT;
+                    end
+                end
+
+                S_EVICT_SNOOP_WAIT, S_SHARER_SNOOP_WAIT: begin
+                    if (dsnoop_ack_valid_vec != 4'b0) begin
+                        if ((dsnoop_ack_valid_vec & ~snoop_todo) != 4'b0)
+                            protocol_error <= 1'b1;
+                        if ((any_snoop_dirty && (dsnoop_ack_dirty_vec != 4'b0)) ||
+                            ((dsnoop_ack_dirty_vec &
+                              (dsnoop_ack_dirty_vec - 4'b0001)) != 4'b0))
+                            protocol_error <= 1'b1;
+                        snoop_todo   <= snoop_todo & ~dsnoop_ack_valid_vec;
+                        line_sharers <= line_sharers & ~snoop_remove_mask;
+                        if (dsnoop_ack_dirty_vec != 4'b0) begin
+                            any_snoop_dirty  <= 1'b1;
+                            snoop_dirty_data <= snoop_ack_dirty_line;
+                            line_data        <= snoop_ack_dirty_line;
+                        end
+                        if ((snoop_todo & ~dsnoop_ack_valid_vec) == 4'b0)
+                            state <= (state == S_EVICT_SNOOP_WAIT) ?
+                                     S_EVICT_SNOOP_ISSUE : S_SHARER_SNOOP_ISSUE;
+                    end
+                end
+
+                // ==================================================
+                // Evict path: write victim's (possibly snoop-updated)
+                // dirty data to memory if needed, then fetch the new
+                // line, then fill L2, then resume as if it had hit.
+                // ==================================================
+                S_EVICT_WB_MEM: begin
+                    if (!(line_dirty | any_snoop_dirty)) begin
+                        mem_word_idx <= 3'd0;
+                        mem_waiting  <= 1'b0;
+                        state <= S_FETCH_MEM;
+                    end
+                    else if (!mem_waiting) begin
+                        mem_req_valid <= 1'b1;
+                        mem_we        <= 1'b1;
+                        mem_req_burst <= MEM_BURST_ENABLE;
+                        mem_addr      <= MEM_BURST_ENABLE ? mem_line_addr :
+                                         mem_line_addr + (mem_word_idx << 2);
+                        mem_wdata     <= line_data[mem_word_idx*32 +: 32];
+                        mem_wstrb     <= 4'b1111;
+                        mem_wline     <= line_data;
+                        mem_waiting   <= 1'b1;
+                        if (PERF_COUNTER_ENABLE)
+                            perf_mem_write_words <= perf_mem_write_words +
+                                                    (MEM_BURST_ENABLE ? 32'd8 : 32'd1);
+                    end
+                    else if (mem_valid) begin
+                        mem_waiting <= 1'b0;
+                        if (mem_error) begin
+                            // Snoop invalidations may already have removed
+                            // every other copy. Preserve the authoritative
+                            // victim in L2 as dirty before failing the
+                            // original requester; never discard partial WB.
+                            memory_error      <= 1'b1;
+                            transaction_error <= 1'b1;
+                            recovery_dirty    <= 1'b1;
+                            state             <= S_ERROR_RESTORE_L2;
+                        end
+                        else if (MEM_BURST_ENABLE || (mem_word_idx == 3'd7)) begin
+                            mem_word_idx  <= 3'd0;
+                            state         <= S_FETCH_MEM;
+                        end
+                        else begin
+                            mem_word_idx  <= mem_word_idx + 3'd1;
+                        end
+                    end
+                end
+
+                S_FETCH_MEM: begin
+                    if (!mem_waiting) begin
+                        mem_req_valid <= 1'b1;
+                        mem_we        <= 1'b0;
+                        mem_req_burst <= MEM_BURST_ENABLE;
+                        mem_addr      <= MEM_BURST_ENABLE ? req_addr :
+                                         req_addr + (mem_word_idx << 2);
+                        mem_wstrb     <= 4'b0000;
+                        mem_waiting   <= 1'b1;
+                        if (PERF_COUNTER_ENABLE)
+                            perf_mem_read_words <= perf_mem_read_words +
+                                                   (MEM_BURST_ENABLE ? 32'd8 : 32'd1);
+                    end
+                    else if (mem_valid) begin
+                        mem_waiting <= 1'b0;
+                        if (mem_error) begin
+                            // A failed fill is never installed. If this miss
+                            // selected a valid victim, restore that victim in
+                            // L2 with no sharers; a completed victim WB makes
+                            // it clean, otherwise the WB-error path above
+                            // restores it dirty directly.
+                            memory_error      <= 1'b1;
+                            transaction_error <= 1'b1;
+                            recovery_dirty    <= 1'b0;
+                            state             <= victim_valid ? S_ERROR_RESTORE_L2 : S_RESPOND;
+                        end
+                        else if (MEM_BURST_ENABLE) begin
+                            mem_line_buf <= mem_rline;
+                            line_data    <= mem_rline;
+                            line_dirty   <= 1'b0;
+                            mem_word_idx <= 3'd0;
+                            state        <= S_L2_FILL;
+                        end
+                        else begin
+                            mem_line_buf[mem_word_idx*32 +: 32] <= mem_rdata;
+                            if (mem_word_idx == 3'd7) begin
+                                mem_word_idx  <= 3'd0;
+                                line_data     <= { mem_rdata, mem_line_buf[223:0] }; // fold in the final word
+                                line_dirty    <= 1'b0;
+                                state         <= S_L2_FILL;
+                            end
+                            else begin
+                                mem_word_idx  <= mem_word_idx + 3'd1;
+                            end
+                        end
+                    end
+                end
+
+                // ==================================================
+                // Strongly ordered, single-word MMIO access.  Request
+                // metadata is packed by l1_dcache as:
+                //   [36] write, [35:32] WSTRB, [31:0] shifted WDATA.
+                // This path deliberately bypasses L2 and the MSI directory,
+                // so a side-effecting peripheral read is issued exactly once
+                // and no device response can later be satisfied from cache.
+                S_UNCACHED_MEM: begin
+                    if (!mem_waiting) begin
+                        mem_req_valid <= 1'b1;
+                        mem_we        <= req_wr_line[36];
+                        mem_addr      <= req_addr;
+                        mem_wdata     <= req_wr_line[31:0];
+                        mem_wstrb     <= req_wr_line[36] ?
+                                         req_wr_line[35:32] : 4'b0000;
+                        mem_waiting   <= 1'b1;
+                        if (PERF_COUNTER_ENABLE) begin
+                            if (req_wr_line[36])
+                                perf_mem_write_words <= perf_mem_write_words + 32'd1;
+                            else
+                                perf_mem_read_words <= perf_mem_read_words + 32'd1;
+                        end
+                    end
+                    else if (mem_valid) begin
+                        mem_waiting      <= 1'b0;
+                        transaction_error <= mem_error;
+                        if (mem_error)
+                            memory_error <= 1'b1;
+                        line_data <= {{(LINE_BITS-32){1'b0}}, mem_rdata};
+                        state <= S_RESPOND;
+                    end
+                end
+
+                S_L2_FILL: begin
+                    // line_data/line_way already set; sharers start
+                    // empty, dirty=0 (clean copy straight from DRAM).
+                    line_sharers <= 4'b0;
+                    line_dirty   <= 1'b0;
+                    if (!req_is_d) begin
+                        state <= S_RESPOND;
+                    end
+                    else begin
+                        snoop_todo      <= 4'b0; // freshly fetched: no sharers to probe
+                        snoop_after     <= S_GRANT_WRITE_L2;
+                        state           <= S_SHARER_SNOOP_ISSUE; // immediately falls through (snoop_todo==0)
+                    end
+                end
+
+                // ==================================================
+                S_GRANT_WRITE_L2: begin
+                    // Add requester to sharers (mask already pruned of
+                    // any non-acking stale sharers above); RFO clears
+                    // everyone else. (grant_sharers is the same
+                    // combinational expression the L2 write above
+                    // this cycle already used -- registering it here
+                    // too just makes it visible to S_RESPOND next
+                    // cycle.)
+                    line_sharers <= grant_sharers;
+                    state <= S_RESPOND;
+                end
+
+                S_WB_UPDATE_L2: state <= S_RESPOND;
+
+                // Rewrite the selected victim way under its original tag
+                // after an external-memory failure. This state is the data-
+                // preservation barrier before the failed requester is acked.
+                S_ERROR_RESTORE_L2: state <= S_RESPOND;
+
+                // ==================================================
+                S_RESPOND: begin
+                    if (req_is_d) begin
+                        dresp_valid_r[req_core[1:0]] <= 1'b1;
+                        dresp_error_r[req_core[1:0]] <= transaction_error;
+                        dresp_line_r[req_core[1:0]]  <= line_data;
+                        dresp_state_r[req_core[1:0]] <=
+                            (req_type == 2'b10) ? 2'b00 : // WRITEBACK ack, state field unused
+                            (req_type == 2'b01) ? 2'b11 : // RFO -> M
+                            (MESI_ENABLE && (line_sharers == req_bit)) ?
+                                                  2'b10 : // sole clean holder -> E
+                                                  2'b01;  // shared read fill -> S
+                    end
+                    else begin
+                        iresp_valid_r[req_core[1:0]] <= 1'b1;
+                        iresp_error_r[req_core[1:0]] <= transaction_error;
+                        iresp_line_r[req_core[1:0]]  <= line_data;
+                    end
+                    // Requesters hold valid until they observe this
+                    // response. Waiting for deassertion prevents the
+                    // just-completed level request being accepted again
+                    // on the following edge.
+                    // Even with a queued request, do not begin it until the
+                    // current L1 has committed the returned line and drops
+                    // valid.  This preserves the transaction-atomic snoop
+                    // boundary; the queue only hides arbitration latency.
+                    state <= S_WAIT_REQ_DROP;
+                end
+
+                S_WAIT_REQ_DROP: begin
+                    if (req_is_d) begin
+                        if (!active_source_valid) state <= S_IDLE;
+                    end
+                    else begin
+                        if (!active_source_valid) state <= S_IDLE;
+                    end
+                end
+
+                default: state <= S_IDLE;
+            endcase
+            end
+        end
+    end
+
+endmodule

@@ -1,0 +1,8 @@
+List of CLB Tiles
+CLEM_X49Y661
+CLEL_R_X49Y661
+
+List of Congested Nets
+soc/core2/physical_core/core/mem_wb/WriteDataE[25]
+soc/core2/physical_core/core/id_ex/ALUSrcE_reg_rep_n_0
+

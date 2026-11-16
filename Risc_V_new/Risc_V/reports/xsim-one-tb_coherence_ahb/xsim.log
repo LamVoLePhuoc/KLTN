@@ -2,8 +2,8 @@
 # xsim v2022.2 (64-bit)
 # SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
 # IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
-# Start of session at: Tue Nov  3 08:25:02 2026
-# Process ID: 245152
+# Start of session at: Sun Nov  8 17:02:14 2026
+# Process ID: 397432
 # Current directory: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-one-tb_coherence_ahb
 # Command line: xsim.exe -mode tcl -source {xsim.dir/tb_coherence_ahb_behav/xsim_script.tcl}
 # Log file: C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/reports/xsim-one-tb_coherence_ahb/xsim.log
@@ -38,6 +38,6 @@ MSI/AHB G: simultaneous cores hold requests under CM back-pressure
 ---------------------------------------------
 MSI_COHERENCE_AHB_TB: PASS
 ---------------------------------------------
-$finish called at time : 46660 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_ahb.v" Line 415
+$finish called at time : 47160 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_ahb.v" Line 415
 exit
-INFO: [Common 17-206] Exiting xsim at Tue Nov  3 09:00:22 2026...
+INFO: [Common 17-206] Exiting xsim at Sun Nov  8 17:02:18 2026...

@@ -32,6 +32,6 @@ MSI/AHB G: simultaneous cores hold requests under CM back-pressure
 ---------------------------------------------
 MSI_COHERENCE_AHB_TB: PASS
 ---------------------------------------------
-$finish called at time : 46660 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_ahb.v" Line 415
+$finish called at time : 47160 ns : File "C:/Users/ADMIN/Documents/GitHub/KLTN/Risc_V_new/Risc_V/sim/tb_coherence_ahb.v" Line 415
 exit
-INFO: [Common 17-206] Exiting xsim at Tue Nov  3 09:00:22 2026...
+INFO: [Common 17-206] Exiting xsim at Sun Nov  8 17:02:18 2026...
